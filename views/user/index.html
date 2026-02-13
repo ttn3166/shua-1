@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050712">
+  <title>Login - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      background: linear-gradient(145deg, var(--gold-strong), var(--gold-primary));
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-gold);
+    }
+
+    .login-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .login-subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .form-footer a {
+      color: var(--gold-primary);
+      font-weight: 600;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 24px 0;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+
+    .divider::before {
+      margin-right: 12px;
+    }
+
+    .divider::after {
+      margin-left: 12px;
+    }
+  </style>
+  <script src="/public/js/common.js"></script>
+</head>
+<body>
+  <div class="login-container">
+    <!-- 登录表单卡片 -->
+    <div class="card-elevated">
+      <div class="login-header">
+        <div class="logo">T</div>
+        <h1 class="login-title">Welcome Back</h1>
+        <p class="login-subtitle">Login to your TaskMall account</p>
+      </div>
+
+      <!-- 错误提示 -->
+      <div id="error-alert" class="alert alert-error" style="display: none;"></div>
+
+      <!-- 表单 -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="form-label" for="username">Username / Email</label>
+          <input 
+            type="text" 
+            id="username" 
+            class="form-input" 
+            placeholder="Enter Username"
+            required
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            placeholder="Enter Password"
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
+          <span id="btnText">Login</span>
+          <span id="btnLoading" class="loading" style="display: none;"></span>
+        </button>
+      </form>
+
+      <!-- 底部链接 -->
+      <div class="form-footer">
+        No account? <a href="/views/user/register.html">Register</a>
+      </div>
+
+      <div class="divider">or</div>
+
+      <a href="/download.html" class="btn btn-outline btn-full">
+        Download App
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorAlert = document.getElementById('error-alert');
+    const loginBtn = document.getElementById('loginBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoading = document.getElementById('btnLoading');
+
+    // 显示错误
+    function showError(message) {
+      errorAlert.textContent = message;
+      errorAlert.style.display = 'flex';
+    }
+
+    // 隐藏错误
+    function hideError() {
+      errorAlert.style.display = 'none';
+    }
+
+    // 设置加载状态
+    function setLoading(loading) {
+      loginBtn.disabled = loading;
+      if (loading) {
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline-block';
+      } else {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+      }
+    }
+
+    // 表单提交
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Login failed');
+        }
+
+        // 保存 Token
+        localStorage.setItem('token', result.data.token);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+
+        // 跳转到主页
+        window.location.href = '/views/user/dashboard.html';
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

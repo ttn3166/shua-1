@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>Bind Wallet - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 0;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* 顶部导航栏 */
+    .header-bar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(102, 126, 234, 0.1);
+    }
+
+    .back-btn:active {
+      transform: scale(0.95);
+      background: rgba(102, 126, 234, 0.2);
+    }
+
+    .back-btn svg {
+      width: 20px;
+      height: 20px;
+      color: #667eea;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1a202c;
+    }
+
+    /* 主内容区 */
+    .content-container {
+      padding: 24px 20px;
+    }
+
+    .wallet-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    /* 图标区 */
+    .icon-container {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .icon-container svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a202c;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 14px;
+      color: #718096;
+      text-align: center;
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    /* 提示信息 */
+    .info-box {
+      background: rgba(102, 126, 234, 0.08);
+      border: 1.5px solid rgba(102, 126, 234, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .info-box-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-box-content {
+      font-size: 13px;
+      color: #4a5568;
+      line-height: 1.6;
+    }
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1a202c;
+      margin-bottom: 10px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: 'Courier New', monospace;
+      color: #1a202c;
+      background: #f7fafc;
+      transition: all 0.3s;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: #a0aec0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    /* 地址示例 */
+    .address-example {
+      font-size: 12px;
+      color: #a0aec0;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* 按钮 */
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-submit:active {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Toast 提示 */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      padding: 14px 28px;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      border-radius: 28px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 2000;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* 加载状态 */
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <script src="/public/js/common.js"></script>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <div class="header-bar">
+    <div class="back-btn" onclick="history.back()">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+      </svg>
+    </div>
+    <div class="header-title">Bind Wallet</div>
+  </div>
+
+  <!-- 主内容区 -->
+  <div class="content-container">
+    <div class="wallet-card">
+      <!-- 图标 -->
+      <div class="icon-container">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+        </svg>
+      </div>
+
+      <h2 class="card-title">Bind Withdrawal Address</h2>
+      <p class="card-subtitle">Please enter your TRC20 (USDT) address carefully. This address will be used for withdrawals.</p>
+
+      <!-- 提示信息 -->
+      <div class="info-box">
+        <div class="info-box-title">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Important Notice
+        </div>
+        <div class="info-box-content">
+          • Only TRC20-USDT addresses are supported<br>
+          • Address starts with "T" and is 34 characters long<br>
+          • Double check before submitting
+        </div>
+      </div>
+
+      <!-- 表单 -->
+      <div class="form-group">
+        <label class="form-label">USDT Wallet Address (TRC20)</label>
+        <input 
+          type="text" 
+          id="walletAddress" 
+          class="form-input"
+          placeholder="Enter your TRC20 address"
+          maxlength="34"
+        >
+        <div class="address-example">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 12px; height: 12px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Example: TYkKMVn71s3ELzQmKQFuAKbxRmK5VqHbXF
+        </div>
+      </div>
+
+      <!-- 提交按钮 -->
+      <button id="submitBtn" class="btn-submit" onclick="saveWallet()">
+        Confirm Binding
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // 检查登录状态
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/views/user/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    // 显示提示
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // 加载已绑定的钱包地址
+    async function loadWalletInfo() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/user/wallet-info', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.wallet_address) {
+          document.getElementById('walletAddress').value = result.data.wallet_address;
+        }
+      } catch (error) {
+        console.error('加载钱包信息失败:', error);
+      }
+    }
+
+    // 保存钱包地址
+    async function saveWallet() {
+      const address = document.getElementById('walletAddress').value.trim();
+      const submitBtn = document.getElementById('submitBtn');
+
+      // 验证输入
+      if (!address) {
+        showToast('⚠️ Please enter wallet address');
+        return;
+      }
+
+      // 验证 TRC20 格式
+      if (!address.startsWith('T')) {
+        showToast('⚠️ Address must start with T');
+        return;
+      }
+
+      if (address.length !== 34) {
+        showToast('⚠️ Invalid address length (must be 34 characters)');
+        return;
+      }
+
+      // 禁用按钮，显示加载状态
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Submitting<span class="loading"></span>';
+
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/user/bind-wallet', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ address })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showToast('✅ Wallet bound successfully!');
+          setTimeout(() => {
+            history.back();
+          }, 1500);
+        } else {
+          showToast('❌ ' + (result.message || result.error || 'Binding failed'));
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = 'Confirm Binding';
+        }
+      } catch (error) {
+        console.error('绑定钱包失败:', error);
+        showToast('❌ Network error, please try again');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Confirm Binding';
+      }
+    }
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', () => {
+      if (checkAuth()) {
+        loadWalletInfo();
+      }
+    });
+
+    // 输入验证（实时反馈）
+    document.getElementById('walletAddress').addEventListener('input', (e) => {
+      const value = e.target.value;
+      const input = e.target;
+      
+      if (value.length > 0) {
+        if (!value.startsWith('T')) {
+          input.style.borderColor = '#ff5858';
+        } else if (value.length === 34) {
+          input.style.borderColor = '#00c853';
+        } else {
+          input.style.borderColor = '#667eea';
+        }
+      } else {
+        input.style.borderColor = '#e2e8f0';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#050712">
+  <title>Register - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .register-container {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      background: linear-gradient(145deg, var(--gold-strong), var(--gold-primary));
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-dark);
+      box-shadow: var(--shadow-gold);
+    }
+
+    .register-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .register-subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .form-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .form-footer a {
+      color: var(--gold-primary);
+      font-weight: 600;
+    }
+
+    /* 邀请码提示 */
+    .invite-notice {
+      padding: 12px 16px;
+      background: var(--gold-soft);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--gold-strong);
+      display: none;
+    }
+
+    .invite-notice.show {
+      display: block;
+    }
+
+    .invite-code-display {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--gold-primary);
+    }
+  </style>
+  <script src="/public/js/common.js"></script>
+</head>
+<body>
+  <div class="register-container">
+    <!-- 注册表单卡片 -->
+    <div class="card-elevated">
+      <div class="register-header">
+        <div class="logo">T</div>
+        <h1 class="register-title">Create Account</h1>
+        <p class="register-subtitle">Join TaskMall, Start Earning Today</p>
+      </div>
+
+      <!-- Invite code notice (displayed when obtained from URL) -->
+      <div id="invite-notice" class="invite-notice">
+        <p>✨ Registering with invite code <span class="invite-code-display" id="invite-code-display"></span></p>
+        <p style="margin-top: 4px; font-size: 12px; opacity: 0.9;">Referral will be auto-linked after registration</p>
+      </div>
+
+      <!-- 错误/成功提示 -->
+      <div id="error-alert" class="alert alert-error" style="display: none;"></div>
+      <div id="success-alert" class="alert alert-success" style="display: none;"></div>
+
+      <!-- 表单 -->
+      <form id="registerForm">
+        <div class="form-group">
+          <label class="form-label" for="username">Username / Email</label>
+          <input 
+            type="text" 
+            id="username" 
+            class="form-input" 
+            placeholder="Enter Username"
+            required
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            class="form-input" 
+            placeholder="Enter Password"
+            required
+            minlength="6"
+            autocomplete="new-password"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password-confirm">Confirm Password</label>
+          <input 
+            type="password" 
+            id="password-confirm" 
+            class="form-input" 
+            placeholder="Confirm Password"
+            required
+            autocomplete="new-password"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="invite-code">Invitation Code (Optional)</label>
+          <input 
+            type="text" 
+            id="invite-code" 
+            class="form-input" 
+            placeholder="Enter Invitation Code"
+            autocomplete="off"
+          >
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="registerBtn">
+          <span id="btnText">Register</span>
+          <span id="btnLoading" class="loading" style="display: none;"></span>
+        </button>
+      </form>
+
+      <!-- Bottom link -->
+      <div class="form-footer">
+        Have account? <a href="/views/user/index.html">Login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('registerForm');
+    const errorAlert = document.getElementById('error-alert');
+    const successAlert = document.getElementById('success-alert');
+    const registerBtn = document.getElementById('registerBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoading = document.getElementById('btnLoading');
+    const inviteNotice = document.getElementById('invite-notice');
+    const inviteCodeDisplay = document.getElementById('invite-code-display');
+    const inviteCodeInput = document.getElementById('invite-code');
+
+    // 从 URL 获取邀请码 (支持 ?code=xxx 或 ?ref=xxx)
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromUrl = urlParams.get('code') || urlParams.get('ref');
+
+    if (codeFromUrl) {
+      // 显示邀请码提示
+      inviteCodeDisplay.textContent = codeFromUrl;
+      inviteNotice.classList.add('show');
+      // 自动填充邀请码输入框
+      inviteCodeInput.value = codeFromUrl;
+      inviteCodeInput.readOnly = true;
+      inviteCodeInput.style.backgroundColor = 'rgba(245, 182, 66, 0.1)';
+    }
+
+    // 显示错误
+    function showError(message) {
+      errorAlert.textContent = message;
+      errorAlert.style.display = 'flex';
+      successAlert.style.display = 'none';
+    }
+
+    // 显示成功
+    function showSuccess(message) {
+      successAlert.textContent = message;
+      successAlert.style.display = 'flex';
+      errorAlert.style.display = 'none';
+    }
+
+    // 隐藏提示
+    function hideAlerts() {
+      errorAlert.style.display = 'none';
+      successAlert.style.display = 'none';
+    }
+
+    // 设置加载状态
+    function setLoading(loading) {
+      registerBtn.disabled = loading;
+      if (loading) {
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'inline-block';
+      } else {
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+      }
+    }
+
+    // 表单提交
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlerts();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const passwordConfirm = document.getElementById('password-confirm').value;
+      const inviteCode = inviteCodeInput.value.trim();
+
+      // Validation
+      if (!username || !password) {
+        showError('Please enter username and password');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        return;
+      }
+
+      if (password !== passwordConfirm) {
+        showError('Passwords do not match');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            username, 
+            password,
+            code: inviteCode || null,  // 发送邀请码
+            ref: inviteCode || null     // 兼容旧参数
+          })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Registration failed');
+        }
+
+        // Show success
+        showSuccess('Registration successful! Redirecting...');
+
+        // 保存 Token
+        localStorage.setItem('token', result.data.token);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+
+        // 延迟跳转
+        setTimeout(() => {
+          window.location.href = '/views/user/dashboard.html';
+        }, 1000);
+
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+  </script>
+</body>
+</html>

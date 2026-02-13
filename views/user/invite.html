@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invite Friends - TaskMall</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh;
+            padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+        }
+        .glass { 
+            background: rgba(255, 255, 255, 0.95); 
+            backdrop-filter: blur(10px); 
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        .shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+    <script src="/public/js/common.js"></script>
+</head>
+<body class="flex flex-col">
+    <!-- 顶部导航栏 -->
+    <div class="p-4 flex items-center text-white">
+        <button onclick="history.back()" class="mr-4 hover:opacity-80 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <h1 class="text-lg font-bold">Invite Friends</h1>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="flex-1 p-4 flex flex-col justify-center">
+        <!-- 主卡片 -->
+        <div class="glass rounded-2xl p-6 shadow-2xl text-center relative overflow-hidden animate-fade-in">
+            <!-- 装饰圆形 -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-purple-100 rounded-full opacity-50 z-0"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-100 rounded-full opacity-50 z-0"></div>
+            
+            <div class="relative z-10">
+                <!-- 标题 -->
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Invite & Earn</h2>
+                <p class="text-gray-500 text-sm mb-6">Earn high commissions by inviting friends to join TaskMall!</p>
+
+                <!-- 二维码区域 -->
+                <div class="bg-white p-4 rounded-xl shadow-inner inline-block mb-6">
+                    <img id="qrImage" src="" alt="QR Code" class="w-48 h-48 object-contain bg-gray-100 rounded shimmer">
+                </div>
+
+                <!-- 邀请码展示 -->
+                <div class="mb-6">
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Your Invitation Code</p>
+                    <div class="text-3xl font-bold text-purple-600 tracking-widest" id="inviteCode">
+                        <span class="shimmer inline-block h-10 w-32 rounded"></span>
+                    </div>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="space-y-3">
+                    <button onclick="copyLink()" class="w-full bg-purple-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-purple-700 transition transform hover:-translate-y-1 active:scale-95">
+                        📋 Copy Invitation Link
+                    </button>
+                    <button onclick="copyCode()" class="w-full bg-purple-50 text-purple-600 py-3 rounded-xl font-bold hover:bg-purple-100 transition active:scale-95">
+                        🔑 Copy Invitation Code
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 团队统计卡片 -->
+        <div class="mt-6 glass rounded-xl p-4 flex justify-between items-center shadow-lg animate-fade-in" style="animation-delay: 0.2s; opacity: 0;">
+            <div>
+                <p class="text-gray-500 text-xs">Total Team Members</p>
+                <p class="text-xl font-bold text-gray-800" id="teamCount">
+                    <span class="shimmer inline-block h-6 w-12 rounded"></span>
+                </p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+            </div>
+        </div>
+
+        <!-- 奖励说明 -->
+        <div class="mt-6 glass rounded-xl p-4 shadow-lg animate-fade-in" style="animation-delay: 0.4s; opacity: 0;">
+            <h3 class="text-gray-800 font-bold mb-3 flex items-center">
+                <span class="text-xl mr-2">🎁</span>
+                Invitation Rewards
+            </h3>
+            <ul class="text-sm text-gray-600 space-y-2">
+                <li class="flex items-start">
+                    <span class="text-green-500 mr-2">✓</span>
+                    <span>Your friend gets a welcome bonus upon registration</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-500 mr-2">✓</span>
+                    <span>You earn commission from their completed tasks</span>
+                </li>
+                <li class="flex items-start">
+                    <span class="text-green-500 mr-2">✓</span>
+                    <span>Unlimited invitations, unlimited earnings</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm hidden z-50 transition-all"></div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/views/user/index.html';
+        }
+        
+        let shareLink = '';
+        let inviteCode = '';
+
+        // 加载邀请信息
+        async function loadInviteInfo() {
+            try {
+                const response = await fetch('/api/user/invite-info', { 
+                    headers: { 'Authorization': 'Bearer ' + token } 
+                });
+                const json = await response.json();
+                
+                if (json.success) {
+                    const data = json.data;
+                    inviteCode = data.invite_code;
+                    shareLink = data.invite_link;
+                    
+                    // 更新页面内容
+                    document.getElementById('inviteCode').textContent = inviteCode;
+                    document.getElementById('teamCount').textContent = data.team_count;
+                    
+                    // 生成二维码 (使用公共 API)
+                    const qrImage = document.getElementById('qrImage');
+                    qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareLink)}`;
+                    qrImage.classList.remove('shimmer');
+                } else {
+                    showToast('❌ Failed to load invite info');
+                }
+            } catch (error) {
+                console.error('加载邀请信息失败:', error);
+                showToast('❌ Network error, please try again');
+            }
+        }
+
+        // Toast 提示
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
+        }
+
+        // 复制到剪贴板（兼容 Clipboard API 与 execCommand 回退）
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            }
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            try {
+                document.execCommand('copy');
+                return Promise.resolve();
+            } catch (e) {
+                return Promise.reject(e);
+            } finally {
+                document.body.removeChild(ta);
+            }
+        }
+
+        // 复制邀请链接
+        function copyLink() {
+            if (!shareLink) {
+                showToast('⏳ Loading...');
+                return;
+            }
+            copyToClipboard(shareLink).then(() => {
+                showToast('✅ Link Copied!');
+            }).catch(() => {
+                showToast('❌ Copy failed');
+            });
+        }
+
+        // 复制邀请码
+        function copyCode() {
+            if (!inviteCode) {
+                showToast('⏳ Loading...');
+                return;
+            }
+            copyToClipboard(inviteCode).then(() => {
+                showToast('✅ Code Copied!');
+            }).catch(() => {
+                showToast('❌ Copy failed');
+            });
+        }
+
+        // 页面加载时获取数据
+        loadInviteInfo();
+    </script>
+</body>
+</html>

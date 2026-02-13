@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; min-height: 100vh; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+        .rich-content p { margin: 0.5rem 0; }
+        .rich-content a { color: #2563eb; text-decoration: underline; }
+        .rich-content ul { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+        .rich-content ol { list-style: decimal; padding-left: 1.25rem; margin: 0.5rem 0; }
+        .rich-content img { max-width: 100%; height: auto; border-radius: 0.75rem; }
+        .rich-content h1, .rich-content h2, .rich-content h3 { font-weight: 700; margin: 0.75rem 0 0.5rem; }
+    </style>
+    <script src="/public/js/common.js"></script>
+</head>
+<body class="p-4">
+    <div class="max-w-md mx-auto min-h-screen flex flex-col">
+        <div class="flex items-center mb-8">
+            <button onclick="history.back()" class="mr-4 p-2 bg-white rounded-full shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h1 class="text-xl font-bold text-gray-800">Help Center</h1>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div onclick="window.location.href='/views/user/invitation_rules.html'" class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">Invitation Rules</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+
+            <div onclick="window.location.href='/views/user/vip_rule.html'" class="flex items-center justify-between p-4 border-b border-gray-50 active:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">VIP Rules</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+
+            <div onclick="window.location.href='/views/user/faq.html'" class="flex items-center justify-between p-4 active:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">FAQ</span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </div>
+        </div>
+
+        <!-- About Us (from admin setting: about_us) -->
+        <div id="aboutUsCard" class="bg-white rounded-2xl shadow-sm overflow-hidden mt-4 hidden">
+            <div class="p-4 border-b border-gray-50">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div>
+                        <div class="text-sm font-semibold text-gray-800">About Us</div>
+                        <div class="text-xs text-gray-500">Configurable in Admin panel</div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 text-sm text-gray-700 rich-content" id="aboutUsContent">
+                Loading...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load about_us from /api/config
+        (function () {
+            fetch('/api/config')
+                .then(function (res) { return res.json(); })
+                .then(function (json) {
+                    var card = document.getElementById('aboutUsCard');
+                    var content = document.getElementById('aboutUsContent');
+                    if (!card || !content) return;
+
+                    if (json && json.success && json.data && json.data.about_us) {
+                        card.classList.remove('hidden');
+                        content.innerHTML = json.data.about_us;
+                    } else {
+                        // No content -> keep hidden
+                        card.classList.add('hidden');
+                    }
+                })
+                .catch(function () {
+                    // Fail silently
+                });
+        })();
+    </script>
+</body>
+</html>

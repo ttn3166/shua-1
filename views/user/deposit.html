@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>Deposit - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 0;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+    .header-bar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      background: rgba(102, 126, 234, 0.1);
+    }
+    .back-btn:active { transform: scale(0.95); }
+    .back-btn svg { width: 20px; height: 20px; color: #667eea; }
+    .header-title { font-size: 18px; font-weight: 700; color: #1a202c; }
+    .content-container { padding: 24px 20px; max-width: 520px; margin: 0 auto; }
+    .deposit-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 28px 24px;
+      box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      margin-bottom: 20px;
+    }
+    .page-title { font-size: 22px; font-weight: 700; color: #1a202c; margin-bottom: 8px; }
+    .page-subtitle { font-size: 14px; color: #718096; margin-bottom: 24px; }
+    .step-label { font-size: 13px; font-weight: 600; color: #718096; margin-bottom: 10px; display: block; }
+    .address-box {
+      background: #f7fafc;
+      padding: 16px;
+      border-radius: 12px;
+      border: 2px dashed #4299e1;
+      word-break: break-all;
+      font-family: monospace;
+      font-size: 14px;
+      color: #2d3748;
+      margin-bottom: 12px;
+    }
+    .btn-copy {
+      width: 100%;
+      padding: 12px;
+      background: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .btn-copy:active { opacity: 0.9; }
+    .form-block { margin-bottom: 16px; }
+    .form-block label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: #2d3748; }
+    .form-block input, .form-block textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    .form-block textarea { resize: vertical; min-height: 72px; }
+    .form-block small { display: block; margin-top: 4px; font-size: 11px; color: #718096; }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: #48bb78;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+    .btn-submit:active:not(:disabled) { opacity: 0.95; }
+    .tips-box {
+      background: rgba(66, 153, 225, 0.1);
+      border-left: 4px solid #4299e1;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #2d3748;
+      line-height: 1.6;
+    }
+    .toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      border-radius: 24px;
+      font-size: 14px;
+      z-index: 2000;
+      display: none;
+    }
+    .toast.show { display: block; animation: fadeIn 0.3s; }
+  </style>
+</head>
+<body>
+  <header class="header-bar">
+    <a href="javascript:history.back()" class="back-btn" aria-label="Back">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <h1 class="header-title">USDT Deposit</h1>
+  </header>
+
+  <main class="content-container">
+    <div class="deposit-card">
+      <h2 class="page-title">USDT Deposit (TRC20)</h2>
+      <p class="page-subtitle">Transfer USDT to the address below, then submit your deposit record.</p>
+
+      <section style="margin-bottom: 24px;" id="step1Section">
+        <span class="step-label">STEP 1: Choose method and send</span>
+        <div id="depositChannelSelect" style="margin-bottom:12px;display:none;"></div>
+        <div id="depositAddressBox" class="address-box">Loading...</div>
+        <button type="button" id="btnCopyAddress" class="btn-copy" style="display: none;">Copy Address</button>
+      </section>
+
+      <section>
+        <span class="step-label">STEP 2: Submit deposit record after transfer</span>
+        <div class="form-block">
+          <label for="depositAmount">Amount (USDT) *</label>
+          <input type="number" id="depositAmount" placeholder="Enter amount" step="0.01" min="10" required>
+        </div>
+        <div class="form-block">
+          <label for="depositHash">Transaction Hash (Optional)</label>
+          <input type="text" id="depositHash" placeholder="Paste transaction hash">
+          <small>Providing hash will speed up approval</small>
+        </div>
+        <div class="form-block">
+          <label for="depositScreenshot">Screenshot URL (Optional)</label>
+          <input type="text" id="depositScreenshot" placeholder="Image URL">
+          <small>Provide hash or screenshot for faster review</small>
+        </div>
+        <div class="form-block">
+          <label for="depositNote">Note (Optional)</label>
+          <textarea id="depositNote" placeholder="Any special instructions"></textarea>
+        </div>
+        <button type="button" id="submitDepositBtn" class="btn-submit">Submit Deposit Record</button>
+      </section>
+    </div>
+
+    <div class="tips-box" id="depositTipsBox">
+      <strong>Tips:</strong><br>
+      <span id="depositTipsText">Loading...</span>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function() {
+      var token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/views/user/index.html';
+        return;
+      }
+
+      var depositAddress = '';
+      var selectedChannelId = null;
+      var channels = [];
+      var config = {};
+      var addressBox = document.getElementById('depositAddressBox');
+      var btnCopy = document.getElementById('btnCopyAddress');
+      var submitBtn = document.getElementById('submitDepositBtn');
+
+      function showToast(msg) {
+        var el = document.getElementById('toast');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(function() { el.classList.remove('show'); }, 2500);
+      }
+
+      function loadConfig() {
+        fetch('/api/config')
+          .then(function(r) { return r.json(); })
+          .then(function(cfg) {
+            if (!cfg.success || !cfg.data) { addressBox.textContent = 'Failed to load config.'; return; }
+            config = cfg.data;
+            if (config.deposit_maintenance === '1') {
+              addressBox.textContent = 'Deposit is under maintenance. Please try again later.';
+              document.getElementById('step1Section').style.display = 'none';
+              submitBtn.style.display = 'none';
+              document.querySelector('.deposit-card section:last-of-type').style.display = 'none';
+              var tipsEl = document.getElementById('depositTipsText');
+              if (tipsEl) tipsEl.textContent = config.deposit_tips || 'Under maintenance.';
+              return;
+            }
+            try { channels = JSON.parse(config.deposit_channels || '[]'); } catch (e) { channels = []; }
+            var enabled = channels.filter(function(c) { return c.enabled !== false; });
+            if (enabled.length > 0) {
+              enabled.sort(function(a, b) { return (a.order || 0) - (b.order || 0); });
+              var def = enabled.find(function(c) { return c.is_default; }) || enabled[0];
+              selectedChannelId = def.id;
+              var sel = document.getElementById('depositChannelSelect');
+              sel.style.display = 'block';
+              sel.innerHTML = '<label style="display:block;margin-bottom:6px;font-weight:600;">Payment method</label><select id="depositChannelSelectInput" style="width:100%;padding:10px;border-radius:8px;">' + enabled.map(function(c) { return '<option value="' + c.id + '"' + (c.id === selectedChannelId ? ' selected' : '') + '>' + (c.name || c.id) + '</option>'; }).join('') + '</select>';
+              sel.querySelector('select').addEventListener('change', function() { selectedChannelId = this.value; showChannel(); });
+              showChannel();
+            } else {
+              depositAddress = config.deposit_address || '';
+              addressBox.textContent = depositAddress || 'No deposit address. Please contact support.';
+              btnCopy.style.display = depositAddress ? 'block' : 'none';
+            }
+            var minAmt = parseFloat(config.deposit_min_amount);
+            if (!isNaN(minAmt)) { var inp = document.getElementById('depositAmount'); if (inp) { inp.min = minAmt; inp.placeholder = 'Min ' + minAmt + ' USDT'; } }
+            var reqHash = config.deposit_require_hash_or_screenshot !== '0';
+            document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash ' + (reqHash ? '*' : '(Optional)');
+            document.querySelector('label[for="depositScreenshot"]').innerHTML = 'Screenshot URL ' + (reqHash ? '*' : '(Optional)');
+            var tipsEl = document.getElementById('depositTipsText');
+            if (tipsEl) tipsEl.textContent = config.deposit_tips || 'Only TRC20; wait for admin approval after submission.';
+          })
+          .catch(function() {
+            addressBox.textContent = 'Failed to load. Please try again.';
+          });
+      }
+
+      function showChannel() {
+        var ch = channels.find(function(c) { return c.id === selectedChannelId; });
+        if (!ch) return;
+        if (ch.type === 'address' && ch.value) {
+          depositAddress = ch.value;
+          addressBox.textContent = depositAddress;
+          btnCopy.style.display = 'block';
+        } else {
+          depositAddress = '';
+          addressBox.textContent = ch.value || ch.instruction || (ch.name || '') + ' – see instructions above.';
+          btnCopy.style.display = 'none';
+        }
+      }
+
+      btnCopy.addEventListener('click', function() {
+        if (!depositAddress) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(depositAddress).then(function() {
+            showToast('Address copied!');
+          }).catch(function() { fallbackCopy(); });
+        } else {
+          fallbackCopy();
+        }
+      });
+
+      function fallbackCopy() {
+        var input = document.createElement('input');
+        input.value = depositAddress;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('Address copied!');
+      }
+
+      submitBtn.addEventListener('click', function submitDeposit() {
+        var amountEl = document.getElementById('depositAmount');
+        var hashEl = document.getElementById('depositHash');
+        var screenshotEl = document.getElementById('depositScreenshot');
+        var noteEl = document.getElementById('depositNote');
+        var amount = amountEl ? parseFloat(amountEl.value) : 0;
+        var hash = (hashEl && hashEl.value) ? hashEl.value.trim() : null;
+        var screenshot_url = (screenshotEl && screenshotEl.value) ? screenshotEl.value.trim() : null;
+        var note = (noteEl && noteEl.value) ? noteEl.value.trim() : null;
+
+        var minAmt = parseFloat(config.deposit_min_amount);
+        if (isNaN(minAmt)) minAmt = 10;
+        if (!amount || amount < minAmt) {
+          showToast('Please enter valid amount (min ' + minAmt + ' USDT)');
+          return;
+        }
+        var reqHash = config.deposit_require_hash_or_screenshot !== '0';
+        if (reqHash && !hash && !screenshot_url) {
+          showToast('Please provide transaction hash or screenshot URL');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        fetch('/api/finance/deposit', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: amount, hash: hash, screenshot_url: screenshot_url, note: note, channel_id: selectedChannelId || null })
+        })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data.success) {
+              showToast('Deposit record submitted! Please wait for approval.');
+              amountEl.value = '';
+              if (hashEl) hashEl.value = '';
+              if (screenshotEl) screenshotEl.value = '';
+              if (noteEl) noteEl.value = '';
+            } else {
+              showToast(data.error || data.message || 'Submission failed');
+            }
+          })
+          .catch(function() {
+            showToast('Network error, please try again');
+          })
+          .finally(function() {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Deposit Record';
+          });
+      });
+
+      loadConfig();
+    })();
+  </script>
+</body>
+</html>

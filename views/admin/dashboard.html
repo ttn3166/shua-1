@@ -1,0 +1,2733 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 | 数据中心</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #1a202c;
+            --text-secondary: #718096;
+            --accent-color: #667eea;
+            --success-color: #00c853;
+            --danger-color: #ff5858;
+            --sidebar-width: 260px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: var(--primary-bg); height: 100vh; display: flex; overflow: hidden; min-height: 0; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .brand { font-size: 24px; font-weight: 700; margin-bottom: 40px; display: flex; align-items: center; gap: 10px; }
+        .menu-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.7);
+        }
+        .menu-item:hover, .menu-item.active { background: white; color: var(--accent-color); font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .menu-item svg { width: 20px; height: 20px; }
+        .menu-group { margin-top: 8px; }
+        .menu-group-toggle { display: flex; align-items: center; justify-content: space-between; }
+        .menu-sub { display: none; margin-top: 6px; padding-left: 10px; }
+        .menu-sub.open { display: block; }
+        .menu-sub .menu-item { padding: 10px 14px; font-size: 13px; border-radius: 12px; }
+        .menu-sub .menu-item::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.35); display: inline-block; }
+        .menu-sub .menu-item.active::before { background: var(--accent-color); }
+
+        /* Main Content */
+        .main-content { flex: 1; min-height: 0; padding: 30px 30px 60px; overflow-y: auto; overflow-x: hidden; position: relative; }
+        .view-container { display: none; animation: fadeIn 0.3s ease; }
+        .view-container.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Stats Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; margin-bottom: 30px; }
+        .stat-card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        .stat-label { font-size: 14px; color: var(--text-secondary); margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .stat-detail { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 8px; }
+        .stat-card.highlight { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .stat-card.highlight .stat-label { color: rgba(255,255,255,0.8); }
+        .stat-card.highlight .stat-value { color: white; }
+
+        /* Tables & Lists */
+        .content-card { background: var(--card-bg); border-radius: 24px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 16px; color: var(--text-secondary); font-size: 12px; font-weight: 600; border-bottom: 1px solid #eee; }
+        td { padding: 16px; color: var(--text-primary); font-size: 14px; border-bottom: 1px solid #f7fafc; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: #e6fffa; color: #00c853; }
+        .badge-warning { background: #fffaf0; color: #ed8936; }
+        .badge-danger { background: #fff5f5; color: #ff5858; }
+        .badge-primary { background: #ebf8ff; color: #4299e1; }
+
+        /* Forms & Inputs */
+        input, select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 16px; font-family: inherit; }
+        button { padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background: var(--accent-color); color: white; }
+        .btn-danger { background: var(--danger-color); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        /* Loading */
+        .loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.8); display: none; justify-content: center; align-items: center; z-index: 50; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--accent-color); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; overflow-y: auto; padding: 20px 0; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 400px; max-width: 90%; animation: slideUp 0.3s ease; max-height: 80vh; overflow-y: auto; }
+        .modal-inner-scroll { max-height: 80vh; overflow-y: auto; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: 0.3s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; }
+        input:checked + .slider { background-color: #48bb78; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Split View for VIP */
+        .split-view { display: grid; grid-template-columns: 350px 1fr; gap: 24px; }
+        
+        /* Toast */
+        #toast { position: fixed; top: 20px; right: 20px; background: #333; color: white; padding: 12px 24px; border-radius: 10px; z-index: 200; transform: translateY(-100px); transition: 0.3s; }
+
+        /* 视图页面标题 */
+        .view-page-title { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .view-page-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; }
+        /* 设置页分区卡片 */
+        .settings-section { background: var(--card-bg); border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04); }
+        .settings-section-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+        .form-row { margin-bottom: 16px; }
+        .form-row label { display: block; color: var(--text-secondary); font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+        .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 14px; transition: border-color 0.2s; }
+        .form-row input:focus, .form-row select:focus, .form-row textarea:focus { outline: none; border-color: var(--accent-color); }
+        .form-row .hint { font-size: 12px; color: #a0aec0; margin-top: 6px; }
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 48px 24px; color: var(--text-secondary); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        /* 财务 Tab */
+        .finance-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; }
+        .finance-tabs button { padding: 12px 24px; border: none; background: none; color: var(--text-secondary); font-weight: 500; cursor: pointer; border-radius: 8px 8px 0 0; transition: all 0.2s; }
+        .finance-tabs button:hover { color: var(--accent-color); background: rgba(102,126,234,0.08); }
+        .finance-tabs button.active { color: var(--accent-color); background: white; border-bottom: 2px solid white; margin-bottom: -2px; }
+        .mini-stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        .mini-stat { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 12px 20px; border-radius: 12px; font-size: 13px; color: var(--text-secondary); }
+        .mini-stat strong { color: var(--text-primary); font-size: 16px; }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="brand">⚡ Admin</div>
+        <div class="menu-item active" onclick="switchView('dashboard', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+            仪表盘
+        </div>
+        <div class="menu-item" onclick="switchView('users', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            用户管理
+        </div>
+        <div class="menu-item" onclick="switchView('finance', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            财务审批
+        </div>
+        <div class="menu-item" onclick="switchView('tasks', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            商品管理
+        </div>
+        <div class="menu-item" onclick="switchView('vip', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            VIP 管理
+        </div>
+        <div class="menu-item" onclick="switchView('orderParams', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            ⚙️ 做单参数
+        </div>
+        <div class="menu-item" onclick="switchView('agents', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+            🤵 业务员管理
+        </div>
+        <div class="menu-item" onclick="switchView('reports', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            📊 报表统计
+        </div>
+        <div class="menu-group">
+            <div class="menu-item menu-group-toggle" onclick="toggleSystemMenu(event)">
+                <span style="display:flex; align-items:center; gap:12px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    系统
+                </span>
+                <span id="systemMenuArrow" style="opacity:0.7;">▸</span>
+            </div>
+            <div id="systemSubMenu" class="menu-sub">
+                <div class="menu-item" onclick="switchView('systemBase', event)">基础与展示</div>
+                <div class="menu-item" onclick="switchView('systemFinance', event)">财务与提现</div>
+                <div class="menu-item" onclick="switchView('systemContent', event)">规则与内容</div>
+                <div class="menu-item" onclick="switchView('systemDeposit', event)">充值收款</div>
+                <div class="menu-item" onclick="switchView('systemFinanceConfig', event)">充值提现配置</div>
+            </div>
+        </div>
+        <div class="menu-item" onclick="switchView('loginLogs', event)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            📡 登录日志 (IP)
+        </div>
+        <div class="menu-item" onclick="logout()" style="margin-top: auto; color: #ffaaaa;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            退出登录
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div id="toast">操作成功</div>
+        <div class="loading-overlay" id="loading"><div class="spinner"></div></div>
+
+        <div id="dashboardView" class="view-container active">
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">注册用户总数量</div>
+                    <div class="stat-value" id="statUsers" style="color: white;">0</div>
+                    <div class="stat-detail">今日注册统计 <span id="statTodayReg">0</span> · 昨日注册统计 <span id="statYesterdayReg">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">用户充值总额</div>
+                    <div class="stat-value" id="statDeposit" style="color: white;">0</div>
+                    <div class="stat-detail">今日充值统计 <span id="statTodayDeposit">0</span> · 昨日充值统计 <span id="statYesterdayDeposit">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">用户提现成功总额</div>
+                    <div class="stat-value" id="statWithdraw" style="color: white;">0</div>
+                    <div class="stat-detail">今日提现成功 <span id="statTodayWithdraw">0</span> · 昨日提现成功 <span id="statYesterdayWithdraw">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">当月充值成功总额</div>
+                    <div class="stat-value" id="statMonthDeposit" style="color: white;">0</div>
+                    <div class="stat-detail">上月充值成功总额 <span id="statLastMonthDeposit">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">当月提现成功总额</div>
+                    <div class="stat-value" id="statMonthWithdraw" style="color: white;">0</div>
+                    <div class="stat-detail">上月提现成功总额 <span id="statLastMonthWithdraw">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">结算盈利总额</div>
+                    <div class="stat-value" id="statProfit" style="color: white;">0.00</div>
+                    <div class="stat-detail">当日结算盈利 <span id="statTodayProfit">0</span> · 昨日结算盈利 <span id="statYesterdayProfit">0</span></div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                    <div class="stat-label" style="color: rgba(255,255,255,0.9);">当前在线用户</div>
+                    <div class="stat-value" id="statOnline" style="color: white;">0</div>
+                    <div class="stat-detail">最近 10 分钟有活动 · 共 <span id="statOnlineCount">0</span> 人</div>
+                </div>
+            </div>
+            <div class="content-card" style="margin-bottom: 24px;">
+                <div class="card-title">在线用户列表（最近 10 分钟有活动）</div>
+                <div id="onlineUsersList" style="min-height: 60px; font-size: 13px; color: #718096;">加载中...</div>
+            </div>
+            <div class="stats-charts-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                <div class="content-card">
+                    <div class="card-title">近十天新增会员</div>
+                    <canvas id="members10dChart" style="max-height: 280px;"></canvas>
+                </div>
+                <div class="content-card">
+                    <div class="card-title">近十天充值统计 (U)</div>
+                    <canvas id="deposit10dChart" style="max-height: 280px;"></canvas>
+                </div>
+            </div>
+            <div class="content-card">
+                <div class="card-title">最新提现申请</div>
+                <div id="recentWithdrawalsList">加载中...</div>
+            </div>
+            <div class="content-card">
+                <div class="card-title">邀请趋势（最近30天）</div>
+                <canvas id="inviteTrendChart" style="max-height: 300px;"></canvas>
+            </div>
+        </div>
+
+        <div id="usersView" class="view-container">
+            <h1 class="view-page-title">👤 用户管理</h1>
+            <p class="view-page-desc">查看与筛选真实用户、做单账户，支持资金调节、重置密码、修改推荐关系等操作。</p>
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">用户列表</div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="userSearch" placeholder="搜索用户名/UID/邀请码..." style="width: 200px; margin: 0;">
+                        <button class="btn-primary" onclick="loadUsers()">搜索</button>
+                        <button class="btn-primary" onclick="resetUserFilters()" style="background: #a0aec0;">重置</button>
+                        <button class="btn-primary" onclick="exportInvites()" style="background: #48bb78;">
+                            <svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:4px;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            导出推荐数据
+                        </button>
+                    </div>
+                </div>
+                <div id="userAdvancedFilters" style="margin: 12px 0; padding: 12px; background: #f7fafc; border-radius: 8px; display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; font-size: 13px;">
+                        <input type="text" id="filterUserId" placeholder="用户ID" style="padding: 6px 10px;">
+                        <input type="text" id="filterPhone" placeholder="手机号" style="padding: 6px 10px;">
+                        <input type="text" id="filterUsername" placeholder="用户名" style="padding: 6px 10px;">
+                        <input type="text" id="filterLoginIp" placeholder="登录IP" style="padding: 6px 10px;">
+                        <input type="text" id="filterInviteCode" placeholder="邀请码" style="padding: 6px 10px;">
+                        <select id="filterVipLevel" style="padding: 6px 10px;"><option value="">等级</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+                        <select id="filterStatus" style="padding: 6px 10px;"><option value="">状态</option><option value="active">active</option><option value="banned">banned</option><option value="frozen">frozen</option></select>
+                        <input type="date" id="filterCreatedFrom" placeholder="注册起" style="padding: 6px 10px;">
+                        <input type="date" id="filterCreatedTo" placeholder="注册止" style="padding: 6px 10px;">
+                        <input type="number" id="filterBalanceMin" placeholder="余额≥" step="0.01" style="padding: 6px 10px;">
+                        <input type="number" id="filterBalanceMax" placeholder="余额≤" step="0.01" style="padding: 6px 10px;">
+                    </div>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <button type="button" onclick="document.getElementById('userAdvancedFilters').style.display = document.getElementById('userAdvancedFilters').style.display === 'none' ? 'block' : 'none';" style="background: none; border: none; color: #718096; cursor: pointer; font-size: 12px;">▼ 高级搜索</button>
+                </div>
+                
+                <!-- 用户类型标签页切换 -->
+                <div style="margin: 20px 0; display: flex; align-items: center; justify-content: space-between;">
+                    <div class="user-tabs" style="display: flex; gap: 10px;">
+                        <button id="tabReal" onclick="switchUserTab('real')" style="padding: 8px 20px; background: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+                            👤 真实用户 (Real Users)
+                        </button>
+                        <button id="tabWorker" onclick="switchUserTab('worker')" style="padding: 8px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+                            🤖 做单账户 (Workers)
+                        </button>
+                    </div>
+                    <button id="btnAddWorker" onclick="openAddWorkerModal()" style="padding: 8px 16px; background: #ed8936; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500; display: none;">
+                        ➕ 添加做单账号
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="usersTable">
+                        <thead><tr><th>ID</th><th>用户名</th><th>手机</th><th>余额</th><th>冻结</th><th>最近IP</th><th>钱包</th><th>资金密码</th><th>邀请码</th><th>推荐人</th><th>团队</th><th>抢单</th><th>进度</th><th>状态</th><th>注册时间</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div id="userPagination" style="margin-top: 12px; font-size: 13px; color: #718096;"></div>
+            </div>
+
+            <div class="content-card" style="margin-top: 20px;">
+                <div class="card-header">
+                    <div class="card-title">推荐奖励记录</div>
+                    <button class="btn-primary" onclick="loadReferralRewards()">刷新</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table id="rewardsTable">
+                        <thead><tr><th>ID</th><th>推荐人</th><th>被推荐人</th><th>奖励金额</th><th>发放时间</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="financeView" class="view-container">
+            <h1 class="view-page-title">💰 财务审批</h1>
+            <p class="view-page-desc">审核用户充值与提现申请，通过或拒绝后将影响用户余额与资金流水。</p>
+            <div class="mini-stats-row" id="financeMiniStats">
+                <span class="mini-stat">待审提现：<strong id="financePendingWithdraw">-</strong> 笔</span>
+                <span class="mini-stat">待审充值：<strong id="financePendingDeposit">-</strong> 笔</span>
+            </div>
+            <div class="content-card">
+                <div class="finance-tabs">
+                    <button type="button" id="financeTabWithdraw" class="active" onclick="switchFinanceTab('withdraw')">提现审批</button>
+                    <button type="button" id="financeTabDeposit" onclick="switchFinanceTab('deposit')">充值审批</button>
+                </div>
+                <div id="financePagination" style="margin-bottom:12px;font-size:13px;color:#718096;"></div>
+                <div id="financeList"></div>
+            </div>
+        </div>
+
+        <div id="tasksView" class="view-container">
+            <h1 class="view-page-title">📦 商品管理</h1>
+            <p class="view-page-desc">添加与管理抢单商品，设置名称、价格、VIP 等级与图片。</p>
+            <div class="split-view">
+                <div class="content-card" style="height: fit-content;">
+                    <div class="card-title">添加抢单商品</div>
+                    <div style="margin-top: 20px;">
+                        <input type="text" id="prodTitle" placeholder="商品名称 (如 iPhone 16)">
+                        <input type="number" id="prodPrice" placeholder="价格 (USDT)">
+                        <select id="prodVip">
+                            <option value="0" selected>全员通用</option>
+                            <option value="1">VIP 1</option>
+                            <option value="2">VIP 2</option>
+                            <option value="3">VIP 3</option>
+                            <option value="4">VIP 4</option>
+                        </select>
+                        <input type="text" id="prodImg" placeholder="图片URL (可选)">
+                        <button class="btn-primary" onclick="addProduct()" style="width: 100%">添加商品</button>
+                        <div style="display:flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn-primary" onclick="triggerProductsImport()" style="flex: 1; background: #4c51bf;">批量导入 (.xlsx)</button>
+                            <button class="btn-primary" onclick="downloadImportTemplate()" style="flex: 1; background: #718096;">下载模板</button>
+                        </div>
+                        <input id="prodImportFile" type="file" accept=".xlsx" style="display:none" onchange="importProductsExcel()" />
+                        <div style="margin-top: 10px; font-size: 12px; color: #718096; line-height: 1.5;">
+                            Excel 字段：Name（名称）、Price（单价）、Image（图片URL，可选）。导入商品默认设置为「全员通用」。
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card">
+                    <div class="card-title">商品列表</div>
+                    <table id="productsTable" style="margin-top: 20px;">
+                        <thead><tr><th>ID</th><th>图片</th><th>名称</th><th>价格</th><th>VIP</th><th>操作</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="vipView" class="view-container">
+            <h1 class="view-page-title">👑 VIP 管理</h1>
+            <p class="view-page-desc">统一管理 VIP 等级分层（同一张表），支持编辑全部字段；保存时会自动补齐可能缺失的映射字段。</p>
+            <div class="split-view">
+                <div class="content-card" style="height: fit-content;">
+                    <div class="card-title">新增 / 编辑 VIP 等级</div>
+                    <div style="margin-top: 16px;">
+                        <input type="hidden" id="vipTierId">
+
+                        <div class="form-row">
+                            <label>等级层级 (level / level_order)</label>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <input type="number" id="vipTierLevel" placeholder="level (如 1)">
+                                <input type="number" id="vipTierLevelOrder" placeholder="level_order (如 1)">
+                            </div>
+                            <div class="hint">保存时会自动同步：level ⇄ level_order</div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>名称 (name)</label>
+                            <input type="text" id="vipTierName" placeholder="如 Amazon Hall">
+                        </div>
+
+                        <div class="form-row">
+                            <label>门槛 (price / min_balance)</label>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <input type="number" id="vipTierPrice" placeholder="price (USDT)">
+                                <input type="number" id="vipTierMinBalance" placeholder="min_balance (USDT)">
+                            </div>
+                            <div class="hint">保存时会自动同步：price ⇄ min_balance</div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>佣金比例 (commission_rate)</label>
+                            <input type="number" id="vipTierCommissionRate" placeholder="百分比，如 2.5 表示 2.5%" step="0.001" min="0">
+                            <div class="hint">该字段存储为小数（0.025），此处输入百分比</div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>每日单数 (task_limit / daily_orders)</label>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <input type="number" id="vipTierTaskLimit" placeholder="task_limit">
+                                <input type="number" id="vipTierDailyOrders" placeholder="daily_orders">
+                            </div>
+                            <div class="hint">保存时会自动同步：task_limit ⇄ daily_orders</div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>描述 (description)</label>
+                            <textarea id="vipTierDescription" rows="3" placeholder="可选"></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 8px;">
+                            <button class="btn-primary" onclick="saveVipTier()" style="flex: 1">保存</button>
+                            <button onclick="resetVipTierForm()" style="flex: 1; background: #eee;">重置</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card">
+                    <div class="card-header">
+                        <div class="card-title">VIP 分层列表</div>
+                        <button class="btn-primary" onclick="resetVipTierForm()">➕ 新增等级</button>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table style="margin-top: 8px;">
+                            <thead><tr><th>层级</th><th>名称</th><th>门槛</th><th>佣金</th><th>单数</th><th>操作</th></tr></thead>
+                            <tbody id="vipTiersTable">
+                                <tr><td colspan="6" style="text-align:center; color:#999;">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 做单参数视图 -->
+        <div id="orderParamsView" class="view-container">
+            <h1 class="view-page-title">⚙️ 做单参数设置</h1>
+            <p class="view-page-desc">配置订单金额匹配比例，系统将根据用户余额自动生成符合比例的订单金额。</p>
+            <div class="content-card" style="max-width: 600px; margin: 0 auto;">
+                <div class="settings-section" style="background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%); border: 1px solid rgba(102,126,234,0.2); margin-bottom: 24px;">
+                    <div class="settings-section-title">📐 计算公式</div>
+                    <p style="color: var(--text-primary); font-size: 15px; margin: 0; line-height: 1.6;">订单金额 = 用户余额 × 随机比例 (最小比例 ~ 最大比例)</p>
+                </div>
+                
+                <div class="form-row">
+                    <label>📉 最小匹配比例 (Min Ratio)</label>
+                    <input type="number" id="matchMinRatio" step="0.01" min="0" max="1" placeholder="0.1">
+                    <div class="hint">例如：0.1 表示订单金额至少为用户余额的 10%</div>
+                </div>
+                <div class="form-row">
+                    <label>📈 最大匹配比例 (Max Ratio)</label>
+                    <input type="number" id="matchMaxRatio" step="0.01" min="0" max="1" placeholder="0.7">
+                    <div class="hint">例如：0.7 表示订单金额最多为用户余额的 70%</div>
+                </div>
+                <button onclick="saveOrderParams()" class="btn-primary" style="width: 100%; padding: 14px; font-size: 16px; border-radius: 12px;">💾 保存参数</button>
+            </div>
+        </div>
+
+        <!-- 会员等级入口已合并至 VIP 管理 -->
+
+        <!-- 业务员管理视图 -->
+        <div id="agentsView" class="view-container">
+            <h1 class="view-page-title">🤵 业务员管理</h1>
+            <p class="view-page-desc">业务员拥有专属推广权限，可查看下级用户人数与团队总余额。</p>
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">业务员列表</div>
+                    <button class="btn-primary" onclick="openAgentModal()" style="padding: 8px 16px;">
+                        ➕ 添加业务员
+                    </button>
+                </div>
+                
+                <p style="color: #718096; font-size: 14px; margin-bottom: 20px; padding: 0 15px;">
+                    业务员拥有专属推广权限，可以查看其下级用户的总人数和总余额。
+                </p>
+                
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户名</th>
+                                <th>邀请码</th>
+                                <th>下级人数</th>
+                                <th>团队总余额 (USDT)</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsTable">
+                            <tr><td colspan="8" style="text-align:center; color:#999;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 报表统计视图 -->
+        <div id="reportsView" class="view-container">
+            <h1 class="view-page-title">📊 数据统计与报表</h1>
+            <p class="view-page-desc">每日经营报表与全站资金流水明细，支持按时间与类型查看。</p>
+            <div class="content-card">
+                <div class="card-title" style="margin-bottom: 20px;">报表</div>
+                
+                <!-- 标签页切换 -->
+                <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 2px solid #e2e8f0;">
+                    <button id="tabDailyReport" onclick="switchReportTab('daily')" style="padding: 10px 20px; background: #3182ce; color: white; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 500;">
+                        📈 每日经营报表
+                    </button>
+                    <button id="tabTransactions" onclick="switchReportTab('transactions')" style="padding: 10px 20px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 500;">
+                        💰 资金流水明细
+                    </button>
+                </div>
+                
+                <!-- Tab 1: 每日报表 -->
+                <div id="dailyReportTab" style="display: block;">
+                    <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
+                        展示过去30天的运营数据，包括用户增长、充值提现、净入金等关键指标。
+                    </p>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>新增用户</th>
+                                    <th>总充值 (U)</th>
+                                    <th>总提现 (U)</th>
+                                    <th>净入金 (U)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyReportTable">
+                                <tr><td colspan="5" style="text-align:center; color:#999;">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Tab 2: 流水明细 -->
+                <div id="transactionsTab" style="display: none;">
+                    <p style="color: #718096; font-size: 14px; margin-bottom: 15px;">
+                        全站资金流水记录，包括充值、提现、任务佣金、系统调节等所有账变类型。
+                    </p>
+                    <div style="overflow-x: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>时间</th>
+                                    <th>用户</th>
+                                    <th>类型</th>
+                                    <th>金额 (U)</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTable">
+                                <tr><td colspan="6" style="text-align:center; color:#999;">加载中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <button onclick="loadMoreTransactions()" class="btn-primary" style="padding: 8px 20px;">加载更多</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 登录日志 (IP) 视图 -->
+        <div id="loginLogsView" class="view-container">
+            <h1 class="view-page-title">📡 登录日志</h1>
+            <p class="view-page-desc">查看用户登录 IP、User-Agent 及时间，支持按用户 ID 筛选。</p>
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">日志列表</div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="loginLogsUserId" placeholder="按用户ID筛选 (可选)" style="width: 180px; margin: 0; padding: 8px 12px;">
+                        <button class="btn-primary" onclick="loadLoginLogs()">查询</button>
+                        <button class="btn-primary" onclick="document.getElementById('loginLogsUserId').value=''; loadLoginLogs();" style="background: #718096;">重置</button>
+                    </div>
+                </div>
+                <p style="color: #718096; font-size: 13px; margin-bottom: 15px;">记录用户登录时的 IP 地址及时间，支持按用户 ID 筛选。</p>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用户ID</th>
+                                <th>用户名</th>
+                                <th>IP 地址</th>
+                                <th>User-Agent</th>
+                                <th>登录时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loginLogsTable">
+                            <tr><td colspan="6" style="text-align:center; color:#999;">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 15px; color: #718096; font-size: 12px;" id="loginLogsPagination"></div>
+            </div>
+        </div>
+
+        <div id="systemBaseView" class="view-container">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <h1 class="view-page-title">系统 · 基础与展示</h1>
+                <p class="view-page-desc">公告、客服链接、关于我们等用户端展示内容。</p>
+                <div class="settings-section">
+                    <div class="settings-section-title">📢 基础与展示</div>
+                    <div class="form-row">
+                        <label>首页滚动公告 (announcement)</label>
+                        <input type="text" id="setAnnounce" placeholder="输入公告内容，将显示在用户端首页">
+                    </div>
+                    <div class="form-row">
+                        <label>客服链接 (service_url)</label>
+                        <input type="text" id="setService" placeholder="https://t.me/...">
+                    </div>
+                    <div class="form-row">
+                        <label>关于我们 (about_us)</label>
+                        <textarea id="setAboutUs" rows="6" placeholder="HTML 或纯文本"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>首页 Banner 图 1 (home_banner_1)</label>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="setHomeBanner1" placeholder="图片 URL 或点击右侧上传" style="flex:1;min-width:200px;">
+                            <input type="file" id="uploadBanner1" accept="image/*" style="display:none;">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('uploadBanner1').click()">上传图片</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>首页 Banner 图 2 (home_banner_2)</label>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="setHomeBanner2" placeholder="图片 URL 或点击右侧上传" style="flex:1;min-width:200px;">
+                            <input type="file" id="uploadBanner2" accept="image/*" style="display:none;">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('uploadBanner2').click()">上传图片</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>首页 Banner 图 3 (home_banner_3)</label>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                            <input type="text" id="setHomeBanner3" placeholder="图片 URL 或点击右侧上传" style="flex:1;min-width:200px;">
+                            <input type="file" id="uploadBanner3" accept="image/*" style="display:none;">
+                            <button type="button" class="btn-secondary" onclick="document.getElementById('uploadBanner3').click()">上传图片</button>
+                        </div>
+                    </div>
+                    <div style="margin-top:6px; color:#718096; font-size:12px;">每个位置可填写完整图片 URL，或点击「上传图片」选择本地文件（上传后会自动填入当前框，需再点「保存本页」）。</div>
+                </div>
+                <div class="content-card" style="padding: 20px; text-align: center;">
+                    <button class="btn-primary" onclick="saveSettingsPartial(['announcement','service_url','about_us','home_banner_1','home_banner_2','home_banner_3'])" style="padding: 14px 48px; font-size: 16px; border-radius: 12px;">保存本页</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="systemFinanceView" class="view-container">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <h1 class="view-page-title">系统 · 财务与提现</h1>
+                <p class="view-page-desc">提现开关、手续费、最低提现、推荐奖励等业务规则。</p>
+                <div class="settings-section">
+                    <div class="settings-section-title">💰 财务与提现</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-row">
+                            <label>提现手续费 (%) (withdraw_fee)</label>
+                            <input type="number" id="setFee" placeholder="0">
+                        </div>
+                        <div class="form-row">
+                            <label>最低提现金额 (USDT) (withdraw_min)</label>
+                            <input type="number" id="setWithdrawMin" placeholder="10" min="0" step="0.01">
+                            <div class="hint">用户单笔提现不能低于此金额</div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>提现功能开关 (withdraw_open)</label>
+                        <select id="setWithdrawOpen">
+                            <option value="1">开启 (允许提现)</option>
+                            <option value="0">关闭 (禁止提现)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>推荐奖励金额 (元) (referral_reward_amount)</label>
+                        <input type="number" step="0.01" id="setReferralReward" placeholder="5.00">
+                        <div class="hint">每成功推荐 1 人，推荐人获得的奖励金额</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding: 20px; text-align: center;">
+                    <button class="btn-primary" onclick="saveSettingsPartial(['withdraw_fee','withdraw_min','withdraw_open','referral_reward_amount'])" style="padding: 14px 48px; font-size: 16px; border-radius: 12px;">保存本页</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="systemContentView" class="view-container">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <h1 class="view-page-title">系统 · 规则与内容</h1>
+                <p class="view-page-desc">用户端页面内容（邀请规则、VIP 规则、FAQ）。支持 HTML 或纯文本。</p>
+                <div class="settings-section">
+                    <div class="settings-section-title">📜 规则与内容</div>
+                    <div class="form-row">
+                        <label>邀请规则 (invitation_rule)</label>
+                        <textarea id="setInvitationRule" rows="6" placeholder="HTML 或纯文本"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>VIP 规则 (vip_rule)</label>
+                        <textarea id="setVipRule" rows="6" placeholder="HTML 或纯文本"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>FAQ (faq)</label>
+                        <textarea id="setFaq" rows="6" placeholder="HTML 或纯文本"></textarea>
+                    </div>
+                </div>
+                <div class="content-card" style="padding: 20px; text-align: center;">
+                    <button class="btn-primary" onclick="saveSettingsPartial(['invitation_rule','vip_rule','faq'])" style="padding: 14px 48px; font-size: 16px; border-radius: 12px;">保存本页</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="systemDepositView" class="view-container">
+            <div style="max-width: 720px; margin: 0 auto;">
+                <h1 class="view-page-title">系统 · 充值收款</h1>
+                <p class="view-page-desc">配置用户充值弹窗展示的收款地址。</p>
+                <div class="settings-section">
+                    <div class="settings-section-title">💳 充值收款</div>
+                    <div class="form-row">
+                        <label>充值地址 (deposit_address) · TRC20 USDT</label>
+                        <input type="text" id="setDepositAddress" placeholder="输入 TRC20 收款地址" style="font-family: monospace;">
+                        <div class="hint">保存后立即生效</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding: 20px; text-align: center;">
+                    <button class="btn-primary" onclick="saveSettingsPartial(['deposit_address'])" style="padding: 14px 48px; font-size: 16px; border-radius: 12px;">保存本页</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="systemFinanceConfigView" class="view-container">
+            <div style="max-width:720px;margin:0 auto;">
+                <h1 class="view-page-title">系统 · 充值提现配置</h1>
+                <p class="view-page-desc">充值/提现方式与规则，用户端按此展示。保存后请到「财务与提现」确认 withdraw_min / withdraw_open。</p>
+                <div class="settings-section">
+                    <div class="settings-section-title">充值</div>
+                    <div class="form-row"><label>deposit_channels JSON</label><textarea id="setDepositChannels" rows="5" style="font-family:monospace;"></textarea><div class="hint">充值渠道列表，如 [{"id":"trx","name":"TRC20-USDT","address":"xxx"}]，用户端展示支付方式选择；留空 [] 则用旧版 deposit_address</div></div>
+                    <div class="form-row"><label>deposit_min_amount</label><input type="number" id="setDepositMinAmount" min="0" step="0.01"><div class="hint">单笔最低充值金额（USDT），低于此值无法提交</div></div>
+                    <div class="form-row"><label>deposit_require_hash_or_screenshot (1=必填)</label><select id="setDepositRequireHash"><option value="1">必填</option><option value="0">选填</option></select><div class="hint">用户充值是否必须填写交易哈希或上传截图</div></div>
+                    <div class="form-row"><label>deposit_tips</label><textarea id="setDepositTips" rows="2"></textarea><div class="hint">充值页展示的提示文案，用户端可见（如：仅支持 TRC20、到账时间等）</div></div>
+                    <div class="form-row"><label>deposit_maintenance (1=关闭)</label><select id="setDepositMaintenance"><option value="0">正常</option><option value="1">维护</option></select><div class="hint">维护开启时用户端无法提交充值，仅显示提示</div></div>
+                    <div class="form-row"><label>deposit_daily_limit (0=不限)</label><input type="number" id="setDepositDailyLimit" min="0"><div class="hint">单日充值总额上限（USDT），0 表示不限制</div></div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-section-title">提现</div>
+                    <div class="form-row"><label>withdraw_channels JSON</label><textarea id="setWithdrawChannels" rows="4" style="font-family:monospace;"></textarea><div class="hint">提现渠道列表，格式同 deposit_channels，用户端选择提现方式</div></div>
+                    <div class="form-row"><label>withdraw_max</label><input type="number" id="setWithdrawMax" min="0" step="0.01"><div class="hint">单笔最高提现金额（USDT）</div></div>
+                    <div class="form-row"><label>withdraw_fee_type</label><select id="setWithdrawFeeType"><option value="percent">percent</option><option value="fixed">fixed</option></select><div class="hint">手续费类型：percent=按比例扣，fixed=每笔固定金额</div></div>
+                    <div class="form-row"><label>withdraw_fee_value</label><input type="number" id="setWithdrawFeeValue" min="0" step="0.01"><div class="hint">手续费值：percent 时为百分比（如 1 表示 1%），fixed 时为 USDT 金额</div></div>
+                    <div class="form-row"><label>withdraw_tips</label><textarea id="setWithdrawTips" rows="2"></textarea><div class="hint">提现页展示的提示文案，用户端可见</div></div>
+                    <div class="form-row"><label>withdraw_maintenance</label><select id="setWithdrawMaintenance"><option value="0">正常</option><option value="1">维护</option></select><div class="hint">维护开启时用户端无法发起提现</div></div>
+                    <div class="form-row"><label>withdraw_daily_count_limit / withdraw_daily_amount_limit (0=不限)</label><input type="number" id="setWithdrawDailyCountLimit" min="0"><input type="number" id="setWithdrawDailyAmountLimit" min="0" step="0.01"><div class="hint">单日提现次数上限、单日提现总额上限（USDT），0 表示不限制</div></div>
+                </div>
+                <div class="content-card" style="padding:20px;text-align:center;"><button class="btn-primary" onclick="saveFinanceConfig()">保存本页</button></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="balanceModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">💰 资金调节 (Adjust Balance)</h3>
+                <button onclick="document.getElementById('balanceModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <input type="hidden" id="editUserId">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #718096; font-size: 12px; margin-bottom: 5px; font-weight: 600;">用户</label>
+                <div id="editUserName" style="font-weight: bold; color: #2d3748; font-size: 15px;"></div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #718096; font-size: 12px; margin-bottom: 5px; font-weight: 600;">操作类型</label>
+                <select id="adjustType" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                    <option value="add">➕ 加款 (Add Balance)</option>
+                    <option value="deduct">➖ 扣款 (Deduct Balance)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #718096; font-size: 12px; margin-bottom: 5px; font-weight: 600;">金额 (USDT)</label>
+                <input type="number" id="editAmount" placeholder="请输入金额" step="0.01" min="0" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #718096; font-size: 12px; margin-bottom: 5px; font-weight: 600;">备注</label>
+                <input type="text" id="editReason" placeholder="操作原因..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="document.getElementById('balanceModal').style.display='none'" style="flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #4a5568;">取消</button>
+                <button onclick="submitBalance()" class="btn-primary" style="flex: 1; padding: 10px; border-radius: 8px;">确认调账</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 做单账户创建模态框 -->
+    <div id="workerModal" class="modal">
+        <div class="modal-content" style="max-width: 450px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">🤖 添加做单账户</h3>
+                <button onclick="document.getElementById('workerModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #4a5568; font-size: 14px; margin-bottom: 5px; font-weight: 500;">用户名 (Username)</label>
+                <input type="text" id="workerUser" placeholder="请输入用户名..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; color: #4a5568; font-size: 14px; margin-bottom: 5px; font-weight: 500;">密码 (Password)</label>
+                <input type="text" id="workerPass" placeholder="请输入密码..." style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #4a5568; font-size: 14px; margin-bottom: 5px; font-weight: 500;">初始余额 (Initial Balance)</label>
+                <input type="number" id="workerBal" placeholder="0.00" step="0.01" min="0" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                <div style="color: #718096; font-size: 12px; margin-top: 5px;">💡 可选填，默认为 0 USDT</div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="document.getElementById('workerModal').style.display='none'" style="flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #4a5568;">取消</button>
+                <button onclick="submitWorker()" class="btn-primary" style="flex: 1; padding: 10px; border-radius: 8px;">创建账户</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h3>密码管理</h3>
+            <input type="hidden" id="resetUserId">
+            <p id="resetUserName" style="margin: 10px 0; color: #666;"></p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">重置登录密码</label>
+                <input type="text" id="newLoginPassword" placeholder="输入新登录密码 (至少6位)" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <button onclick="resetLoginPassword()" class="btn-primary" style="width:100%; margin-top:8px; padding:8px;">重置登录密码</button>
+            </div>
+            
+            <div style="border-top:1px solid #eee; padding-top:15px; margin-top:15px;">
+                <label style="display:block; font-size:13px; color:#666; margin-bottom:8px;">清除资金密码</label>
+                <p style="font-size:12px; color:#999; margin-bottom:8px;">清除后用户需重新设置</p>
+                <button onclick="resetSecurityPassword()" class="btn-danger" style="width:100%; padding:8px;">清除资金密码</button>
+            </div>
+            
+            <div style="margin-top:20px;">
+                <button onclick="document.getElementById('passwordModal').style.display='none'" style="width:100%; padding:10px; background:#eee; border:none; border-radius:8px; cursor:pointer;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 团队详情模态框 -->
+    <div id="teamModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">团队成员列表</h3>
+                <button onclick="document.getElementById('teamModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <div id="teamModalContent" style="min-height: 200px;">
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <div class="spinner" style="margin: 0 auto 20px;"></div>
+                    <p>加载中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改推荐关系模态框 -->
+    <div id="referrerModal" class="modal">
+        <div class="modal-content" style="max-width: 500px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">修改推荐关系</h3>
+                <button onclick="document.getElementById('referrerModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 13px; color: #856404;">
+                    ⚠️ <strong>注意</strong>：此操作将改变用户的推荐关系，请谨慎操作。
+                </p>
+            </div>
+            
+            <div id="referrerModalContent">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        当前用户：<span id="currentUserName" style="color: #667eea;"></span>
+                    </label>
+                    <div style="font-size: 13px; color: #666; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                        当前推荐人：<span id="currentReferrerName" style="font-weight: 600;"></span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        新推荐人邀请码：
+                    </label>
+                    <input 
+                        type="text" 
+                        id="newReferrerCode" 
+                        placeholder="输入新推荐人的邀请码（留空则清除推荐关系）" 
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                    >
+                    <p style="font-size: 12px; color: #999; margin-top: 8px;">
+                        💡 提示：可以在用户列表中查看每个用户的邀请码
+                    </p>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="submitReferrerChange()" class="btn-primary" style="flex: 1;">
+                        确认修改
+                    </button>
+                    <button onclick="document.getElementById('referrerModal').style.display='none'" style="flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #4a5568;">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 派送订单模态框 -->
+    <div id="dispatchModal" class="modal">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">🎯 派送订单（预设插队）</h3>
+                <button onclick="document.getElementById('dispatchModal').style.display='none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            
+            <div style="background: #ffebee; border: 1px solid #ff6b6b; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 13px; color: #c62828;">
+                    ⚠️ <strong>派单说明</strong>：为指定用户在特定任务编号时匹配大额订单（埋雷）
+                </p>
+            </div>
+            
+            <div id="dispatchModalContent">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        目标用户：<span id="dispatchUserName" style="color: #667eea;"></span>
+                    </label>
+                    <div style="font-size: 13px; color: #666; background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                        当前进度：<span id="dispatchCurrentProgress" style="font-weight: 600;">0</span> 单
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                        任务编号（第几单触发）*
+                    </label>
+                    <input 
+                        type="number" 
+                        id="dispatchTaskIndex" 
+                        placeholder="例如：输入 5 表示用户做第5单时触发" 
+                        min="1"
+                        style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                    >
+                    <p style="font-size: 12px; color: #999; margin-top: 5px;">
+                        💡 用户抢到第N单时会匹配此订单
+                    </p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                            最小金额 (USDT)*
+                        </label>
+                        <input 
+                            type="number" 
+                            id="dispatchMinAmount" 
+                            placeholder="例如：1000" 
+                            min="0"
+                            step="0.01"
+                            style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                        >
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #333;">
+                            最大金额 (USDT)*
+                        </label>
+                        <input 
+                            type="number" 
+                            id="dispatchMaxAmount" 
+                            placeholder="例如：5000" 
+                            min="0"
+                            step="0.01"
+                            style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;"
+                        >
+                    </div>
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 12px; color: #1565c0;">
+                        📌 <strong>示例</strong>：设置任务编号=10，金额范围=1000-5000，则用户做第10单时会随机匹配1000-5000 USDT的订单
+                    </p>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="submitDispatchOrder()" class="btn-primary" style="flex: 1;">
+                        确认派单
+                    </button>
+                    <button onclick="document.getElementById('dispatchModal').style.display='none'" style="flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: #4a5568;">
+                        取消
+                    </button>
+                </div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2e8f0;">
+                
+                <div id="dispatchOrdersList" style="max-height: 200px; overflow-y: auto;">
+                    <div style="text-align: center; padding: 20px; color: #999;">
+                        <div class="spinner" style="margin: 0 auto 10px;"></div>
+                        <p style="font-size: 13px;">加载已派订单...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/admin';
+        const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+        
+        // --- Core Functions ---
+        
+        async function fetchAPI(endpoint, options = {}) {
+            if (!token) { window.location.href = 'login.html'; return; }
+            options.headers = { ...options.headers, 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' };
+            try {
+                const res = await fetch(API_BASE + endpoint, options);
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                const data = await res.json();
+                return data;
+            } catch (err) {
+                console.error("API Error:", err);
+                return { success: false, message: '网络请求失败，请检查控制台' };
+            }
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.transform = 'translateY(0)';
+            setTimeout(() => t.style.transform = 'translateY(-100px)', 3000);
+        }
+
+        function toggleSystemMenu(event) {
+            try { if (event) event.preventDefault(); } catch (e) {}
+            try { if (event) event.stopPropagation(); } catch (e) {}
+            const sub = document.getElementById('systemSubMenu');
+            const arrow = document.getElementById('systemMenuArrow');
+            if (!sub) return;
+            const open = sub.classList.toggle('open');
+            if (arrow) arrow.textContent = open ? '▾' : '▸';
+        }
+
+        function switchView(viewName, event) {
+            // Remove active from all views and menus
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            // Activate selected
+            const targetView = document.getElementById(viewName + 'View');
+            if (targetView) {
+                targetView.classList.add('active');
+                if (event) event.currentTarget.classList.add('active');
+                
+                // Load data based on view
+                if (viewName === 'dashboard') loadStats();
+                if (viewName === 'users') {
+                    loadUsers();
+                    loadReferralRewards();
+                }
+                if (viewName === 'finance') loadWithdrawals();
+                if (viewName === 'tasks') loadProducts();
+                if (viewName === 'vip') loadVipTiers();
+                if (viewName === 'orderParams') loadOrderParams();
+                if (viewName === 'agents') loadAgents();
+                if (viewName === 'reports') {
+                    currentTransactionOffset = 0;
+                    switchReportTab('daily');
+                }
+                if (viewName === 'loginLogs') loadLoginLogs();
+
+                // System group views
+                if (['systemBase', 'systemFinance', 'systemContent', 'systemDeposit', 'systemFinanceConfig'].includes(viewName)) {
+                    const sub = document.getElementById('systemSubMenu');
+                    const arrow = document.getElementById('systemMenuArrow');
+                    if (sub && !sub.classList.contains('open')) sub.classList.add('open');
+                    if (arrow) arrow.textContent = '▾';
+                    loadSettings();
+                    if (viewName === 'systemBase') setupBannerUpload();
+                }
+            } else {
+                console.error("View not found:", viewName + 'View');
+            }
+        }
+
+        // --- Dashboard ---
+        let members10dChart, deposit10dChart;
+        async function loadStats() {
+            const res = await fetchAPI('/stats');
+            if (res.success) {
+                var d = res.data;
+                function set(id, val) { var e = document.getElementById(id); if (e) e.textContent = val; }
+                set('statUsers', d.total_users || 0);
+                set('statTodayReg', d.today_reg || 0);
+                set('statYesterdayReg', d.yesterday_reg || 0);
+                set('statDeposit', parseFloat(d.total_deposit || 0).toFixed(2));
+                set('statTodayDeposit', parseFloat(d.today_deposit || 0).toFixed(2));
+                set('statYesterdayDeposit', parseFloat(d.yesterday_deposit || 0).toFixed(2));
+                set('statWithdraw', parseFloat(d.total_withdraw || 0).toFixed(2));
+                set('statTodayWithdraw', parseFloat(d.today_withdraw || 0).toFixed(2));
+                set('statYesterdayWithdraw', parseFloat(d.yesterday_withdraw || 0).toFixed(2));
+                set('statMonthDeposit', parseFloat(d.month_deposit || 0).toFixed(2));
+                set('statLastMonthDeposit', parseFloat(d.last_month_deposit || 0).toFixed(2));
+                set('statMonthWithdraw', parseFloat(d.month_withdraw || 0).toFixed(2));
+                set('statLastMonthWithdraw', parseFloat(d.last_month_withdraw || 0).toFixed(2));
+                set('statProfit', parseFloat(d.total_profit || 0).toFixed(2));
+                set('statTodayProfit', parseFloat(d.today_profit || 0).toFixed(2));
+                set('statYesterdayProfit', parseFloat(d.yesterday_profit || 0).toFixed(2));
+                set('statOnline', d.online_count != null ? d.online_count : 0);
+                set('statOnlineCount', d.online_count != null ? d.online_count : 0);
+                var listEl = document.getElementById('onlineUsersList');
+                if (listEl) {
+                    if (d.online_users && d.online_users.length) {
+                        listEl.innerHTML = '<table style="width:100%; border-collapse:collapse;"><thead><tr style="border-bottom:1px solid #e2e8f0;"><th style="text-align:left; padding:8px;">ID</th><th style="text-align:left; padding:8px;">用户名</th><th style="text-align:left; padding:8px;">最后活跃</th></tr></thead><tbody>' +
+                            d.online_users.map(function(u){ return '<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:8px;">'+u.id+'</td><td style="padding:8px;">'+(u.username||'-')+'</td><td style="padding:8px;">'+(u.last_active_at||'-')+'</td></tr>'; }).join('') + '</tbody></table>';
+                    } else {
+                        listEl.innerHTML = '<span style="color:#a0aec0;">暂无在线用户（10 分钟内有请求的用户会显示在此）</span>';
+                    }
+                }
+                if (d.members_10d && d.members_10d.length) {
+                    if (members10dChart) members10dChart.destroy();
+                    members10dChart = new Chart(document.getElementById('members10dChart'), {
+                        type: 'bar',
+                        data: { labels: d.members_10d.map(function(x){return x.date;}), datasets: [{ label: '新增会员', data: d.members_10d.map(function(x){return x.count;}), backgroundColor: 'rgba(102,126,234,0.6)' }] },
+                        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                    });
+                }
+                if (d.deposit_10d && d.deposit_10d.length) {
+                    if (deposit10dChart) deposit10dChart.destroy();
+                    deposit10dChart = new Chart(document.getElementById('deposit10dChart'), {
+                        type: 'bar',
+                        data: { labels: d.deposit_10d.map(function(x){return x.date;}), datasets: [{ label: '充值(U)', data: d.deposit_10d.map(function(x){return x.amount;}), backgroundColor: 'rgba(72,187,120,0.6)' }] },
+                        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                    });
+                }
+            }
+        }
+
+        let inviteChart;
+        async function loadInviteTrend() {
+            try {
+                const res = await fetchAPI('/invite-trends');
+                if (res.success && res.data) {
+                    const ctx = document.getElementById('inviteTrendChart');
+                    if (inviteChart) inviteChart.destroy();
+                    inviteChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: res.data.map(d => d.date),
+                            datasets: [{
+                                label: '新增邀请',
+                                data: res.data.map(d => d.count),
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102,126,234,0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                }
+            } catch(e) { console.error('加载趋势图失败:', e); }
+        }
+
+        // --- Users ---
+        let currentUserType = 'real';
+        let currentUserPage = 1;
+        var userPageSize = 50;
+
+        function buildUserQueryParams(page) {
+            var p = new URLSearchParams();
+            var search = document.getElementById('userSearch');
+            if (search && search.value && search.value.trim()) p.set('search', search.value.trim());
+            p.set('type', currentUserType);
+            p.set('limit', userPageSize);
+            p.set('offset', (((page || currentUserPage) - 1) * userPageSize));
+            var ids = ['filterUserId','filterPhone','filterUsername','filterLoginIp','filterInviteCode','filterVipLevel','filterStatus','filterCreatedFrom','filterCreatedTo','filterBalanceMin','filterBalanceMax'];
+            var keys = ['user_id','phone','username','login_ip','invite_code','vip_level','status','created_from','created_to','balance_min','balance_max'];
+            for (var i = 0; i < ids.length; i++) {
+                var el = document.getElementById(ids[i]);
+                if (el && el.value && String(el.value).trim()) p.set(keys[i], String(el.value).trim());
+            }
+            return p.toString();
+        }
+
+        function resetUserFilters() {
+            document.getElementById('userSearch').value = '';
+            ['filterUserId','filterPhone','filterUsername','filterLoginIp','filterInviteCode','filterVipLevel','filterStatus','filterCreatedFrom','filterCreatedTo','filterBalanceMin','filterBalanceMax'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            currentUserPage = 1;
+            loadUsers();
+        }
+
+        async function loadUsers(type, page) {
+            if (type) currentUserType = type;
+            if (page) currentUserPage = page;
+            var qs = buildUserQueryParams(currentUserPage);
+            const res = await fetchAPI('/users?' + qs);
+            const tbody = document.querySelector('#usersTable tbody');
+            tbody.innerHTML = '';
+            if (res.success && res.data.users) {
+                res.data.users.forEach(u => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${u.id}</td>
+                            <td>${u.username}</td>
+                            <td style="font-size:11px;">${u.phone || '-'}</td>
+                            <td>${(u.balance || 0).toFixed(2)}</td>
+                            <td>${u.frozen_balance || 0}</td>
+                            <td style="font-family:monospace;font-size:11px;" title="${u.last_login_ip || '-'}">${u.last_login_ip || '-'}</td>
+                            <td>
+                                ${u.wallet_address 
+                                    ? `<span class="badge badge-success" style="cursor:pointer; font-family:monospace; font-size:11px;" title="${u.wallet_address}" onclick="navigator.clipboard.writeText('${u.wallet_address}');showToast('地址已复制: ${u.wallet_address.substring(0,6)}...')">${u.wallet_address.substring(0,6)}...${u.wallet_address.substring(u.wallet_address.length-4)}</span>` 
+                                    : '<span class="badge" style="background:#eee;color:#999;font-size:11px;">未绑定</span>'
+                                }
+                            </td>
+                            <td>
+                                ${u.has_security_password 
+                                    ? '<span class="badge badge-success" style="font-size:11px;">✅ 已设置</span>' 
+                                    : '<span class="badge badge-warning" style="font-size:11px;">⚠️ 未设置</span>'
+                                }
+                            </td>
+                            <td>
+                                ${u.invite_code 
+                                    ? `<span class="badge badge-primary" style="cursor:pointer; font-family:monospace; font-size:11px;" title="点击复制" onclick="navigator.clipboard.writeText('${u.invite_code}');showToast('邀请码已复制: ${u.invite_code}')">${u.invite_code}</span>` 
+                                    : '<span class="badge" style="background:#eee;color:#999;font-size:11px;">-</span>'
+                                }
+                            </td>
+                            <td>
+                                ${u.referrer_name 
+                                    ? `<span style="font-size:12px;color:#667eea;">${u.referrer_name}</span>` 
+                                    : '<span style="font-size:12px;color:#ccc;">-</span>'
+                                }
+                            </td>
+                            <td>
+                                ${u.team_count > 0 
+                                    ? `<span class="badge" style="background:#667eea;color:white;font-size:11px;font-weight:700;cursor:pointer;" onclick="openTeamModal(${u.id}, '${u.username}', ${u.team_count})" title="点击查看团队成员">${u.team_count} 人 👥</span>` 
+                                    : '<span class="badge" style="background:#f0f0f0;color:#999;font-size:11px;">0 人</span>'
+                                }
+                            </td>
+                            <td>
+                                <label class="switch" style="margin: 0;">
+                                    <input type="checkbox" ${u.allow_grab === 1 ? 'checked' : ''} onchange="toggleGrab(${u.id}, '${u.username}')">
+                                    <span class="slider"></span>
+                                </label>
+                            </td>
+                            <td style="text-align: center;">
+                                <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
+                                    <span style="font-weight: 600; color: #667eea;">${u.task_progress || 0}</span>
+                                    <button class="btn-sm" style="background:#ff9800;color:white;padding:4px 8px;font-size:11px;" onclick="resetProgress(${u.id}, '${u.username}', ${u.task_progress || 0})" title="重置进度">
+                                        🔄
+                                    </button>
+                                </div>
+                            </td>
+                            <td><span class="badge ${u.status==='active'?'badge-success':'badge-danger'}">${u.status}</span></td>
+                            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td style="white-space:nowrap;">
+                                <button onclick="openBalanceModal(${u.id}, '${u.username}')" style="background:#38a169; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="资金调节">资金</button>
+                                <button onclick="openDispatchModal(${u.id}, '${u.username}', ${u.task_progress})" style="background:#d69e2e; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="派单插队">派单</button>
+                                <button onclick="openEditUserModal(${u.id}, '${u.username}', ${u.vip_level || 1}, ${u.credit_score || 100}, ${u.allow_withdraw})" style="background:#3182ce; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="编辑资料">编辑</button>
+                                <button onclick="resetUserProgress(${u.id})" style="background:#805ad5; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="重置进度">重置</button>
+                                ${u.status === 'banned' 
+                                    ? '<button onclick="toggleUserStatus(' + u.id + ', 0)" style="background:#718096; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">解冻</button>' 
+                                    : '<button onclick="toggleUserStatus(' + u.id + ', 1)" style="background:#e53e3e; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">冻结</button>'
+                                }
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            var pag = res.data && res.data.pagination;
+            var pagEl = document.getElementById('userPagination');
+            if (pagEl && pag) {
+                var totalPages = Math.ceil((pag.total || 0) / userPageSize) || 1;
+                var html = '共 ' + (pag.total || 0) + ' 条 · 第 ' + currentUserPage + '/' + totalPages + ' 页';
+                if (totalPages > 1) {
+                    html += ' · ';
+                    if (currentUserPage > 1) html += '<a href="javascript:loadUsers(null,' + (currentUserPage - 1) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                    if (currentUserPage < totalPages) html += '<a href="javascript:loadUsers(null,' + (currentUserPage + 1) + ')" style="color:#3182ce;">下一页</a>';
+                }
+                pagEl.innerHTML = html;
+            }
+        }
+
+        // 切换用户类型标签页
+        function switchUserTab(type) {
+            currentUserType = type;
+            currentUserPage = 1;
+            
+            // 更新按钮样式
+            const tabReal = document.getElementById('tabReal');
+            const tabWorker = document.getElementById('tabWorker');
+            const btnAddWorker = document.getElementById('btnAddWorker');
+            
+            if (type === 'real') {
+                tabReal.style.background = '#3182ce';
+                tabReal.style.color = 'white';
+                tabWorker.style.background = '#e2e8f0';
+                tabWorker.style.color = '#4a5568';
+                btnAddWorker.style.display = 'none';
+            } else {
+                tabWorker.style.background = '#3182ce';
+                tabWorker.style.color = 'white';
+                tabReal.style.background = '#e2e8f0';
+                tabReal.style.color = '#4a5568';
+                btnAddWorker.style.display = 'inline-block';
+            }
+            
+            // 重新加载用户列表
+            loadUsers(type);
+        }
+
+        // 打开添加做单账户模态框
+        function openAddWorkerModal() {
+            document.getElementById('workerUser').value = '';
+            document.getElementById('workerPass').value = '';
+            document.getElementById('workerBal').value = '';
+            document.getElementById('workerModal').style.display = 'flex';
+        }
+
+        // 提交创建做单账户
+        async function submitWorker() {
+            const username = document.getElementById('workerUser').value;
+            const password = document.getElementById('workerPass').value;
+            const balance = document.getElementById('workerBal').value;
+            
+            if (!username || !password) {
+                showToast('❌ 请填写用户名和密码');
+                return;
+            }
+            
+            try {
+                const res = await fetchAPI('/worker/create', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password, balance: parseFloat(balance) || 0 })
+                });
+                
+                if (res.success) {
+                    showToast('✅ 做单账户创建成功');
+                    document.getElementById('workerModal').style.display = 'none';
+                    loadUsers('worker');
+                } else {
+                    showToast('❌ ' + (res.message || '创建失败'));
+                }
+            } catch (e) {
+                showToast('❌ 请求失败');
+                console.error(e);
+            }
+        }
+
+        function openBalanceModal(id, name) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editUserName').textContent = name;
+            document.getElementById('adjustType').value = 'add';
+            document.getElementById('editAmount').value = '';
+            document.getElementById('editReason').value = '';
+            document.getElementById('balanceModal').style.display = 'flex';
+        }
+
+        async function submitBalance() {
+            var id = document.getElementById('editUserId').value;
+            var type = document.getElementById('adjustType').value;
+            var amount = document.getElementById('editAmount').value;
+            var remark = document.getElementById('editReason').value;
+
+            if (!amount) { showToast('Please enter amount'); return; }
+            if (parseFloat(amount) <= 0) { showToast('Please enter a valid amount'); return; }
+
+            try {
+                var res = await fetchAPI('/adjust-balance', {
+                    method: 'POST',
+                    body: JSON.stringify({ user_id: parseInt(id, 10), type: type, amount: parseFloat(amount), remark: remark || '' })
+                });
+
+                if (res.success) {
+                    showToast('Success');
+                    document.getElementById('balanceModal').style.display = 'none';
+                    loadUsers();
+                } else {
+                    console.error('Adjust failed:', res);
+                    showToast(res.message || 'Operation failed');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Network Error');
+            }
+        }
+
+        async function toggleStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'banned' : 'active';
+            if (!confirm(`确定要${newStatus === 'banned' ? '冻结' : '解冻'}该用户吗？`)) return;
+            
+            const res = await fetchAPI(`/users/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.success) { showToast('操作成功'); loadUsers(); }
+        }
+
+        // --- Password Management ---
+        function openPasswordModal(id, name) {
+            document.getElementById('resetUserId').value = id;
+            document.getElementById('resetUserName').textContent = '用户: ' + name;
+            document.getElementById('newLoginPassword').value = '';
+            document.getElementById('passwordModal').style.display = 'flex';
+        }
+
+        async function resetLoginPassword() {
+            const id = document.getElementById('resetUserId').value;
+            const newPassword = document.getElementById('newLoginPassword').value;
+            
+            if (!newPassword || newPassword.length < 6) {
+                showToast('密码至少6位');
+                return;
+            }
+            
+            if (!confirm('确定要重置该用户的登录密码吗？')) return;
+            
+            const res = await fetchAPI(`/users/${id}/reset-password`, {
+                method: 'POST',
+                body: JSON.stringify({ new_password: newPassword })
+            });
+            
+            if (res.success) {
+                showToast('登录密码已重置');
+                document.getElementById('newLoginPassword').value = '';
+                showToast(res.message || '重置失败');
+            }
+        }
+
+        async function resetSecurityPassword() {
+            const id = document.getElementById('resetUserId').value;
+            
+            if (!confirm('确定要清除该用户的资金密码吗？用户需重新设置。')) return;
+            
+            const res = await fetchAPI(`/users/${id}/reset-security-password`, {
+                method: 'POST',
+                body: JSON.stringify({})
+            });
+            
+            if (res.success) {
+                showToast('资金密码已清除');
+                document.getElementById('passwordModal').style.display = 'none';
+                loadUsers();
+            } else {
+                showToast(res.message || '清除失败');
+            }
+        }
+
+        // --- 团队管理 ---
+        async function openTeamModal(userId, username, teamCount) {
+            const modal = document.getElementById('teamModal');
+            const content = document.getElementById('teamModalContent');
+            modal.style.display = 'flex';
+            content.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner" style="margin:0 auto 20px;"></div><p>加载中...</p></div>';
+            
+            try {
+                const res = await fetchAPI(`/users/${userId}/team`);
+                if (res.success && res.data.team) {
+                    const team = res.data.team;
+                    if (team.length === 0) {
+                        content.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><p style="font-size:48px;">📭</p><p>该用户暂无团队成员</p></div>';
+                        return;
+                    }
+                    let html = `<div style="background:#f8f9fa;padding:15px;border-radius:12px;margin-bottom:20px;"><div style="font-size:14px;color:#666;"><strong style="color:#667eea;font-size:16px;">${username}</strong> 的团队</div><div style="font-size:13px;color:#999;margin-top:5px;">共 <strong style="color:#667eea;">${team.length}</strong> 名成员</div></div><div style="overflow-x:auto;"><table style="width:100%;font-size:13px;"><thead><tr><th>ID</th><th>用户名</th><th>余额</th><th>下级人数</th><th>状态</th><th>注册时间</th></tr></thead><tbody>`;
+                    team.forEach(m => {
+                        html += `<tr><td>${m.id}</td><td><strong>${m.username}</strong></td><td>${m.balance.toFixed(2)}</td><td>${m.sub_team_count > 0 ? '<span class="badge badge-primary" style="font-size:10px;">'+m.sub_team_count+' 人</span>' : '<span style="color:#ccc;">0</span>'}</td><td><span class="badge ${m.status === 'active' ? 'badge-success' : 'badge-danger'}" style="font-size:10px;">${m.status}</span></td><td>${new Date(m.created_at).toLocaleDateString()}</td></tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                    content.innerHTML = html;
+                } else {
+                    content.innerHTML = '<div style="text-align:center;padding:40px;color:#ff5858;"><p>❌ 加载失败</p></div>';
+                }
+            } catch (err) {
+                content.innerHTML = '<div style="text-align:center;padding:40px;color:#ff5858;"><p>❌ 加载失败</p></div>';
+            }
+        }
+
+        // --- Products ---
+        async function loadProducts() {
+            const res = await fetchAPI('/products');
+            const tbody = document.querySelector('#productsTable tbody');
+            tbody.innerHTML = '';
+            if (res.success && res.data.products) {
+                res.data.products.forEach(p => {
+                    const vipText = (p.vip_level == null || Number(p.vip_level) === 0) ? '通用' : ('VIP ' + p.vip_level);
+                    const imgUrl = (p.image && String(p.image).trim()) ? String(p.image).replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
+                    const placeholder = 'https://placehold.co/48x48/e2e8f0/718096?text=N/A';
+                    const imgHtml = imgUrl
+                        ? '<img src="' + imgUrl + '" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;background:#f5f5f5;" onerror="this.onerror=null;this.src=\'' + placeholder + '\';" loading="lazy">'
+                        : '<span style="color:#718096;font-size:12px;">无图</span>';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${p.id}</td>
+                            <td>${imgHtml}</td>
+                            <td>${(p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                            <td>${p.price}</td>
+                            <td>${vipText}</td>
+                            <td><button class="btn-sm btn-danger" onclick="deleteProduct(${p.id})">删除</button></td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        async function addProduct() {
+            const data = {
+                title: document.getElementById('prodTitle').value,
+                price: document.getElementById('prodPrice').value,
+                vip_level: document.getElementById('prodVip').value,
+                image: document.getElementById('prodImg').value || `https://placehold.co/100`
+            };
+            const res = await fetchAPI('/products', { method: 'POST', body: JSON.stringify(data) });
+            if (res.success) { showToast('商品添加成功'); loadProducts(); }
+        }
+
+        function triggerProductsImport() {
+            const input = document.getElementById('prodImportFile');
+            if (input) input.click();
+        }
+
+        function downloadImportTemplate() {
+            // 简易 CSV 模板（Excel 也可直接打开）
+            const csv = '\ufeffName,Price,Image\nSample Product,50,https://placehold.co/100\n';
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'products-import-template.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        async function importProductsExcel() {
+            const input = document.getElementById('prodImportFile');
+            if (!input || !input.files || !input.files[0]) return;
+            const file = input.files[0];
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                // 注意：这里不能用 fetchAPI（它会强制 Content-Type=application/json）
+                const res = await fetch(API_BASE + '/products/import', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (token || '') },
+                    body: fd
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    showToast(data.message || '导入成功');
+                    loadProducts();
+                } else {
+                    showToast((data && (data.message || data.error)) || '导入失败');
+                }
+            } catch (e) {
+                showToast('导入失败，请查看控制台');
+                console.error(e);
+            } finally {
+                // 清空，便于重复选择同一文件也触发 onchange
+                input.value = '';
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('确定删除?')) return;
+            const res = await fetchAPI(`/products/${id}`, { method: 'DELETE' });
+            if (res.success) { showToast('已删除'); loadProducts(); }
+        }
+
+        // --- VIP (统一走 /vip-levels) ---
+        let vipTierCache = [];
+
+        async function loadVipTiers() {
+            const res = await fetchAPI('/vip-levels');
+            vipTierCache = (res.success && res.data) ? res.data : [];
+
+            const tbody = document.getElementById('vipTiersTable');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if (!vipTierCache.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无数据</td></tr>';
+                return;
+            }
+
+            vipTierCache.forEach(t => {
+                const layer = (t.level_order != null && t.level_order !== '') ? t.level_order : (t.level != null ? t.level : '');
+                const threshold = (t.price != null && t.price !== '') ? t.price : (t.min_balance != null ? t.min_balance : 0);
+                const orders = (t.task_limit != null && t.task_limit !== '') ? t.task_limit : (t.daily_orders != null ? t.daily_orders : 0);
+                const rate = (t.commission_rate != null ? (t.commission_rate * 100) : 0).toFixed(2) + '%';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><span class="badge badge-primary" style="background:#667eea;color:white">${layer}</span></td>
+                        <td><strong>${t.name || '-'}</strong></td>
+                        <td>${parseFloat(threshold || 0).toFixed(2)}</td>
+                        <td>${rate}</td>
+                        <td>${orders || 0}</td>
+                        <td style="white-space:nowrap;">
+                            <button class="btn-sm btn-primary" onclick="editVipTier(${t.id})">编辑</button>
+                            <button class="btn-sm btn-danger" onclick="deleteVipTier(${t.id})">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function editVipTier(id) {
+            const t = vipTierCache.find(x => x.id === id);
+            if (!t) return;
+
+            document.getElementById('vipTierId').value = t.id;
+            document.getElementById('vipTierLevel').value = (t.level != null ? t.level : '');
+            document.getElementById('vipTierLevelOrder').value = (t.level_order != null ? t.level_order : '');
+            document.getElementById('vipTierName').value = t.name || '';
+            document.getElementById('vipTierPrice').value = (t.price != null ? t.price : '');
+            document.getElementById('vipTierMinBalance').value = (t.min_balance != null ? t.min_balance : '');
+            document.getElementById('vipTierCommissionRate').value = (t.commission_rate != null ? (t.commission_rate * 100).toFixed(3) : '');
+            document.getElementById('vipTierTaskLimit').value = (t.task_limit != null ? t.task_limit : '');
+            document.getElementById('vipTierDailyOrders').value = (t.daily_orders != null ? t.daily_orders : '');
+            document.getElementById('vipTierDescription').value = t.description || '';
+        }
+
+        function resetVipTierForm() {
+            document.getElementById('vipTierId').value = '';
+            document.getElementById('vipTierLevel').value = '';
+            document.getElementById('vipTierLevelOrder').value = '';
+            document.getElementById('vipTierName').value = '';
+            document.getElementById('vipTierPrice').value = '';
+            document.getElementById('vipTierMinBalance').value = '';
+            document.getElementById('vipTierCommissionRate').value = '';
+            document.getElementById('vipTierTaskLimit').value = '';
+            document.getElementById('vipTierDailyOrders').value = '';
+            document.getElementById('vipTierDescription').value = '';
+        }
+
+        async function saveVipTier() {
+            const id = document.getElementById('vipTierId').value;
+            const name = (document.getElementById('vipTierName').value || '').trim();
+
+            let level = parseInt(document.getElementById('vipTierLevel').value);
+            let level_order = parseInt(document.getElementById('vipTierLevelOrder').value);
+            let price = parseFloat(document.getElementById('vipTierPrice').value);
+            let min_balance = parseFloat(document.getElementById('vipTierMinBalance').value);
+            let task_limit = parseInt(document.getElementById('vipTierTaskLimit').value);
+            let daily_orders = parseInt(document.getElementById('vipTierDailyOrders').value);
+            const commissionPct = parseFloat(document.getElementById('vipTierCommissionRate').value);
+            const description = (document.getElementById('vipTierDescription').value || '').trim();
+
+            if (!name) { showToast('❌ 请填写名称'); return; }
+
+            // 字段补齐策略
+            if (isNaN(level) && !isNaN(level_order)) level = level_order;
+            if (isNaN(level_order) && !isNaN(level)) level_order = level;
+            if (isNaN(level) && isNaN(level_order)) { showToast('❌ 请填写等级层级'); return; }
+
+            if (isNaN(price) && !isNaN(min_balance)) price = min_balance;
+            if (isNaN(min_balance) && !isNaN(price)) min_balance = price;
+            if (isNaN(price)) price = 0;
+            if (isNaN(min_balance)) min_balance = 0;
+
+            if (isNaN(task_limit) && !isNaN(daily_orders)) task_limit = daily_orders;
+            if (isNaN(daily_orders) && !isNaN(task_limit)) daily_orders = task_limit;
+            if (isNaN(task_limit)) task_limit = 0;
+            if (isNaN(daily_orders)) daily_orders = 0;
+
+            const commission_rate = (!isNaN(commissionPct) ? commissionPct / 100 : 0);
+
+            const body = {
+                name,
+                level,
+                level_order,
+                price,
+                min_balance,
+                commission_rate,
+                task_limit,
+                daily_orders,
+                description
+            };
+            if (id) body.id = parseInt(id);
+
+            const res = await fetchAPI('/vip-levels', { method: 'POST', body: JSON.stringify(body) });
+            if (res.success) {
+                showToast('✅ 保存成功');
+                resetVipTierForm();
+                loadVipTiers();
+            } else {
+                showToast('❌ ' + (res.message || '保存失败'));
+            }
+        }
+
+        async function deleteVipTier(id) {
+            if (!confirm('确定删除该等级？\n如有用户正在使用该等级，删除会失败。')) return;
+            const res = await fetchAPI('/vip-levels/' + id, { method: 'DELETE' });
+            if (res.success) {
+                showToast('✅ 已删除');
+                loadVipTiers();
+            } else {
+                showToast('❌ ' + (res.message || '删除失败'));
+            }
+        }
+
+        // --- Finance ---
+        function switchFinanceTab(tab) {
+            document.getElementById('financeTabWithdraw').classList.toggle('active', tab === 'withdraw');
+            document.getElementById('financeTabDeposit').classList.toggle('active', tab === 'deposit');
+            if (tab === 'withdraw') loadWithdrawals(); else loadDeposits();
+        }
+
+        var financeOffset = { withdraw: 0, deposit: 0 };
+        async function loadWithdrawals(offset) {
+            if (typeof offset !== 'number') offset = 0;
+            financeOffset.withdraw = offset;
+            const res = await fetchAPI('/withdrawals?limit=50&offset=' + offset);
+            const list = res.data && res.data.withdrawals ? res.data.withdrawals : [];
+            const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
+            var el = document.getElementById('financePendingWithdraw'); if (el) el.textContent = pending;
+            renderFinanceTable(list, 'withdraw', res.data && res.data.pagination ? res.data.pagination : null);
+        }
+        async function loadDeposits(offset) {
+            if (typeof offset !== 'number') offset = 0;
+            financeOffset.deposit = offset;
+            const res = await fetchAPI('/deposits?limit=50&offset=' + offset);
+            const list = res.data && res.data.deposits ? res.data.deposits : [];
+            const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
+            var el = document.getElementById('financePendingDeposit'); if (el) el.textContent = pending;
+            renderFinanceTable(list, 'deposit', res.data && res.data.pagination ? res.data.pagination : null);
+        }
+
+        function renderFinanceTable(list, type, pagination) {
+            const container = document.getElementById('financeList');
+            const pagEl = document.getElementById('financePagination');
+            if (pagEl) pagEl.innerHTML = '';
+            if (!list || list.length === 0) { container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无' + (type === 'withdraw' ? '提现' : '充值') + '记录</p></div>'; return; }
+            
+            let html = `<table><thead><tr><th>用户</th><th>金额</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
+            list.forEach(item => {
+                const actionBtns = item.status === 'pending' ? `
+                    <button class="btn-sm btn-primary" onclick="reviewFinance(${item.id}, '${type}', 'approve')">通过</button>
+                    <button class="btn-sm btn-danger" onclick="reviewFinance(${item.id}, '${type}', 'reject')">驳回</button>
+                ` : item.status;
+                
+                html += `<tr>
+                    <td>${item.username}</td>
+                    <td>${item.amount}</td>
+                    <td><span class="badge badge-${item.status==='pending'?'warning':(item.status==='approved'?'success':'danger')}">${item.status}</span></td>
+                    <td>${new Date(item.created_at).toLocaleString()}</td>
+                    <td>${actionBtns}</td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        async function reviewFinance(id, type, action) {
+            if (!confirm(`确定${action === 'approve' ? '通过' : '驳回'}?`)) return;
+            const endpoint = type === 'withdraw' ? `/withdrawals/${id}/review` : `/deposits/${id}/review`;
+            const res = await fetchAPI(endpoint, { method: 'POST', body: JSON.stringify({ action, reason: 'admin action' }) });
+            if (res.success) { showToast('操作成功'); type === 'withdraw' ? loadWithdrawals() : loadDeposits(); }
+            else { showToast(res.message); }
+        }
+
+        // --- Settings ---
+        async function loadSettings() {
+            const res = await fetchAPI('/settings');
+            if (res.success && res.data) {
+                document.getElementById('setAnnounce').value = res.data.announcement || '';
+                document.getElementById('setService').value = res.data.service_url || '';
+                document.getElementById('setFee').value = res.data.withdraw_fee || '0';
+                document.getElementById('setWithdrawMin').value = res.data.withdraw_min || '10';
+                document.getElementById('setReferralReward').value = res.data.referral_reward_amount || '5.00';
+                document.getElementById('setWithdrawOpen').value = res.data.withdraw_open || '1';
+                document.getElementById('setInvitationRule').value = res.data.invitation_rule || '';
+                document.getElementById('setVipRule').value = res.data.vip_rule || '';
+                document.getElementById('setFaq').value = res.data.faq || '';
+                document.getElementById('setDepositAddress').value = res.data.deposit_address || '';
+                if (document.getElementById('setAboutUs')) document.getElementById('setAboutUs').value = res.data.about_us || '';
+                if (document.getElementById('setHomeBanner1')) document.getElementById('setHomeBanner1').value = res.data.home_banner_1 || '';
+                if (document.getElementById('setHomeBanner2')) document.getElementById('setHomeBanner2').value = res.data.home_banner_2 || '';
+                if (document.getElementById('setHomeBanner3')) document.getElementById('setHomeBanner3').value = res.data.home_banner_3 || '';
+                if (document.getElementById('setDepositChannels')) document.getElementById('setDepositChannels').value = res.data.deposit_channels || '[]';
+                if (document.getElementById('setDepositMinAmount')) document.getElementById('setDepositMinAmount').value = res.data.deposit_min_amount || '';
+                if (document.getElementById('setDepositRequireHash')) document.getElementById('setDepositRequireHash').value = res.data.deposit_require_hash_or_screenshot || '1';
+                if (document.getElementById('setDepositTips')) document.getElementById('setDepositTips').value = res.data.deposit_tips || '';
+                if (document.getElementById('setDepositMaintenance')) document.getElementById('setDepositMaintenance').value = res.data.deposit_maintenance || '0';
+                if (document.getElementById('setDepositDailyLimit')) document.getElementById('setDepositDailyLimit').value = res.data.deposit_daily_limit || '0';
+                if (document.getElementById('setWithdrawChannels')) document.getElementById('setWithdrawChannels').value = res.data.withdraw_channels || '[]';
+                if (document.getElementById('setWithdrawMax')) document.getElementById('setWithdrawMax').value = res.data.withdraw_max || '';
+                if (document.getElementById('setWithdrawFeeType')) document.getElementById('setWithdrawFeeType').value = res.data.withdraw_fee_type || 'percent';
+                if (document.getElementById('setWithdrawFeeValue')) document.getElementById('setWithdrawFeeValue').value = res.data.withdraw_fee_value || '0';
+                if (document.getElementById('setWithdrawTips')) document.getElementById('setWithdrawTips').value = res.data.withdraw_tips || '';
+                if (document.getElementById('setWithdrawMaintenance')) document.getElementById('setWithdrawMaintenance').value = res.data.withdraw_maintenance || '0';
+                if (document.getElementById('setWithdrawDailyCountLimit')) document.getElementById('setWithdrawDailyCountLimit').value = res.data.withdraw_daily_count_limit || '0';
+                if (document.getElementById('setWithdrawDailyAmountLimit')) document.getElementById('setWithdrawDailyAmountLimit').value = res.data.withdraw_daily_amount_limit || '0';
+                setupBannerUpload();
+            }
+        }
+
+        async function saveSettings() {
+            return await saveSettingsPartial([
+                'announcement',
+                'service_url',
+                'withdraw_fee',
+                'withdraw_min',
+                'referral_reward_amount',
+                'withdraw_open',
+                'invitation_rule',
+                'vip_rule',
+                'faq',
+                'deposit_address',
+                'about_us',
+                'home_banner_1',
+                'home_banner_2',
+                'home_banner_3'
+            ]);
+        }
+
+        async function saveSettingsPartial(keys) {
+            const map = {
+                announcement: 'setAnnounce',
+                service_url: 'setService',
+                withdraw_fee: 'setFee',
+                withdraw_min: 'setWithdrawMin',
+                referral_reward_amount: 'setReferralReward',
+                withdraw_open: 'setWithdrawOpen',
+                invitation_rule: 'setInvitationRule',
+                vip_rule: 'setVipRule',
+                faq: 'setFaq',
+                deposit_address: 'setDepositAddress',
+                about_us: 'setAboutUs',
+                home_banner_1: 'setHomeBanner1',
+                home_banner_2: 'setHomeBanner2',
+                home_banner_3: 'setHomeBanner3',
+                deposit_channels: 'setDepositChannels', deposit_min_amount: 'setDepositMinAmount', deposit_require_hash_or_screenshot: 'setDepositRequireHash', deposit_tips: 'setDepositTips', deposit_maintenance: 'setDepositMaintenance', deposit_daily_limit: 'setDepositDailyLimit',
+                withdraw_channels: 'setWithdrawChannels', withdraw_max: 'setWithdrawMax', withdraw_fee_type: 'setWithdrawFeeType', withdraw_fee_value: 'setWithdrawFeeValue', withdraw_tips: 'setWithdrawTips', withdraw_maintenance: 'setWithdrawMaintenance', withdraw_daily_count_limit: 'setWithdrawDailyCountLimit', withdraw_daily_amount_limit: 'setWithdrawDailyAmountLimit'
+            };
+
+            const data = {};
+            (keys || []).forEach(k => {
+                const id = map[k];
+                const el = id ? document.getElementById(id) : null;
+                data[k] = el ? el.value : '';
+            });
+
+            const res = await fetchAPI('/settings', { method: 'POST', body: JSON.stringify(data) });
+            if (res.success) { showToast('设置已保存'); }
+            else { showToast(res.message || '保存失败'); }
+            return res;
+        }
+
+        async function saveFinanceConfig() {
+            await saveSettingsPartial(['deposit_channels','deposit_min_amount','deposit_require_hash_or_screenshot','deposit_tips','deposit_maintenance','deposit_daily_limit','withdraw_channels','withdraw_max','withdraw_fee_type','withdraw_fee_value','withdraw_tips','withdraw_maintenance','withdraw_daily_count_limit','withdraw_daily_amount_limit']);
+        }
+
+        function setupBannerUpload() {
+            if (window._bannerUploadBound) return;
+            window._bannerUploadBound = true;
+            const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+            [1, 2, 3].forEach(function(n) {
+                var input = document.getElementById('uploadBanner' + n);
+                var textInput = document.getElementById('setHomeBanner' + n);
+                if (!input || !textInput) return;
+                input.addEventListener('change', async function() {
+                    var file = this.files[0];
+                    if (!file) return;
+                    var fd = new FormData();
+                    fd.append('image', file);
+                    var res = await fetch(API_BASE + '/upload-banner', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: fd });
+                    var json = await res.json();
+                    if (json.success && json.data && json.data.url) {
+                        textInput.value = json.data.url;
+                        showToast('上传成功，请点击保存本页');
+                    } else { showToast(json.message || '上传失败'); }
+                    this.value = '';
+                });
+            });
+        }
+
+        // --- 导出推荐数据 ---
+        async function exportInvites() {
+            try {
+                const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+                const res = await fetch(API_BASE + '/export-invites', {
+                    method: 'GET',
+                    headers: { 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' }
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showToast(err.error || err.message || '导出失败');
+                    return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `invites_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast('导出成功！');
+            } catch (e) {
+                showToast('导出失败');
+            }
+        }
+
+        // --- 修改推荐关系 ---
+        let currentEditUserId = null;
+        
+        function openReferrerModal(userId, username, currentReferrerName, userInviteCode) {
+            currentEditUserId = userId;
+            document.getElementById('currentUserName').textContent = username;
+            document.getElementById('currentReferrerName').textContent = currentReferrerName || '无';
+            document.getElementById('newReferrerCode').value = '';
+            document.getElementById('referrerModal').style.display = 'flex';
+        }
+
+        async function submitReferrerChange() {
+            if (!currentEditUserId) return;
+            
+            const newReferrerCode = document.getElementById('newReferrerCode').value.trim();
+            
+            // 确认操作
+            const confirmMsg = newReferrerCode 
+                ? `确定要将该用户调整到邀请码为 "${newReferrerCode}" 的用户团队下吗？` 
+                : '确定要清除该用户的推荐关系吗？';
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const res = await fetchAPI(`/users/${currentEditUserId}/referrer`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ referrer_code: newReferrerCode || null })
+                });
+                
+                if (res.success) {
+                    showToast(res.message || '修改成功');
+                    document.getElementById('referrerModal').style.display = 'none';
+                    loadUsers(); // 刷新用户列表
+                } else {
+                    showToast(res.message || '修改失败');
+                }
+            } catch (err) {
+                showToast('Operation failed: ' + err.message);
+            }
+        }
+
+        // --- 推荐奖励记录 ---
+        async function loadReferralRewards() {
+            try {
+                const res = await fetchAPI('/referral-rewards?page=1&limit=50');
+                const tbody = document.querySelector('#rewardsTable tbody');
+                if (!tbody) return;
+                
+                if (res.success && res.data && res.data.rewards && res.data.rewards.length > 0) {
+                    let html = '';
+                    res.data.rewards.forEach(item => {
+                        html += `<tr>
+                            <td>${item.id}</td>
+                            <td>${item.referrer_name}</td>
+                            <td>${item.referee_name}</td>
+                            <td style="color: #48bb78; font-weight: 600;">+${item.amount} USDT</td>
+                            <td>${new Date(item.created_at).toLocaleString('zh-CN')}</td>
+                        </tr>`;
+                    });
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:40px;">暂无奖励记录</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载奖励记录失败:', e);
+                showToast('加载失败');
+            }
+        }
+
+        // --- 登录日志 (IP) ---
+        let loginLogsOffset = 0;
+        async function loadLoginLogs() {
+            const tbody = document.querySelector('#loginLogsTable');
+            const paginationEl = document.getElementById('loginLogsPagination');
+            if (!tbody) return;
+            const userId = document.getElementById('loginLogsUserId') && document.getElementById('loginLogsUserId').value.trim();
+            try {
+                let url = '/login-logs?limit=50&offset=' + (loginLogsOffset || 0);
+                if (userId) url += '&user_id=' + encodeURIComponent(userId);
+                const res = await fetchAPI(url);
+                if (res.success && res.data && res.data.logs) {
+                    const logs = res.data.logs;
+                    const pagination = res.data.pagination || {};
+                    if (logs.length > 0) {
+                        tbody.innerHTML = logs.map(item => '<tr><td>' + item.id + '</td><td>' + item.user_id + '</td><td>' + (item.username || '-') + '</td><td style="font-family:monospace;">' + (item.ip || '-') + '</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:12px;" title="' + (item.user_agent || '') + '">' + (item.user_agent ? (item.user_agent.length > 40 ? item.user_agent.substring(0, 40) + '...' : item.user_agent) : '-') + '</td><td>' + (item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-') + '</td></tr>').join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px;">暂无登录记录</td></tr>';
+                    }
+                    if (paginationEl) {
+                        paginationEl.textContent = '共 ' + (pagination.total || logs.length) + ' 条';
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px;">加载失败</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载登录日志失败:', e);
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ff5858;">加载失败</td></tr>';
+                if (paginationEl) paginationEl.textContent = '';
+            }
+        }
+
+        // --- 切换抢单状态 ---
+        async function toggleGrab(userId, username) {
+            try {
+                const res = await fetchAPI(`/users/${userId}/toggle-grab`, {
+                    method: 'POST'
+                });
+                
+                if (res.success) {
+                    showToast(res.message || '操作成功');
+                    loadUsers(); // 刷新用户列表
+                } else {
+                    showToast(res.message || 'Operation failed');
+                }
+            } catch (err) {
+                showToast('Operation failed: ' + err.message);
+            }
+        }
+
+        // --- 重置任务进度 ---
+        async function resetProgress(userId, username, currentProgress) {
+            if (!confirm(`确定要将 ${username} 的任务进度重置为0吗？\n当前进度：${currentProgress}`)) {
+                return;
+            }
+            
+            try {
+                const res = await fetchAPI(`/users/${userId}/reset-progress`, {
+                    method: 'POST'
+                });
+                
+                if (res.success) {
+                    showToast(res.message || '重置成功');
+                    loadUsers(); // 刷新用户列表
+                } else {
+                    showToast(res.message || '重置失败');
+                }
+            } catch (err) {
+                showToast('Operation failed: ' + err.message);
+            }
+        }
+
+        // === 派送订单 (Dispatch Order) 核心逻辑 ===
+        let currentDispatchUserId = null;
+
+        // 打开派单弹窗
+        function openDispatchModal(userId, username, progress) {
+            currentDispatchUserId = userId;
+            document.getElementById('dispatchUserName').textContent = username;
+            document.getElementById('dispatchCurrentProgress').textContent = progress || 0;
+            
+            // 重置表单
+            document.getElementById('dispatchTaskIndex').value = '';
+            document.getElementById('dispatchMinAmount').value = '';
+            document.getElementById('dispatchMaxAmount').value = '';
+            
+            // 显示弹窗
+            document.getElementById('dispatchModal').style.display = 'flex';
+            
+            // 加载已存在的派单
+            loadDispatchOrders(userId);
+        }
+
+        // 加载该用户的派单列表
+        async function loadDispatchOrders(userId) {
+            const listDiv = document.getElementById('dispatchOrdersList');
+            listDiv.innerHTML = '<p style="color:#666;text-align:center">Loading...</p>';
+            
+            try {
+                const res = await fetchAPI('/users/' + userId + '/dispatch-orders');
+                if (res.success && res.data && res.data.length > 0) {
+                    let html = '<h4 style="margin:10px 0;font-size:14px;color:#2d3748;">已安排的插队订单：</h4>';
+                    res.data.forEach(order => {
+                        html += `
+                            <div style="background:#f7fafc; padding:10px; margin-bottom:8px; border-radius:6px; border:1px solid #edf2f7; display:flex; justify-content:space-between; align-items:center;">
+                                <div>
+                                    <span style="font-weight:bold; color:#d69e2e;">第 ${order.task_index} 单</span>
+                                    <span style="margin-left:8px; color:#4a5568;">金额: ${order.min_amount} - ${order.max_amount} U</span>
+                                </div>
+                                <button onclick="deleteDispatchOrder(${order.id})" style="background:#fff5f5; color:#c53030; border:1px solid #feb2b2; border-radius:4px; padding:4px 8px; cursor:pointer; font-size:12px;">删除</button>
+                            </div>
+                        `;
+                    });
+                    listDiv.innerHTML = html;
+                } else {
+                    listDiv.innerHTML = '<p style="color:#a0aec0;text-align:center;padding:10px;">暂无预设订单</p>';
+                }
+            } catch (e) {
+                console.error(e);
+                listDiv.innerHTML = '<p style="color:red;text-align:center">加载失败</p>';
+            }
+        }
+
+        // 提交派单
+        async function submitDispatchOrder() {
+            if (!currentDispatchUserId) return;
+            
+            const taskIndex = parseInt(document.getElementById('dispatchTaskIndex').value);
+            const minAmount = parseFloat(document.getElementById('dispatchMinAmount').value);
+            const maxAmount = parseFloat(document.getElementById('dispatchMaxAmount').value);
+            
+            if (!taskIndex || taskIndex < 1) {
+                showToast('请输入有效的任务编号 (第几单)');
+                return;
+            }
+            if (!minAmount || !maxAmount) {
+                showToast('请输入金额范围');
+                return;
+            }
+            if (minAmount < 0 || maxAmount < 0 || maxAmount < minAmount) {
+                showToast('金额范围无效 (最大值不能小于最小值)');
+                return;
+            }
+            
+            try {
+                const res = await fetchAPI('/users/' + currentDispatchUserId + '/dispatch-order', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        task_index: taskIndex,
+                        min_amount: minAmount,
+                        max_amount: maxAmount
+                    })
+                });
+                
+                if (res.success) {
+                    showToast('✅ 派单设置成功');
+                    // 刷新列表并清空表单
+                    loadDispatchOrders(currentDispatchUserId);
+                    document.getElementById('dispatchTaskIndex').value = '';
+                    document.getElementById('dispatchMinAmount').value = '';
+                    document.getElementById('dispatchMaxAmount').value = '';
+                } else {
+                    showToast('❌ ' + (res.message || '设置失败'));
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('❌ 网络错误');
+            }
+        }
+
+        // 删除派单
+        async function deleteDispatchOrder(id) {
+            if (!confirm('确定要撤销这个派单吗？')) return;
+            
+            try {
+                const res = await fetchAPI('/dispatch-orders/' + id, { method: 'DELETE' });
+                if (res.success) {
+                    showToast('🗑️ 已删除');
+                    loadDispatchOrders(currentDispatchUserId);
+                } else {
+                    showToast('删除失败');
+                }
+            } catch (e) {
+                showToast('操作失败');
+            }
+        }
+
+        // === 用户高级控制逻辑 ===
+        function openEditUserModal(id, name, vip, credit, withdraw) {
+            document.getElementById('editUserIdInput').value = id;
+            document.getElementById('editUserNameInput').value = name;
+            document.getElementById('editUserVipLevel').value = vip || 1;
+            document.getElementById('editUserCreditScore').value = credit || 100;
+            document.getElementById('editUserAllowWithdraw').value = (withdraw === undefined || withdraw === 1) ? 1 : 0;
+            document.getElementById('editUserPassword').value = '';
+            document.getElementById('editUserSecurityPassword').value = '';
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        async function submitEditUser() {
+            const id = document.getElementById('editUserIdInput').value;
+            const body = {
+                vip_level: document.getElementById('editUserVipLevel').value,
+                credit_score: document.getElementById('editUserCreditScore').value,
+                allow_withdraw: document.getElementById('editUserAllowWithdraw').value,
+                password: document.getElementById('editUserPassword').value || undefined,
+                security_password: document.getElementById('editUserSecurityPassword').value || undefined
+            };
+            try {
+                const res = await fetchAPI('/users/' + id + '/edit', { method: 'POST', body: JSON.stringify(body) });
+                if (res.success) { showToast('✅ 修改成功'); document.getElementById('editUserModal').style.display = 'none'; loadUsers(currentUserType); }
+                else { showToast('❌ ' + res.message); }
+            } catch(e) { showToast('Operation failed'); }
+        }
+
+        async function toggleUserStatus(id, currentStatus) {
+            if (!confirm(currentStatus === 1 ? '⚠️ 确定要冻结该用户吗？' : '确定解除冻结？')) return;
+            try {
+                const res = await fetchAPI('/users/' + id + '/toggle-status', { method: 'POST' });
+                if (res.success) { showToast('操作成功'); loadUsers(currentUserType); } else showToast(res.message);
+            } catch(e) { showToast('网络错误'); }
+        }
+
+        async function resetUserProgress(id) {
+            if (!confirm('🔄 确定重置今日进度吗？')) return;
+            try {
+                const res = await fetchAPI('/users/' + id + '/reset-progress', { method: 'POST' });
+                if (res.success) { showToast('✅ 进度已重置'); loadUsers(currentUserType); } else showToast(res.message);
+            } catch(e) { showToast('网络错误'); }
+        }
+
+        // === 做单参数管理 ===
+        async function loadOrderParams() {
+            try {
+                const res = await fetchAPI('/system-params');
+                if (res.success) {
+                    document.getElementById('matchMinRatio').value = res.data.match_min_ratio;
+                    document.getElementById('matchMaxRatio').value = res.data.match_max_ratio;
+                }
+            } catch (e) {
+                console.error('加载做单参数失败:', e);
+            }
+        }
+
+        async function saveOrderParams() {
+            const minRatio = parseFloat(document.getElementById('matchMinRatio').value);
+            const maxRatio = parseFloat(document.getElementById('matchMaxRatio').value);
+            
+            if (isNaN(minRatio) || isNaN(maxRatio)) {
+                showToast('❌ 请输入有效的比例值');
+                return;
+            }
+            if (minRatio < 0 || maxRatio > 1 || minRatio >= maxRatio) {
+                showToast('❌ 比例范围无效 (需满足: 0 ≤ Min < Max ≤ 1)');
+                return;
+            }
+            
+            try {
+                const res = await fetchAPI('/system-params', {
+                    method: 'POST',
+                    body: JSON.stringify({ match_min_ratio: minRatio, match_max_ratio: maxRatio })
+                });
+                if (res.success) {
+                    showToast('✅ 参数保存成功');
+                } else {
+                    showToast('❌ ' + res.message);
+                }
+            } catch (e) {
+                showToast('❌ 保存失败');
+            }
+        }
+
+        // === VIP 等级管理 ===
+        async function loadVipLevels() {
+            try {
+                const res = await fetchAPI('/vip-levels');
+                const tbody = document.getElementById('vipLevelsTable');
+                tbody.innerHTML = '';
+                
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(level => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${level.level_order}</td>
+                                <td><strong>${level.name}</strong></td>
+                                <td>${(level.commission_rate * 100).toFixed(2)}%</td>
+                                <td>${level.daily_orders}</td>
+                                <td>${level.min_balance.toFixed(2)}</td>
+                                <td style="color:#718096; font-size:12px;">${level.description || '-'}</td>
+                                <td style="white-space:nowrap;">
+                                    <button onclick="editVipLevel(${level.id})" style="background:#3182ce; color:white; border:none; padding:4px 12px; border-radius:4px; margin-right:5px; cursor:pointer; font-size:12px;">编辑</button>
+                                    <button onclick="deleteVipLevel(${level.id})" style="background:#e53e3e; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px;">删除</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">No Data</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载VIP等级失败:', e);
+            }
+        }
+
+        function openVipLevelModal(levelId = null) {
+            if (levelId) {
+                // 编辑模式
+                document.getElementById('vipModalTitle').textContent = '编辑会员等级';
+                fetchAPI('/vip-levels').then(res => {
+                    const level = res.data.find(l => l.id === levelId);
+                    if (level) {
+                        document.getElementById('vipLevelId').value = level.id;
+                        document.getElementById('vipLevelName').value = level.name;
+                        document.getElementById('vipLevelOrder').value = level.level_order;
+                        document.getElementById('vipCommissionRate').value = (level.commission_rate * 100).toFixed(3);
+                        document.getElementById('vipDailyOrders').value = level.daily_orders;
+                        document.getElementById('vipMinBalance').value = level.min_balance;
+                        document.getElementById('vipDescription').value = level.description || '';
+                    }
+                });
+            } else {
+                // 新建模式
+                document.getElementById('vipModalTitle').textContent = '添加会员等级';
+                document.getElementById('vipLevelId').value = '';
+                document.getElementById('vipLevelName').value = '';
+                document.getElementById('vipLevelOrder').value = '';
+                document.getElementById('vipCommissionRate').value = '';
+                document.getElementById('vipDailyOrders').value = '';
+                document.getElementById('vipMinBalance').value = '0';
+                document.getElementById('vipDescription').value = '';
+            }
+            document.getElementById('vipLevelModal').style.display = 'flex';
+        }
+
+        function editVipLevel(id) {
+            openVipLevelModal(id);
+        }
+
+        async function submitVipLevel() {
+            const id = document.getElementById('vipLevelId').value;
+            const name = document.getElementById('vipLevelName').value.trim();
+            const levelOrder = parseInt(document.getElementById('vipLevelOrder').value);
+            const commissionRate = parseFloat(document.getElementById('vipCommissionRate').value) / 100;
+            const dailyOrders = parseInt(document.getElementById('vipDailyOrders').value);
+            const minBalance = parseFloat(document.getElementById('vipMinBalance').value);
+            const description = document.getElementById('vipDescription').value.trim();
+            
+            if (!name || isNaN(levelOrder) || isNaN(commissionRate) || isNaN(dailyOrders)) {
+                showToast('❌ 请填写所有必填字段');
+                return;
+            }
+            
+            try {
+                const body = {
+                    name, level_order: levelOrder, commission_rate: commissionRate,
+                    daily_orders: dailyOrders, min_balance: minBalance, description
+                };
+                if (id) body.id = parseInt(id);
+                
+                const res = await fetchAPI('/vip-levels', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                
+                if (res.success) {
+                    showToast('✅ 保存成功');
+                    document.getElementById('vipLevelModal').style.display = 'none';
+                    loadVipLevels();
+                } else {
+                    showToast('❌ ' + res.message);
+                }
+            } catch (e) {
+                showToast('❌ Operation failed');
+            }
+        }
+
+        async function deleteVipLevel(id) {
+            if (!confirm('确定要删除这个VIP等级吗？\n注意：如果有用户正在使用此等级，将无法删除。')) return;
+            
+            try {
+                const res = await fetchAPI('/vip-levels/' + id, { method: 'DELETE' });
+                if (res.success) {
+                    showToast('✅ 已删除');
+                    loadVipLevels();
+                } else {
+                    showToast('❌ ' + res.message);
+                }
+            } catch (e) {
+                showToast('❌ Operation failed');
+            }
+        }
+
+        // === 业务员管理逻辑 ===
+        async function loadAgents() {
+            try {
+                const res = await fetchAPI('/agents');
+                const tbody = document.getElementById('agentsTable');
+                tbody.innerHTML = '';
+                
+                const agents = res.data && res.data.agents ? res.data.agents : [];
+                if (res.success && agents.length > 0) {
+                    agents.forEach(agent => {
+                        const statusBadge = agent.status === 'active' 
+                            ? '<span class="badge badge-success">正常</span>' 
+                            : '<span class="badge badge-danger">冻结</span>';
+                        
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${agent.id}</td>
+                                <td><strong>${agent.username}</strong></td>
+                                <td>
+                                    <span class="badge badge-primary" style="cursor:pointer; font-family:monospace;" 
+                                          onclick="navigator.clipboard.writeText('${agent.invite_code}');showToast('邀请码已复制')" 
+                                          title="点击复制">${agent.invite_code}</span>
+                                </td>
+                                <td><strong style="color:#667eea;">${agent.member_count}</strong> 人</td>
+                                <td><strong style="color:#48bb78;">${agent.total_team_balance.toFixed(2)}</strong> U</td>
+                                <td>${statusBadge}</td>
+                                <td>${new Date(agent.created_at).toLocaleDateString()}</td>
+                                <td style="white-space:nowrap;">
+                                    <button onclick="toggleAgentStatus(${agent.id}, '${agent.status}')" 
+                                            style="background:${agent.status === 'active' ? '#e53e3e' : '#718096'}; color:white; border:none; padding:4px 12px; border-radius:4px; margin-right:5px; cursor:pointer; font-size:12px;">
+                                        ${agent.status === 'active' ? '冻结' : '解冻'}
+                                    </button>
+                                    <button onclick="deleteAgent(${agent.id})" 
+                                            style="background:#e53e3e; color:white; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px;">删除</button>
+                                </td>
+                            </tr>`;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无业务员</td></tr>';
+                }
+            } catch (e) { console.error(e); showToast('加载失败'); }
+        }
+
+        function openAgentModal() {
+            document.getElementById('agentUsername').value = '';
+            document.getElementById('agentPassword').value = '';
+            document.getElementById('agentRemark').value = '';
+            document.getElementById('agentModal').style.display = 'flex';
+        }
+
+        async function submitAgent() {
+            const username = document.getElementById('agentUsername').value.trim();
+            const password = document.getElementById('agentPassword').value.trim();
+            const remark = document.getElementById('agentRemark').value.trim();
+            
+            if (!username || !password) return showToast('❌ 请填写用户名和密码');
+            
+            try {
+                const res = await fetchAPI('/agent/create', { method: 'POST', body: JSON.stringify({ username, password, remark }) });
+                if (res.success) { showToast('✅ 创建成功'); document.getElementById('agentModal').style.display = 'none'; loadAgents(); }
+                else showToast('❌ ' + res.message);
+            } catch (e) { showToast('创建失败'); }
+        }
+
+        async function toggleAgentStatus(id, currentStatus) {
+            if (!confirm('确定切换状态？')) return;
+            try {
+                const res = await fetchAPI('/agents/' + id + '/toggle-status', { method: 'POST' });
+                if (res.success) { showToast('操作成功'); loadAgents(); } else showToast(res.message);
+            } catch (e) { showToast('操作失败'); }
+        }
+
+        async function deleteAgent(id) {
+            if (!confirm('确定删除该业务员吗？如果有下级用户将无法删除。')) return;
+            try {
+                const res = await fetchAPI('/agents/' + id, { method: 'DELETE' });
+                if (res.success) { showToast('✅ 已删除'); loadAgents(); } else showToast('❌ ' + res.message);
+            } catch (e) { showToast('操作失败'); }
+        }
+
+        // === 报表统计系统 ===
+        let currentTransactionOffset = 0;
+        
+        function switchReportTab(tab) {
+            const tabDaily = document.getElementById('tabDailyReport');
+            const tabTrans = document.getElementById('tabTransactions');
+            const dailyDiv = document.getElementById('dailyReportTab');
+            const transDiv = document.getElementById('transactionsTab');
+            
+            if (tab === 'daily') {
+                tabDaily.style.background = '#3182ce';
+                tabDaily.style.color = 'white';
+                tabTrans.style.background = '#e2e8f0';
+                tabTrans.style.color = '#4a5568';
+                dailyDiv.style.display = 'block';
+                transDiv.style.display = 'none';
+                loadDailyReports();
+            } else {
+                tabTrans.style.background = '#3182ce';
+                tabTrans.style.color = 'white';
+                tabDaily.style.background = '#e2e8f0';
+                tabDaily.style.color = '#4a5568';
+                transDiv.style.display = 'block';
+                dailyDiv.style.display = 'none';
+                currentTransactionOffset = 0;
+                loadAllTransactions();
+            }
+        }
+
+        async function loadDailyReports() {
+            try {
+                const res = await fetchAPI('/reports/daily');
+                const tbody = document.getElementById('dailyReportTable');
+                tbody.innerHTML = '';
+                
+                if (res.success && res.data.length > 0) {
+                    res.data.forEach(report => {
+                        const netClass = report.net_inflow >= 0 ? 'color:#48bb78;' : 'color:#e53e3e;';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${report.date}</td>
+                                <td><strong style="color:#667eea;">${report.new_users}</strong></td>
+                                <td><strong style="color:#48bb78;">${report.total_deposit.toFixed(2)}</strong></td>
+                                <td><strong style="color:#e53e3e;">${report.total_withdraw.toFixed(2)}</strong></td>
+                                <td><strong style="${netClass}">${report.net_inflow >= 0 ? '+' : ''}${report.net_inflow.toFixed(2)}</strong></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">No Data</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载每日报表失败:', e);
+                document.getElementById('dailyReportTable').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">加载失败</td></tr>';
+            }
+        }
+
+        async function loadAllTransactions() {
+            try {
+                const res = await fetchAPI('/transactions/all?limit=100&offset=' + currentTransactionOffset);
+                const tbody = document.getElementById('transactionsTable');
+                
+                if (currentTransactionOffset === 0) {
+                    tbody.innerHTML = '';
+                }
+                
+                if (res.success && res.data.transactions.length > 0) {
+                    res.data.transactions.forEach(t => {
+                        const typeMap = {
+                            'deposit': '💳 充值',
+                            'withdraw': '💸 提现',
+                            'task_commission': '📦 任务佣金',
+                            'referral_reward': '🎁 推荐奖励',
+                            'system_add': '➕ 系统加款',
+                            'system_deduct': '➖ 系统扣款'
+                        };
+                        const typeLabel = typeMap[t.type] || t.type;
+                        const amountColor = t.type.includes('add') || t.type.includes('deposit') || t.type.includes('commission') || t.type.includes('reward') ? '#48bb78' : '#e53e3e';
+                        
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${t.id}</td>
+                                <td style="font-size:12px;">${new Date(t.created_at).toLocaleString()}</td>
+                                <td>${t.username || 'N/A'}</td>
+                                <td><span style="font-size:12px; color:#718096;">${typeLabel}</span></td>
+                                <td><strong style="color:${amountColor};">${t.amount.toFixed(2)}</strong></td>
+                                <td style="color:#718096; font-size:12px;">${t.description || '-'}</td>
+                            </tr>
+                        `;
+                    });
+                } else if (currentTransactionOffset === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无流水记录</td></tr>';
+                }
+            } catch (e) {
+                console.error('加载流水记录失败:', e);
+            }
+        }
+
+        function loadMoreTransactions() {
+            currentTransactionOffset += 100;
+            loadAllTransactions();
+        }
+
+        async function logout() {
+            var token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        // Init
+        loadStats();
+        loadInviteTrend();
+    </script>
+
+    <!-- 编辑用户模态框 -->
+    <div id="editUserModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+        <div class="modal-inner-scroll" style="background:white; padding:25px; width:450px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="margin:0;">✏️ 编辑用户</h3>
+                <span onclick="document.getElementById('editUserModal').style.display='none'" style="cursor:pointer; font-size:20px;">&times;</span>
+            </div>
+            <input type="hidden" id="editUserIdInput">
+            <div style="margin-bottom:10px;"><label style="color:#718096; font-size:12px;">用户名</label><input type="text" id="editUserNameInput" readonly style="width:100%; padding:8px; background:#f7fafc; border:1px solid #e2e8f0; border-radius:4px;"></div>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;"><label style="color:#718096; font-size:12px;">VIP等级</label><select id="editUserVipLevel" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;"><option value="1">VIP 1</option><option value="2">VIP 2</option><option value="3">VIP 3</option><option value="4">VIP 4</option><option value="5">VIP 5</option></select></div>
+                <div style="flex:1;"><label style="color:#718096; font-size:12px;">信用分</label><input type="number" id="editUserCreditScore" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;"></div>
+            </div>
+            <div style="margin-bottom:10px;"><label style="color:#718096; font-size:12px;">提现权限</label><select id="editUserAllowWithdraw" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;"><option value="1">✅ 允许提现</option><option value="0">🚫 禁止提现</option></select></div>
+            <div style="margin-bottom:10px;"><label style="color:#718096; font-size:12px;">登录密码 (留空不改)</label><input type="text" id="editUserPassword" placeholder="New Password" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;"></div>
+            <div style="margin-bottom:20px;"><label style="color:#718096; font-size:12px;">资金密码 (留空不改)</label><input type="text" id="editUserSecurityPassword" placeholder="New Security Password" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;"></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;"><button onclick="document.getElementById('editUserModal').style.display='none'" style="padding:8px 16px; background:#edf2f7; border:none; border-radius:4px; cursor:pointer;">取消</button><button onclick="submitEditUser()" style="padding:8px 16px; background:#3182ce; color:white; border:none; border-radius:4px; cursor:pointer;">保存修改</button></div>
+        </div>
+    </div>
+
+    <!-- VIP等级编辑模态框 -->
+    <div id="vipLevelModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+        <div class="modal-inner-scroll" style="background:white; padding:25px; width:500px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="margin:0;">👑 <span id="vipModalTitle">添加会员等级</span></h3>
+                <span onclick="document.getElementById('vipLevelModal').style.display='none'" style="cursor:pointer; font-size:20px;">&times;</span>
+            </div>
+            
+            <input type="hidden" id="vipLevelId">
+            
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">等级名称</label>
+                    <input type="text" id="vipLevelName" placeholder="VIP 1" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">排序顺序</label>
+                    <input type="number" id="vipLevelOrder" placeholder="1" min="1" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">收益率 (%)</label>
+                    <input type="number" id="vipCommissionRate" placeholder="0.5" step="0.001" min="0" max="100" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+                    <p style="font-size:11px; color:#999; margin-top:2px;">输入百分比，如 0.5 表示 0.5%</p>
+                </div>
+                <div style="flex:1;">
+                    <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">每日任务数</label>
+                    <input type="number" id="vipDailyOrders" placeholder="40" min="1" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+                </div>
+            </div>
+            
+            <div style="margin-bottom:12px;">
+                <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">升级门槛 (USDT)</label>
+                <input type="number" id="vipMinBalance" placeholder="0" step="0.01" min="0" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+                <p style="font-size:11px; color:#999; margin-top:2px;">用户余额达到此金额自动升级</p>
+            </div>
+            
+            <div style="margin-bottom:20px;">
+                <label style="color:#718096; font-size:12px; display:block; margin-bottom:5px;">描述</label>
+                <input type="text" id="vipDescription" placeholder="新手会员" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:4px;">
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="document.getElementById('vipLevelModal').style.display='none'" style="padding:8px 16px; background:#edf2f7; border:none; border-radius:4px; cursor:pointer;">取消</button>
+                <button onclick="submitVipLevel()" style="padding:8px 16px; background:#3182ce; color:white; border:none; border-radius:4px; cursor:pointer;">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 业务员创建模态框 -->
+    <div id="agentModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+        <div class="modal-inner-scroll" style="background:white; padding:25px; width:400px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="margin:0; color:#2d3748;">🤵 创建业务员账号</h3>
+                <span onclick="document.getElementById('agentModal').style.display='none'" style="cursor:pointer; font-size:20px;">&times;</span>
+            </div>
+            <p style="color:#718096; font-size:13px; margin-bottom:20px;">系统将自动生成专属邀请码，用于统计下级业绩。</p>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#718096; font-size:12px; margin-bottom:5px;">用户名</label>
+                <input type="text" id="agentUsername" placeholder="Enter username" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:4px;">
+            </div>
+            <div style="margin-bottom:15px;">
+                <label style="display:block; color:#718096; font-size:12px; margin-bottom:5px;">登录密码</label>
+                <input type="text" id="agentPassword" placeholder="Enter password" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:4px;">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block; color:#718096; font-size:12px; margin-bottom:5px;">备注 (可选)</label>
+                <input type="text" id="agentRemark" placeholder="e.g. Region A Sales" style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:4px;">
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="document.getElementById('agentModal').style.display='none'" style="padding:10px 20px; background:#edf2f7; border:none; border-radius:4px; cursor:pointer;">取消</button>
+                <button onclick="submitAgent()" style="padding:10px 20px; background:#3182ce; color:white; border:none; border-radius:4px; cursor:pointer;">创建账号</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "taskmall-platform",
+  "version": "2.0.0",
+  "description": "跨境电商抢单生态系统 - 重构版",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "nodemon server/app.js",
+    "init-db": "node server/scripts/init-db.js",
+    "create-admin": "node server/scripts/create-admin.js",
+    "verify-db": "node server/scripts/verify-db.js",
+    "postinstall": "npm rebuild better-sqlite3 2>/dev/null || true"
+  },
+  "keywords": [
+    "taskmall",
+    "ecommerce",
+    "order-grabbing"
+  ],
+  "author": "CTO",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0 <23.0.0"
+  }
+}

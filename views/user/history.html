@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>Order History - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* ============= 层次感增强：渐变阴影系统 ============= */
+    .card-level-1 {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .card-level-2 {
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+    
+    .card-level-3 {
+      box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+    }
+
+    /* ============= 头部区域 ============= */
+    .page-header {
+      padding: 24px 20px 20px;
+      position: relative;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: white;
+      text-align: left;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+      text-align: left;
+    }
+
+    /* ============= 筛选 Tabs - 增强交互 ============= */
+    .filter-tabs {
+      padding: 0 20px 24px;
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-item {
+      flex-shrink: 0;
+      padding: 10px 24px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(8px);
+      color: white;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Tab 悬停效果 */
+    .tab-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .tab-item:hover::before {
+      opacity: 1;
+    }
+
+    .tab-item.active {
+      background: white;
+      color: var(--accent-color);
+      border-color: white;
+      box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .tab-item:active {
+      transform: scale(0.95);
+    }
+
+    /* ============= 订单列表容器 ============= */
+    .orders-container {
+      padding: 0 20px 56px;
+    }
+
+    .order-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 订单卡片左边框状态色 */
+    .order-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #cbd5e0;
+      transition: background 0.3s ease;
+    }
+
+    .order-card[data-status="completed"]::before {
+      background: linear-gradient(to bottom, #00c853, #00e676);
+    }
+
+    .order-card[data-status="pending"]::before {
+      background: linear-gradient(to bottom, #f59e0b, #fbbf24);
+    }
+
+    .order-card[data-status="frozen"]::before {
+      background: linear-gradient(to bottom, #667eea, #4facfe);
+    }
+
+    .order-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+    }
+
+    .order-image {
+      width: 88px;
+      height: 88px;
+      border-radius: 16px;
+      object-fit: cover;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+      flex-shrink: 0;
+      border: 2px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .order-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .order-no {
+      font-size: 12px;
+      color: #667eea;
+      font-family: monospace;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .order-status {
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .order-status.completed {
+      background: rgba(0, 200, 83, 0.12);
+      color: #00c853;
+      border: 1.5px solid rgba(0, 200, 83, 0.3);
+    }
+
+    .order-status.pending {
+      background: rgba(245, 158, 11, 0.12);
+      color: #f59e0b;
+      border: 1.5px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .order-status.frozen {
+      background: rgba(102, 126, 234, 0.12);
+      color: #667eea;
+      border: 1.5px solid rgba(102, 126, 234, 0.3);
+    }
+
+    .order-amounts {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .order-amount {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .amount-label {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-bottom: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .amount-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a202c;
+    }
+
+    .commission-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #00c853;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .commission-value::before {
+      content: '+';
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .order-date {
+      font-size: 11px;
+      color: #a0aec0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .order-date::before {
+      content: '🕐';
+      font-size: 12px;
+    }
+
+    /* ============= 空状态 - 精美设计 ============= */
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      position: relative;
+    }
+
+    /* 空状态背景装饰 */
+    .empty-state::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+      50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.3; }
+    }
+
+    .empty-icon {
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .empty-icon svg {
+      width: 100px;
+      height: 100px;
+      color: rgba(255, 255, 255, 0.6);
+      stroke-width: 1.2;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    .empty-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .empty-desc {
+      font-size: 15px;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
+      line-height: 1.6;
+    }
+
+    .empty-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 36px;
+      background: white;
+      color: var(--accent-color);
+      border-radius: 28px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.3);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      z-index: 1;
+      border: 2px solid white;
+    }
+
+    .empty-action:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(255, 255, 255, 0.4);
+    }
+
+    .empty-action:active {
+      transform: translateY(-1px) scale(0.98);
+    }
+
+    /* ============= 加载状态 - 骨架屏优化 ============= */
+    .loading-state {
+      padding: 20px;
+    }
+
+    .skeleton-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+    }
+
+    .skeleton-image {
+      width: 88px;
+      height: 88px;
+      border-radius: 16px;
+      background: linear-gradient(90deg, #e2e8f0 0%, #f7fafc 50%, #e2e8f0 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #e2e8f0 0%, #f7fafc 50%, #e2e8f0 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-line.title {
+      width: 60%;
+      height: 14px;
+    }
+
+    .skeleton-line.amount {
+      width: 40%;
+      height: 16px;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* ============= 底部导航栏（与 Dashboard/Profile 完全一致）============= */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+      z-index: 1000;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      text-decoration: none;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: var(--accent-color);
+    }
+
+    .nav-icon {
+      margin-bottom: 4px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .nav-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--text-secondary);
+      stroke-width: 1.5;
+    }
+
+    .nav-item.active .nav-icon svg {
+      color: var(--accent-color);
+      stroke-width: 2;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .nav-item.active .nav-label {
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    /* 中间大按钮 */
+    .nav-item.center {
+      position: relative;
+      margin-top: -20px;
+    }
+
+    .nav-item.center .nav-icon-large {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+      border: 4px solid white;
+      margin-bottom: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-item.center:hover .nav-icon-large {
+      transform: scale(1.05);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+    }
+
+    .nav-item.center .nav-icon-large svg {
+      width: 28px;
+      height: 28px;
+      color: white;
+      stroke-width: 2;
+    }
+
+    /* ============= Toast 提示 ============= */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 14px 28px;
+      background: rgba(0,0,0,0.9);
+      color: white;
+      border-radius: 28px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 2000;
+      display: none;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toast.show {
+      display: block;
+      animation: toastSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes toastSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-30px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0) scale(1);
+      }
+    }
+
+    /* ============= 响应式优化 ============= */
+    @media (max-width: 375px) {
+      .order-card {
+        padding: 14px;
+        gap: 12px;
+      }
+      
+      .order-image {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .amount-value,
+      .commission-value {
+        font-size: 14px;
+      }
+    }
+  </style>
+  <script src="/public/js/common.js"></script>
+</head>
+<body>
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 头部区域 -->
+  <div class="page-header">
+    <div class="page-title">Order History</div>
+    <div class="page-subtitle">Track all your completed tasks</div>
+  </div>
+
+  <!-- 筛选 Tabs -->
+  <div class="filter-tabs">
+    <div class="tab-item active" data-status="all" onclick="filterOrders('all')">All Orders</div>
+    <div class="tab-item" data-status="pending" onclick="filterOrders('pending')">Pending</div>
+    <div class="tab-item" data-status="completed" onclick="filterOrders('completed')">Completed</div>
+    <div class="tab-item" data-status="frozen" onclick="filterOrders('frozen')">Frozen</div>
+  </div>
+
+  <!-- 订单列表容器 -->
+  <div class="orders-container" id="ordersContainer">
+    <!-- 骨架屏加载状态 -->
+    <div class="loading-state" id="loadingState">
+      <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-line title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line amount"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-line title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line amount"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skeleton-image"></div>
+        <div class="skeleton-content">
+          <div class="skeleton-line title"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line amount"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部导航栏 -->
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='/views/user/dashboard.html'">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg>
+      </div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="nav-label">History</div>
+    </div>
+    <div class="nav-item center" onclick="window.location.href='/grab'">
+      <div class="nav-icon-large">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+        </svg>
+      </div>
+      <div class="nav-label" style="color: #1a202c; font-weight: 700;">Start</div>
+    </div>
+    <div class="nav-item" onclick="window.open('https://t.me/TaskMall_Support', '_blank')">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+        </svg>
+      </div>
+      <div class="nav-label">Service</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='/views/user/profile.html'">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      </div>
+      <div class="nav-label">Profile</div>
+    </div>
+  </div>
+
+  <script>
+    let allOrders = [];
+    let currentFilter = 'all';
+
+    // 检查登录状态
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/views/user/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    // 显示提示
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
+
+    // 加载订单列表
+    async function loadOrders() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/task/my-orders', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to load');
+        }
+
+        allOrders = result.data || [];
+        
+        // 隐藏加载状态
+        document.getElementById('loadingState').style.display = 'none';
+        
+        renderOrders();
+
+      } catch (error) {
+        console.error('加载订单失败:', error);
+        document.getElementById('loadingState').style.display = 'none';
+        showEmptyState('error', 'Failed to Load', 'Unable to fetch order history. Please try again.');
+      }
+    }
+
+    async function completePendingOrder(orderId) {
+      if (!checkAuth()) return;
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/task/submit', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_id: orderId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Order completed!');
+          loadOrders();
+        } else {
+          showToast(data.error || data.message || 'Failed');
+        }
+      } catch (e) {
+        showToast('Network error');
+      }
+    }
+
+    // 筛选订单
+    function filterOrders(status) {
+      currentFilter = status;
+      
+      // 更新 Tab 状态
+      document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.status === status) {
+          tab.classList.add('active');
+        }
+      });
+
+      renderOrders();
+    }
+
+    // 渲染订单列表
+    function renderOrders() {
+      const container = document.getElementById('ordersContainer');
+      
+      // 筛选订单
+      let filteredOrders = allOrders;
+      if (currentFilter !== 'all') {
+        filteredOrders = allOrders.filter(order => order.status === currentFilter);
+      }
+
+      // 空状态
+      if (filteredOrders.length === 0) {
+        if (currentFilter === 'all') {
+          showEmptyState('empty', 'No Orders Yet', 'Complete your first task to build your order history');
+        } else {
+          const statusNames = {
+            'pending': 'Pending',
+            'completed': 'Completed',
+            'frozen': 'Frozen'
+          };
+          showEmptyState('search', 'No Results', `No ${statusNames[currentFilter] || currentFilter} orders found`);
+        }
+        return;
+      }
+
+      // 渲染订单卡片
+      container.innerHTML = filteredOrders.map(order => {
+        const statusClass = order.status || 'pending';
+        const statusText = statusClass.charAt(0).toUpperCase() + statusClass.slice(1);
+        const orderDate = new Date(order.created_at).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        // 优先使用订单商品图，无图或加载失败时用占位图
+        const statusColors = {
+          'completed': '00c853',
+          'pending': 'f59e0b',
+          'frozen': '667eea'
+        };
+        const bgColor = statusColors[statusClass] || '667eea';
+        const placeholderImg = `https://placehold.co/176x176/${bgColor}/ffffff?text=${statusText}`;
+        const imgSrc = (order.product_image && order.product_image.trim()) ? order.product_image.trim() : placeholderImg;
+        const imgSrcEscaped = imgSrc.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        const completeBtn = statusClass === 'pending' 
+          ? `<button class="complete-pending-btn" onclick="completePendingOrder(${order.id})" style="margin-top:10px;padding:8px 16px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;width:100%;">Complete Task</button>`
+          : '';
+        return `
+          <div class="order-card" data-status="${statusClass}">
+            <img src="${imgSrcEscaped}" class="order-image" alt="Order" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/176x176/667eea/ffffff?text=Order';">
+            <div class="order-info">
+              <div class="order-header">
+                <div class="order-no">#${order.order_no || 'N/A'}</div>
+                <div class="order-status ${statusClass}">${statusText}</div>
+              </div>
+              <div class="order-amounts">
+                <div class="order-amount">
+                  <div class="amount-label">Order Amount</div>
+                  <div class="amount-value">${Number(order.amount || 0).toFixed(2)} <span style="font-size: 12px; font-weight: 600; color: #a0aec0;">USDT</span></div>
+                </div>
+                <div class="order-amount">
+                  <div class="amount-label">Commission</div>
+                  <div class="commission-value">${Number(order.commission || 0).toFixed(2)} <span style="font-size: 12px; font-weight: 600; color: #a0aec0;">USDT</span></div>
+                </div>
+              </div>
+              <div class="order-date">${orderDate}</div>
+              ${completeBtn}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 显示空状态
+    function showEmptyState(iconType, title, desc) {
+      const container = document.getElementById('ordersContainer');
+      
+      // 根据类型选择SVG图标
+      let svgIcon = '';
+      if (iconType === 'empty') {
+        svgIcon = `
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 4.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z" />
+          </svg>
+        `;
+      } else if (iconType === 'search') {
+        svgIcon = `
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
+          </svg>
+        `;
+      } else if (iconType === 'error') {
+        svgIcon = `
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+        `;
+      }
+      
+      const actionButton = currentFilter === 'all' && iconType === 'empty' 
+        ? '<div class="empty-action" onclick="window.location.href=\'/views/user/dashboard.html\'">🚀 Start First Task</div>' 
+        : '';
+      
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">${svgIcon}</div>
+          <div class="empty-title">${title}</div>
+          <div class="empty-desc">${desc}</div>
+          ${actionButton}
+        </div>
+      `;
+    }
+
+    // 加载系统配置
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // 更新客服链接
+          if (result.data.service_url) {
+            const serviceLinks = document.querySelectorAll('.bottom-nav a[onclick*="t.me"], .bottom-nav a[href*="t.me"]');
+            serviceLinks.forEach(link => {
+              link.href = result.data.service_url;
+              link.removeAttribute('onclick');
+            });
+          }
+        }
+      } catch (error) {
+        console.error('加载系统配置失败:', error);
+      }
+    }
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', () => {
+      if (checkAuth()) {
+        loadConfig();
+        setTimeout(() => {
+          loadOrders();
+        }, 800);  // 延迟加载，展示骨架屏效果
+      }
+    });
+
+    // === 强力链接修复器 ===
+    let configCache = null;
+
+    async function forceUpdateServiceLink() {
+        // 1. 获取配置 (优先读缓存，减少请求)
+        let serviceUrl = '#';
+        if (configCache) {
+            serviceUrl = configCache.service_url;
+        } else {
+            try {
+                const res = await fetch('/api/config');
+                const { data } = await res.json();
+                if (data) {
+                    configCache = data;
+                    serviceUrl = data.service_url;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // 2. 强制更新所有 Service 相关的 onclick 事件
+        if (serviceUrl && serviceUrl !== '#') {
+            // 查找所有元素（div, button, a 等）
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(el => {
+                const onclickAttr = el.getAttribute('onclick');
+                // 如果 onclick 包含 t.me 或 TaskMall_Support，替换为新链接
+                if (onclickAttr && (onclickAttr.includes('t.me') || onclickAttr.includes('TaskMall_Support'))) {
+                    el.setAttribute('onclick', `window.open('${serviceUrl}', '_blank')`);
+                    el.onclick = function() { window.open(serviceUrl, '_blank'); };
+                }
+            });
+            console.log('✅ Service links updated to:', serviceUrl);
+        }
+    }
+
+    // 立即执行一次
+    forceUpdateServiceLink();
+
+    // 每 2 秒检查一次 (防止页面动态刷新导致链接重置)
+    setInterval(forceUpdateServiceLink, 2000);
+  </script>
+</body>
+</html>

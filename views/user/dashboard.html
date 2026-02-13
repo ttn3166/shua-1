@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>Home - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <style>
+    body {
+      padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    /* 顶部欢迎区 */
+    .header-section {
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 公告栏 */
+    .announcement-bar {
+      margin: 0 20px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      display: none;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .announcement-bar.show {
+      display: flex;
+    }
+
+    .announcement-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: #667eea;
+    }
+
+    .announcement-content {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .announcement-text {
+      display: inline-block;
+      color: #1a202c;
+      font-size: 14px;
+      font-weight: 500;
+      padding-left: 100%;
+      animation: marquee 20s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .welcome-text {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .welcome-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      margin-top: 4px;
+    }
+
+    .header-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      position: relative;
+    }
+    .header-avatar img { width: 100%; height: 100%; object-fit: cover; display: none; }
+    .header-avatar img.show { display: block; }
+    .header-avatar .avatar-letter { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .header-avatar img.show + .avatar-letter { display: none; }
+
+    /* 紧凑的资产卡片 */
+    .asset-compact {
+      margin: 0 20px 20px;
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    .asset-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .asset-amount {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -1px;
+    }
+
+    .asset-unit {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    .asset-stats {
+      display: flex;
+      gap: 24px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .asset-stat {
+      flex: 1;
+    }
+
+    .asset-stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .asset-stat-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--success-color);
+      margin-top: 2px;
+    }
+
+    /* 金刚区 (Quick Actions) */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 0 20px 24px;
+    }
+
+    .action-item {
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .action-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+    }
+
+    .action-icon svg {
+      width: 32px;
+      height: 32px;
+      color: #1a202c;
+      stroke-width: 1.5;
+    }
+
+    .action-item:active .action-icon {
+      transform: scale(0.95);
+    }
+
+    .action-label {
+      font-size: 12px;
+      color: #1a202c;
+      font-weight: 600;
+    }
+
+    /* Banner 轮播（单屏卡片 + 底部圆点，风格参考 Click-to-Rank / E-COMMERCE） */
+    .banner-section {
+      padding: 0 20px 24px;
+      position: relative;
+    }
+    .banner-carousel {
+      border-radius: 20px;
+      overflow: hidden;
+      background: linear-gradient(145deg, #f0f0f0 0%, #e8e8e8 100%);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8);
+      position: relative;
+    }
+    .banner-slides {
+      display: flex;
+      transition: transform 0.35s ease-out;
+      width: 100%;
+    }
+    .banner-slide {
+      flex: 0 0 100%;
+      width: 100%;
+      min-height: 160px;
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #f5f5f5;
+    }
+    .banner-slide img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      display: block;
+    }
+    .banner-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 0;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.04), transparent);
+      border-radius: 0 0 20px 20px;
+    }
+    .banner-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.25);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .banner-dots span.active {
+      background: #fff;
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.2);
+      transform: scale(1.15);
+    }
+
+    /* 任务大厅 */
+    .section-title {
+      padding: 0 20px 12px;
+      font-size: 18px;
+      font-weight: 700;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .task-halls {
+      padding: 0 20px 24px;
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .task-halls::-webkit-scrollbar {
+      display: none;
+    }
+
+    .hall-card {
+      min-width: 160px;
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .hall-card:active {
+      transform: scale(0.98);
+    }
+
+    .hall-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .hall-entry {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 2px;
+    }
+
+    .hall-comm {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+
+    /* 商品瀑布流 */
+    .products-section {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px calc(100px + env(safe-area-inset-bottom, 0px));
+      min-height: 50vh;
+    }
+
+    .section-title-dark {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .product-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .product-card:active {
+      transform: scale(0.98);
+    }
+
+    .product-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #f5f5f5;
+    }
+
+    .product-info {
+      padding: 12px;
+    }
+
+    .product-title {
+      font-size: 13px;
+      color: var(--text-primary);
+      font-weight: 500;
+      margin-bottom: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .product-price {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent-color);
+      margin-bottom: 4px;
+    }
+
+    .product-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .product-rating {
+      color: #ffa500;
+    }
+
+    /* 底部导航栏（带悬浮按钮） */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      padding: 8px 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+      z-index: 1000;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      text-decoration: none;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .nav-item.active {
+      color: var(--accent-color);
+    }
+
+    .nav-icon {
+      margin-bottom: 4px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .nav-icon svg {
+      width: 24px;
+      height: 24px;
+      color: var(--text-secondary);
+      stroke-width: 1.5;
+    }
+
+    .nav-item.active .nav-icon svg {
+      color: #1a202c;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .nav-item.active .nav-label {
+      color: #1a202c;
+    }
+
+    /* 中间大按钮（悬浮效果） */
+    .nav-item.center {
+      position: relative;
+      margin-top: -20px;
+    }
+
+    .nav-item.center .nav-icon-large {
+      width: 56px;
+      height: 56px;
+      background: #000000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      border: 4px solid white;
+      margin-bottom: 4px;
+    }
+
+    .nav-item.center .nav-icon-large svg {
+      width: 28px;
+      height: 28px;
+      color: white;
+      stroke-width: 2;
+    }
+
+    .nav-item.center:active .nav-icon-large {
+      transform: scale(0.95);
+    }
+
+    /* Toast 提示 */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: rgba(0,0,0,0.85);
+      color: white;
+      border-radius: 24px;
+      font-size: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      z-index: 2000;
+      display: none;
+      backdrop-filter: blur(10px);
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    /* 模态框动画 */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+  <script src="/public/js/common.js"></script>
+</head>
+<body>
+  <!-- Toast 提示 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 顶部欢迎区 -->
+  <div class="header-section">
+    <div>
+      <div class="welcome-text">Hi! Welcome</div>
+      <div class="welcome-name" id="userName">Guest</div>
+    </div>
+    <div class="header-avatar" id="userAvatar">G</div>
+  </div>
+
+  <!-- 公告栏 -->
+  <div id="announcementBar" class="announcement-bar">
+    <svg class="announcement-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+    </svg>
+    <div class="announcement-content">
+      <div class="announcement-text" id="announcementText">Loading announcement...</div>
+    </div>
+  </div>
+
+  <!-- 资产概览（紧凑版） -->
+  <div class="asset-compact">
+    <div class="asset-label">Total Balance (USDT)</div>
+    <div>
+      <span class="asset-amount" id="totalBalance">0.00</span>
+      <span class="asset-unit">USDT</span>
+    </div>
+    <div class="asset-stats">
+      <div class="asset-stat">
+        <div class="asset-stat-label">Today</div>
+        <div class="asset-stat-value" id="todayProfit">+0.00</div>
+      </div>
+      <div class="asset-stat">
+        <div class="asset-stat-label">Total Earned</div>
+        <div class="asset-stat-value" id="totalProfit">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 金刚区（4个快捷入口） -->
+  <div class="quick-actions">
+    <div class="action-item" onclick="window.location.href='/views/user/deposit.html'">
+      <div class="action-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+        </svg>
+      </div>
+      <div class="action-label">Deposit</div>
+    </div>
+    <div class="action-item" onclick="goToWithdraw()">
+      <div class="action-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+        </svg>
+      </div>
+      <div class="action-label">Withdraw</div>
+    </div>
+    <div class="action-item" onclick="window.location.href='/views/user/invite.html'">
+      <div class="action-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+        </svg>
+      </div>
+      <div class="action-label">Invite</div>
+    </div>
+    <div class="action-item" onclick="showAbout()">
+      <div class="action-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+        </svg>
+      </div>
+      <div class="action-label">About</div>
+    </div>
+  </div>
+
+  <!-- Banner 轮播（单屏展示 + 底部圆点，风格类似 Click-to-Rank / E-COMMERCE） -->
+  <div class="banner-section">
+    <div class="banner-carousel">
+      <div class="banner-slides" id="bannerSlides">
+        <div class="banner-slide"><img id="homeBannerImg1" src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800" alt="Banner 1"></div>
+        <div class="banner-slide"><img id="homeBannerImg2" src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800" alt="Banner 2"></div>
+        <div class="banner-slide"><img id="homeBannerImg3" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800" alt="Banner 3"></div>
+      </div>
+      <div class="banner-dots" id="bannerDots">
+        <span class="active" data-index="0" aria-label="Slide 1"></span>
+        <span data-index="1" aria-label="Slide 2"></span>
+        <span data-index="2" aria-label="Slide 3"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 任务大厅 -->
+  <div class="section-title">
+    Task Halls
+    <span style="font-size: 12px; font-weight: 500;">Swipe →</span>
+  </div>
+  <div class="task-halls">
+    <div class="hall-card" onclick="startTask('amazon', 0, 2)">
+      <div class="hall-name">Amazon Hall</div>
+      <div class="hall-entry">Entry: $0</div>
+      <div class="hall-comm">Commission: 2%</div>
+    </div>
+    <div class="hall-card" onclick="startTask('shopee', 500, 3)">
+      <div class="hall-name">Shopee Hall</div>
+      <div class="hall-entry">Entry: $500</div>
+      <div class="hall-comm">Commission: 3%</div>
+    </div>
+    <div class="hall-card" onclick="startTask('alibaba', 2000, 4)">
+      <div class="hall-name">Alibaba Hall</div>
+      <div class="hall-entry">Entry: $2000</div>
+      <div class="hall-comm">Commission: 4%</div>
+    </div>
+    <div class="hall-card" onclick="startTask('walmart', 5000, 5)">
+      <div class="hall-name">Walmart VIP</div>
+      <div class="hall-entry">Entry: $5000</div>
+      <div class="hall-comm">Commission: 5%</div>
+    </div>
+  </div>
+
+  <!-- 商品瀑布流 -->
+  <div class="products-section">
+    <div class="section-title-dark">Recommended for You</div>
+    <div id="productsLoading" class="product-loading" style="text-align:center; padding:40px; color:#718096; display:none;">
+      <div class="loading" style="width:36px; height:36px; margin:0 auto 12px;"></div>
+      Loading...
+    </div>
+    <div id="productGrid" class="product-grid"></div>
+    <div id="noProducts" style="display:none; text-align:center; padding:40px; color:#718096; font-size:14px;">
+      No products available at the moment.
+    </div>
+  </div>
+
+  <!-- 底部导航栏（5个按钮，中间大按钮悬浮） -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="location.reload()">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg>
+      </div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='/views/user/history.html'">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="nav-label">History</div>
+    </div>
+    <div class="nav-item center" onclick="goToTasks()">
+      <div class="nav-icon-large">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+        </svg>
+      </div>
+      <div class="nav-label" style="color: #1a202c; font-weight: 700;">Start</div>
+    </div>
+    <div class="nav-item" onclick="contactSupport()">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+        </svg>
+      </div>
+      <div class="nav-label">Service</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='/views/user/profile.html'">
+      <div class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+        </svg>
+      </div>
+      <div class="nav-label">Profile</div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== 原有逻辑保留 ====================
+    
+    // 检查登录状态
+    function checkAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/views/user/index.html';
+        return false;
+      }
+      return true;
+    }
+
+    // 加载用户数据（401 时清除登录态并跳转登录）
+    async function loadUserData() {
+      const token = localStorage.getItem('token');
+      try {
+        const response = await fetch('/api/user/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await response.json();
+
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/views/user/index.html';
+          return;
+        }
+        if (!response.ok || !result.success) throw new Error(result.message || 'Failed to load');
+
+        var d = result.data;
+        document.getElementById('totalBalance').textContent = Number(d.balance != null ? d.balance : 0).toFixed(2);
+        var name = (d.username || '').trim() || 'Guest';
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userAvatar').textContent = (name === 'Guest' ? 'G' : name[0]).toUpperCase();
+        var stored = JSON.parse(localStorage.getItem('user') || '{}');
+        stored.username = d.username;
+        stored.id = d.id;
+        stored.balance = d.balance;
+        localStorage.setItem('user', JSON.stringify(stored));
+      } catch (error) {
+        console.error('Failed to load user data:', error);
+      }
+    }
+
+    // 显示提示
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    // 提现功能（从 /api/config 读取限额与手续费）
+    async function goToWithdraw() {
+      var cfg = { withdraw_min: '10', withdraw_max: '', withdraw_fee_type: 'percent', withdraw_fee_value: '0', withdraw_tips: '', withdraw_maintenance: '0', withdraw_open: '1' };
+      try {
+        var r = await fetch('/api/config').then(function(x) { return x.json(); });
+        if (r.success && r.data) cfg = r.data;
+      } catch (e) {}
+      if (cfg.withdraw_open === '0' || cfg.withdraw_maintenance === '1') {
+        showToast(cfg.withdraw_maintenance === '1' ? 'Withdrawal under maintenance' : 'Withdrawal is disabled');
+        return;
+      }
+      var minW = parseFloat(cfg.withdraw_min) || 10;
+      var maxW = parseFloat(cfg.withdraw_max) || 0;
+      var feeType = (cfg.withdraw_fee_type || 'percent').toLowerCase();
+      var feeVal = parseFloat(cfg.withdraw_fee_value) || 0;
+      var feeText = feeVal > 0 ? (feeType === 'fixed' ? feeVal + ' USDT' : feeVal + '%') : '0';
+      var subText = 'Min ' + minW + ' USDT';
+      if (maxW > 0) subText += ' · Max ' + maxW + ' USDT';
+      subText += ' · Fee: ' + feeText;
+
+      const modal = document.createElement('div');
+      modal.id = 'withdrawModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(102, 126, 234, 0.95);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-out;
+        overflow-y: auto;
+      `;
+      
+      modal.innerHTML = `
+        <div class="card-elevated" style="max-width: 460px; width: 100%; margin: 20px 0;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">USDT Withdrawal</h2>
+            <p style="color: var(--text-secondary); font-size: 13px;" id="withdrawSubtext">` + subText + `</p>
+          </div>
+          
+          <form id="withdrawForm" onsubmit="submitWithdrawal(event)">
+            <div class="form-group">
+              <label class="form-label">Withdraw Amount (USDT)</label>
+              <input type="number" id="withdrawAmount" class="form-input" placeholder="Min ` + minW + (maxW > 0 ? ', max ' + maxW : '') + `" min="` + minW + `" step="0.01" required>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                Available: <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Wallet Address (TRC20)</label>
+              <input type="text" id="walletAddress" class="form-input" placeholder="Enter your TRC20 address" required>
+            </div>
+            <div class="form-group" id="withdrawSecurityPasswordRow" style="display: none;">
+              <label class="form-label">Security Password</label>
+              <input type="password" id="withdrawSecurityPassword" class="form-input" placeholder="Enter security password">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Remark (Optional)</label>
+              <input type="text" id="withdrawNote" class="form-input" placeholder="Enter remark...">
+            </div>
+            
+            <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; color: #fde68a; text-align: left;">
+              <div style="font-weight: 600; margin-bottom: 4px;">Withdrawal Notice:</div>
+              <div style="line-height: 1.6;">
+                • Request will be queued for audit<br>
+                • Arrives within 24h after approval<br>
+                • Ensure wallet address is correct
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn">
+              <span id="withdrawBtnText">Confirm</span>
+              <span id="withdrawBtnLoading" class="loading" style="display: none;"></span>
+            </button>
+            <button type="button" class="btn btn-outline btn-full" onclick="closeWithdrawModal()" style="margin-top: 12px;">
+              Cancel
+            </button>
+          </form>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      loadAvailableBalance();
+      var hp = await fetch('/api/user/has-security-password', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } }).then(function(x) { return x.json(); });
+      if (hp.success && hp.data && hp.data.has_security_password) {
+        var row = document.getElementById('withdrawSecurityPasswordRow');
+        if (row) { row.style.display = 'block'; var inp = document.getElementById('withdrawSecurityPassword'); if (inp) inp.required = true; }
+      }
+    }
+
+    async function loadAvailableBalance() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/user/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (result.success) {
+          document.getElementById('availableBalance').textContent = Number(result.data.balance || 0).toFixed(2);
+        }
+      } catch (err) {
+        console.error('Failed to load balance:', err);
+      }
+    }
+
+    async function submitWithdrawal(event) {
+      event.preventDefault();
+      
+      const amount = parseFloat(document.getElementById('withdrawAmount').value);
+      const wallet_address = document.getElementById('walletAddress').value.trim();
+      const note = document.getElementById('withdrawNote').value.trim();
+      var pwEl = document.getElementById('withdrawSecurityPassword');
+      var password = (pwEl && pwEl.value) ? pwEl.value : '';
+      
+      const withdrawBtn = document.getElementById('withdrawBtn');
+      const withdrawBtnText = document.getElementById('withdrawBtnText');
+      const withdrawBtnLoading = document.getElementById('withdrawBtnLoading');
+      
+      withdrawBtn.disabled = true;
+      withdrawBtnText.style.display = 'none';
+      withdrawBtnLoading.style.display = 'inline-block';
+      
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/finance/withdrawal', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ amount, wallet_address, note, password: password, channel_id: null })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Withdrawal failed');
+        }
+        
+        closeWithdrawModal();
+        showToast('Withdrawal submitted, pending review');
+        
+        setTimeout(() => {
+          loadUserData();
+        }, 500);
+        
+      } catch (error) {
+        showToast('Error: ' + error.message);
+      } finally {
+        withdrawBtn.disabled = false;
+        withdrawBtnText.style.display = 'inline';
+        withdrawBtnLoading.style.display = 'none';
+      }
+    }
+
+    function closeWithdrawModal() {
+      const modal = document.getElementById('withdrawModal');
+      if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+
+    // 邀请功能
+    function copyInviteLink() {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = user.id || '';
+      const inviteLink = `${window.location.origin}/views/user/register.html?ref=${userId}`;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteLink).then(() => {
+          showToast('Invite link copied!');
+        }).catch(() => {
+          fallbackCopy(inviteLink);
+        });
+      } else {
+        fallbackCopy(inviteLink);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Invite link copied!');
+      } catch (err) {
+        showToast('Copy failed');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // 联系客服
+    function contactSupport() {
+      window.open('https://t.me/TaskMall_Support', '_blank');
+    }
+
+    // 关于功能
+    function showAbout() {
+      showToast('TaskMall v2.0 - Your Shopping Platform');
+    }
+
+    // 任务大厅（带等级检查）
+    function startTask(hall, minBalance, commission) {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentBalance = parseFloat(document.getElementById('totalBalance').textContent) || 0;
+      
+      if (currentBalance < minBalance) {
+        showToast(`❌ Insufficient balance! ${hall} hall requires at least $${minBalance}`);
+        return;
+      }
+      
+      goToTasks();
+    }
+
+    // 推荐商品加载
+    async function loadRecommendedProducts() {
+      var loading = document.getElementById('productsLoading');
+      var grid = document.getElementById('productGrid');
+      var empty = document.getElementById('noProducts');
+      if (!loading || !grid || !empty) return;
+      loading.style.display = 'block';
+      grid.innerHTML = '';
+      empty.style.display = 'none';
+      try {
+        var token = localStorage.getItem('token');
+        var res = await fetch('/api/user/products/recommended?limit=12', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var result = await res.json();
+        loading.style.display = 'none';
+        if (result.success && result.data && result.data.products && result.data.products.length > 0) {
+          result.data.products.forEach(function(p) {
+            grid.appendChild(createProductCard(p));
+          });
+        } else {
+          empty.style.display = 'block';
+        }
+      } catch (e) {
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+        empty.textContent = 'Failed to load products.';
+      }
+    }
+
+    function createProductCard(product) {
+      var card = document.createElement('div');
+      card.className = 'product-card';
+      var imgSrc = (product.image && String(product.image).trim()) ? product.image : 'https://placehold.co/300x300/e2e8f0/718096?text=No+Image';
+      var title = product.title || 'Product';
+      var price = product.price != null ? Number(product.price).toFixed(2) : '0.00';
+      card.innerHTML = '<img src="' + imgSrc.replace(/"/g, '&quot;') + '" class="product-img" alt="' + title.replace(/"/g, '&quot;') + '" onerror="this.src=\'https://placehold.co/300x300/e2e8f0/718096?text=No+Image\'"><div class="product-info"><div class="product-title">' + title.replace(/</g, '&lt;') + '</div><div class="product-price">$' + price + '</div></div>';
+      card.onclick = function() { showProductDetail(product); };
+      return card;
+    }
+
+    function showProductDetail(product) {
+      showToast('Complete task first to unlock shopping');
+    }
+
+    // 开始抢单：跳转到任务大厅（统一使用 match+confirm 流程，不调用已废弃的 /api/task/start）
+    function goToTasks() {
+      window.location.href = '/grab';
+    }
+
+    function showMatchingModal() {
+      const modal = document.createElement('div');
+      modal.id = 'matchingModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(102, 126, 234, 0.95);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        animation: fadeIn 0.3s ease-out;
+      `;
+      
+      modal.innerHTML = `
+        <div style="text-align: center;">
+          <div class="loading" style="width: 60px; height: 60px; border-width: 4px; margin: 0 auto 24px;"></div>
+          <div style="font-size: 20px; color: white; font-weight: 700; margin-bottom: 8px;">Matching order...</div>
+          <div style="font-size: 14px; color: rgba(255,255,255,0.8);">System is finding the best order for you</div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    function hideMatchingModal() {
+      const modal = document.getElementById('matchingModal');
+      if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+
+    function showOrderSuccess(orderData) {
+      const modal = document.createElement('div');
+      modal.id = 'orderSuccessModal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(102, 126, 234, 0.95);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+        animation: fadeIn 0.3s ease-out;
+      `;
+      
+      modal.innerHTML = `
+        <div class="card-elevated" style="max-width: 420px; width: 100%;">
+          <div style="text-align: center;">
+            <h2 style="font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">Order Matched!</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 28px;">Congratulations! Order matched successfully</p>
+            
+            <div style="background: rgba(79, 172, 254, 0.08); border: 1px solid rgba(79, 172, 254, 0.3); border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 24px; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="color: var(--text-secondary); font-size: 13px;">Order No.</span>
+                <span style="color: var(--text-primary); font-family: monospace; font-size: 12px;">${orderData.order_no}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="color: var(--text-secondary); font-size: 14px;">Order Amount</span>
+                <span style="color: var(--text-primary); font-weight: 700; font-size: 18px;">${orderData.amount} <span style="font-size: 14px; font-weight: 500;">USDT</span></span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="color: var(--text-secondary); font-size: 14px;">Commission</span>
+                <span style="color: var(--success-color); font-weight: 700; font-size: 18px;">+${orderData.commission} <span style="font-size: 14px; font-weight: 500;">USDT</span></span>
+              </div>
+              <div style="height: 1px; background: rgba(79, 172, 254, 0.3); margin: 16px 0;"></div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--accent-color); font-size: 15px; font-weight: 600;">Total Return</span>
+                <span style="color: var(--accent-color); font-weight: 800; font-size: 22px;">${orderData.total_return} <span style="font-size: 16px;">USDT</span></span>
+              </div>
+            </div>
+            
+            <div style="background: rgba(77, 208, 225, 0.1); border: 1px solid rgba(77, 208, 225, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 13px; color: #7dd3f0;">
+              Complete within 30 minutes or order will be auto-cancelled
+            </div>
+            
+            <button class="btn btn-primary btn-full btn-lg" onclick="completeOrder(${orderData.order_id})" style="margin-bottom: 12px;">
+              Complete Now
+            </button>
+            <button class="btn btn-outline btn-full" onclick="closeOrderModal()">
+              Complete Later
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+    }
+
+    function closeOrderModal() {
+      const modal = document.getElementById('orderSuccessModal');
+      if (modal) {
+        modal.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => modal.remove(), 300);
+      }
+    }
+
+    async function completeOrder(orderId) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/task/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ order_id: orderId })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Submission failed');
+        }
+        
+        closeOrderModal();
+        showToast(`Order completed! Commission +${result.data.commission} USDT received`);
+        
+        setTimeout(() => {
+          loadUserData();
+        }, 500);
+        
+      } catch (error) {
+        showToast('Error: ' + error.message);
+      }
+    }
+
+    // 加载系统配置
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          // 1. 更新公告栏
+          if (result.data.announcement) {
+            const announcementBar = document.getElementById('announcementBar');
+            const announcementText = document.getElementById('announcementText');
+            announcementText.textContent = result.data.announcement;
+            announcementBar.classList.add('show');
+          }
+          
+          // 2. 更新客服链接
+          if (result.data.service_url) {
+            const serviceLinks = document.querySelectorAll('.bottom-nav a[onclick*="t.me"], .bottom-nav a[href*="t.me"]');
+            serviceLinks.forEach(link => {
+              link.href = result.data.service_url;
+              link.removeAttribute('onclick');
+            });
+          }
+          // 3. 首页三个 Banner 图（管理端可配置 URL 或上传）
+          var defaultBanners = [
+            'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800',
+            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
+            'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800'
+          ];
+          [1, 2, 3].forEach(function(i) {
+            var el = document.getElementById('homeBannerImg' + i);
+            var url = (result.data['home_banner_' + i] || '').trim();
+            if (el) {
+              if (url) { el.src = url; el.onerror = function() { this.src = defaultBanners[i - 1]; }; }
+              else { el.src = defaultBanners[i - 1]; }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load system config:', error);
+      }
+    }
+
+    function initBannerCarousel() {
+      var slidesEl = document.getElementById('bannerSlides');
+      var dotsEl = document.getElementById('bannerDots');
+      if (!slidesEl || !dotsEl) return;
+      var dots = dotsEl.querySelectorAll('span');
+      var total = 3;
+      var current = 0;
+      function goTo(i) {
+        current = (i + total) % total;
+        slidesEl.style.transform = 'translateX(-' + current * 100 + '%)';
+        dots.forEach(function(d, j) { d.classList.toggle('active', j === current); });
+      }
+      dots.forEach(function(d, i) {
+        d.addEventListener('click', function() { goTo(i); });
+      });
+      var t = setInterval(function() { goTo(current + 1); }, 4500);
+      slidesEl.addEventListener('touchstart', function() { clearInterval(t); }, { once: false });
+    }
+
+    // 页面加载
+    window.addEventListener('DOMContentLoaded', () => {
+      if (checkAuth()) {
+        loadUserData();
+        loadConfig();
+        loadRecommendedProducts();
+        initBannerCarousel();
+      }
+    });
+
+    // === 强力链接修复器 ===
+    let configCache = null;
+
+    async function forceUpdateServiceLink() {
+        // 1. 获取配置 (优先读缓存，减少请求)
+        let serviceUrl = '#';
+        if (configCache) {
+            serviceUrl = configCache.service_url;
+        } else {
+            try {
+                const res = await fetch('/api/config');
+                const { data } = await res.json();
+                if (data) {
+                    configCache = data;
+                    serviceUrl = data.service_url;
+                    
+                    // 顺便更新公告 (仅首页)
+                    const marquee = document.getElementById('announcementText');
+                    if (marquee && data.announcement) {
+                        marquee.textContent = data.announcement;
+                        document.getElementById('announcementBar').classList.add('show');
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // 2. 强制重写 contactSupport 函数
+        if (serviceUrl && serviceUrl !== '#') {
+            window.contactSupport = function() {
+                window.open(serviceUrl, '_blank');
+            };
+            console.log('✅ Service link updated to:', serviceUrl);
+        }
+    }
+
+    // 立即执行一次
+    forceUpdateServiceLink();
+
+    // 每 2 秒检查一次 (防止页面动态刷新导致链接重置)
+    setInterval(forceUpdateServiceLink, 2000);
+  </script>
+</body>
+</html>

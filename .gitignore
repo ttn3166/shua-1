@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+
+# Data & DB
+data/*.db
+data/*.sqlite
+data/*.bak
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+wwwlogs/
+
+# Backups
+backups/
+backup/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / cache
+dist/
+.cache/
+*.tar.gz
+
+# Optional
+.user.ini
+.Recycle_bin/

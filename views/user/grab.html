@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <title>Task Hall - TaskMall</title>
+    <link rel="stylesheet" href="/public/css/theme.css">
+    <style>
+        body { background: #f7f9fc; font-family: inherit; padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); min-height: 100vh; }
+        .vip-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 16px; margin: 15px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35); }
+        .vip-card h2 { margin: 0; font-size: 22px; font-weight: 700; }
+        .vip-card .badge { background: rgba(255,255,255,0.25); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .vip-card .commission { margin-top: 10px; opacity: 0.95; font-size: 14px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 0 15px 20px; }
+        .stat-box { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.04); }
+        .stat-box .label { color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+        .stat-box .value { font-size: 20px; font-weight: 700; color: #2d3748; }
+        .grab-btn-container { padding: 30px 15px; text-align: center; }
+        .grab-btn { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; width: 160px; height: 160px; border-radius: 50%; border: none; font-size: 16px; font-weight: 700; line-height: 1.3; box-shadow: 0 8px 24px rgba(66, 153, 225, 0.45); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .grab-btn:hover { transform: scale(1.02); }
+        .grab-btn:active { transform: scale(0.96); }
+        .grab-btn:disabled { opacity: 0.8; cursor: not-allowed; transform: none; }
+        .grab-btn-container .hint { color: #718096; margin-top: 14px; font-size: 12px; }
+        .notice-box { margin: 0 15px 24px; padding: 14px 16px; background: rgba(66, 153, 225, 0.08); border: 1px solid rgba(66, 153, 225, 0.2); border-radius: 12px; font-size: 13px; color: #2d3748; }
+        .notice-box .title { font-weight: 700; margin-bottom: 6px; color: #2b6cb0; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; }
+        .nav-bar a { text-align: center; color: #718096; text-decoration: none; font-size: 11px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-bar a.active { color: #4299e1; font-weight: 600; }
+        .nav-bar .nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .nav-bar .nav-icon.center { width: 48px; height: 48px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; border-radius: 50%; margin-top: -24px; border: 4px solid white; box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4); }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: rgba(0,0,0,0.85); color: white; border-radius: 24px; font-size: 14px; z-index: 2000; display: none; }
+        .toast.show { display: block; }
+        /* Task detail modal */
+        .modal-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background: rgba(102,126,234,0.95); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 20px; animation: fadeIn 0.3s; overflow-y: auto; }
+        .modal-card { background: white; border-radius: 20px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto; }
+        .modal-title { font-size: 20px; font-weight: 700; color: #2d3748; margin-bottom: 6px; text-align: center; }
+        .modal-subtitle { font-size: 13px; color: #718096; text-align: center; margin-bottom: 12px; }
+        .modal-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #e2e8f0; gap: 12px; }
+        .modal-row:last-of-type { border-bottom: none; }
+        .modal-row .label { color: #718096; font-size: 14px; flex-shrink: 0; }
+        .modal-row .value { font-weight: 700; color: #2d3748; font-size: 16px; min-width: 0; word-break: break-word; overflow-wrap: break-word; text-align: right; }
+        .modal-row.product-row .value { text-align: left; }
+        .modal-amount { font-size: 28px; font-weight: 800; color: #4299e1; text-align: center; margin: 12px 0; }
+        .modal-total { background: linear-gradient(135deg, rgba(66,153,225,0.1), rgba(102,126,234,0.1)); border-radius: 12px; padding: 12px; margin: 12px 0; text-align: center; }
+        .modal-total .label { font-size: 12px; color: #718096; }
+        .modal-total .value { font-size: 22px; font-weight: 800; color: #2b6cb0; }
+        .modal-btns { display: flex; gap: 12px; margin: 16px 0 12px; }
+        .modal-tip { font-size: 12px; color: #718096; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.3); border-radius: 10px; padding: 10px 12px; margin: 0; }
+        .modal-btns button { flex: 1; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 15px; cursor: pointer; border: none; transition: all 0.2s; }
+        .modal-btn-cancel { background: #e2e8f0; color: #4a5568; }
+        .modal-btn-confirm { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; }
+        .modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+    <script src="/public/js/common.js"></script>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+    <div class="vip-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>VIP <span id="vipLevel">1</span></h2>
+            <span class="badge">Current Level</span>
+        </div>
+        <p class="commission">Commission Rate: <span id="commissionRate">0.5</span>%</p>
+    </div>
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="label">Balance</div>
+            <div class="value"><span id="balance">0.00</span> USDT</div>
+        </div>
+        <div class="stat-box">
+            <div class="label">Completed Today</div>
+            <div class="value"><span id="progress">0</span> / <span id="dailyOrders">40</span></div>
+        </div>
+    </div>
+    <div class="grab-btn-container">
+        <button class="grab-btn" id="grabBtn" onclick="startGrab()">START<br>GRABBING</button>
+        <p class="hint">System Automatic Dispatch</p>
+    </div>
+    <div class="notice-box">
+        <div class="title">Important Notice</div>
+        <p style="margin:0;">If you have any questions, please contact online customer service.</p>
+    </div>
+    <nav class="nav-bar">
+        <a href="/views/user/dashboard.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></span>Home</a>
+        <a href="/views/user/history.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>History</a>
+        <a href="/grab" class="active"><span class="nav-icon center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></span>Start</a>
+        <a href="#" id="navService"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg></span>Service</a>
+        <a href="/views/user/profile.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></span>Profile</a>
+    </nav>
+    <script>
+        function checkAuth() {
+            var token = localStorage.getItem('token');
+            if (!token) { window.location.href = '/views/user/index.html'; return false; }
+            return true;
+        }
+        function showToast(msg) {
+            var el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(function() { el.classList.remove('show'); }, 2500);
+        }
+        async function loadUserData() {
+            if (!checkAuth()) return;
+            var token = localStorage.getItem('token');
+            try {
+                var res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } });
+                var result = await res.json();
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/views/user/index.html';
+                    return;
+                }
+                if (!res.ok || !result.success) throw new Error(result.message || 'Load failed');
+                var d = result.data;
+                document.getElementById('vipLevel').textContent = d.vip_level != null ? d.vip_level : 1;
+                document.getElementById('commissionRate').textContent = (parseFloat(d.vip_commission_rate || 0.005) * 100).toFixed(1);
+                document.getElementById('balance').textContent = Number(d.balance != null ? d.balance : 0).toFixed(2);
+                document.getElementById('progress').textContent = d.task_progress != null ? d.task_progress : 0;
+                document.getElementById('dailyOrders').textContent = d.vip_daily_orders != null ? d.vip_daily_orders : 40;
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to load data');
+            }
+        }
+        var currentMatchToken = null;
+
+        async function startGrab() {
+            if (!checkAuth()) return;
+            var btn = document.getElementById('grabBtn');
+            btn.disabled = true;
+            btn.innerHTML = 'Matching...';
+            var token = localStorage.getItem('token');
+            try {
+                var response = await fetch('/api/task/match', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
+                var res = await response.json();
+                btn.disabled = false;
+                btn.innerHTML = 'START<br>GRABBING';
+                if (res.success && res.data) {
+                    currentMatchToken = res.data.match_token;
+                    showTaskModal(res.data);
+                } else {
+                    showToast(res.message || 'Match failed');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Network error');
+                btn.disabled = false;
+                btn.innerHTML = 'START<br>GRABBING';
+            }
+        }
+
+        function showTaskModal(data) {
+            var modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.id = 'taskModal';
+            var productHtml = '';
+            if (data && data.product_name) {
+                productHtml += '<div class="modal-row product-row"><span class="label">Product</span><span class="value">' + String(data.product_name).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span></div>';
+            }
+            if (data && data.unit_price != null) {
+                productHtml += '<div class="modal-row"><span class="label">单价</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
+            }
+            if (data && data.quantity != null) {
+                productHtml += '<div class="modal-row"><span class="label">数量</span><span class="value">' + Number(data.quantity) + '</span></div>';
+            }
+            modal.innerHTML = '<div class="modal-card">' +
+                '<div class="modal-title">📦 Task Details</div>' +
+                '<div class="modal-subtitle">Confirm task info before starting</div>' +
+                '<div class="modal-amount">' + Number(data.amount).toFixed(2) + ' USDT</div>' +
+                '<div style="font-size:12px;color:#718096;text-align:center;margin-bottom:12px;">Task Amount</div>' +
+                '<div class="modal-row"><span class="label">Order No.</span><span class="value" style="font-size:12px;font-family:monospace;">' + (data.order_no || '') + '</span></div>' +
+                productHtml +
+                '<div class="modal-row"><span class="label">Commission Rate</span><span class="value">' + ((data.commission_rate || 0) * 100).toFixed(1) + '%</span></div>' +
+                '<div class="modal-row"><span class="label">Estimated Commission</span><span class="value" style="color:#38a169;">+' + Number(data.commission).toFixed(2) + ' USDT</span></div>' +
+                '<div class="modal-total"><div class="label">Total Return</div><div class="value">' + Number(data.total_return).toFixed(2) + ' USDT</div></div>' +
+                '<div class="modal-btns">' +
+                '<button class="modal-btn-cancel" onclick="closeTaskModal()">Cancel</button>' +
+                '<button class="modal-btn-confirm" id="confirmBtn" onclick="confirmGrab()">Confirm</button>' +
+                '</div>' +
+                '<div class="modal-tip">💡 Confirm to deduct task amount; principal + commission will be returned immediately after confirmation.</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+        }
+
+        function closeTaskModal() {
+            var m = document.getElementById('taskModal');
+            if (m) m.remove();
+            currentMatchToken = null;
+        }
+
+        async function confirmGrab() {
+            if (!currentMatchToken) return;
+            var btn = document.getElementById('confirmBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+            var token = localStorage.getItem('token');
+            try {
+                var response = await fetch('/api/task/confirm', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ match_token: currentMatchToken })
+                });
+                var res = await response.json();
+                closeTaskModal();
+                currentMatchToken = null;
+                if (res.success && res.data) {
+                    showToast('✅ Task completed! +' + Number(res.data.commission).toFixed(2) + ' USDT commission');
+                    loadUserData();
+                } else {
+                    showToast(res.message || 'Confirm failed');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Network error');
+                if (btn) btn.disabled = false;
+                if (btn) btn.textContent = 'Confirm';
+            }
+        }
+        function initServiceLink() {
+            fetch('/api/config').then(function(r) { return r.json(); }).then(function(o) {
+                if (o.success && o.data && o.data.service_url) {
+                    var a = document.getElementById('navService');
+                    if (a) { a.href = o.data.service_url; a.target = '_blank'; }
+                }
+            }).catch(function() {});
+        }
+        window.addEventListener('DOMContentLoaded', function() { loadUserData(); initServiceLink(); });
+    </script>
+</body>
+</html>
