@@ -157,9 +157,14 @@
           <small>Providing hash will speed up approval</small>
         </div>
         <div class="form-block">
-          <label for="depositScreenshot">Screenshot URL (Optional)</label>
-          <input type="text" id="depositScreenshot" placeholder="Image URL">
-          <small>Provide hash or screenshot for faster review</small>
+          <label for="depositScreenshotFile">上传截图 (Optional)</label>
+          <input type="file" id="depositScreenshotFile" accept="image/jpeg,image/png,image/gif,image/webp" style="font-size:14px;">
+          <small>提供哈希或上传截图可加快审核</small>
+          <div id="depositScreenshotPreview" style="margin-top:8px;display:none;">
+            <img id="depositScreenshotImg" src="" alt="预览" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #e2e8f0;">
+            <span id="depositScreenshotName" style="font-size:12px;color:#718096;margin-left:8px;"></span>
+            <button type="button" id="depositScreenshotRemove" style="margin-left:8px;padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #e53e3e;color:#e53e3e;background:#fff;cursor:pointer;">移除</button>
+          </div>
         </div>
         <div class="form-block">
           <label for="depositNote">Note (Optional)</label>
@@ -189,6 +194,7 @@
       var selectedChannelId = null;
       var channels = [];
       var config = {};
+      var uploadedScreenshotUrl = null;
       var addressBox = document.getElementById('depositAddressBox');
       var btnCopy = document.getElementById('btnCopyAddress');
       var submitBtn = document.getElementById('submitDepositBtn');
@@ -236,7 +242,7 @@
             if (!isNaN(minAmt)) { var inp = document.getElementById('depositAmount'); if (inp) { inp.min = minAmt; inp.placeholder = 'Min ' + minAmt + ' USDT'; } }
             var reqHash = config.deposit_require_hash_or_screenshot !== '0';
             document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash ' + (reqHash ? '*' : '(Optional)');
-            document.querySelector('label[for="depositScreenshot"]').innerHTML = 'Screenshot URL ' + (reqHash ? '*' : '(Optional)');
+            document.querySelector('label[for="depositScreenshotFile"]').innerHTML = '上传截图 ' + (reqHash ? '*' : '(Optional)');
             var tipsEl = document.getElementById('depositTipsText');
             if (tipsEl) tipsEl.textContent = config.deposit_tips || 'Only TRC20; wait for admin approval after submission.';
           })
@@ -280,30 +286,84 @@
         showToast('Address copied!');
       }
 
+      var fileInput = document.getElementById('depositScreenshotFile');
+      var previewDiv = document.getElementById('depositScreenshotPreview');
+      var previewImg = document.getElementById('depositScreenshotImg');
+      var previewName = document.getElementById('depositScreenshotName');
+      var removeBtn = document.getElementById('depositScreenshotRemove');
+
+      function clearScreenshot() {
+        uploadedScreenshotUrl = null;
+        if (fileInput) fileInput.value = '';
+        if (previewDiv) previewDiv.style.display = 'none';
+        if (previewImg) previewImg.src = '';
+        if (previewName) previewName.textContent = '';
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', function() {
+          var file = this.files && this.files[0];
+          if (!file) { clearScreenshot(); return; }
+          if (!/^image\/(jpeg|png|gif|webp)$/i.test(file.type)) {
+            showToast('请选择图片文件 (JPG/PNG/GIF/WebP)');
+            clearScreenshot();
+            return;
+          }
+          if (file.size > 5 * 1024 * 1024) {
+            showToast('图片大小不能超过 5MB');
+            clearScreenshot();
+            return;
+          }
+          var fd = new FormData();
+          fd.append('screenshot', file);
+          fetch('/api/finance/upload-screenshot', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: fd
+          })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              if (data.success && data.data && data.data.url) {
+                uploadedScreenshotUrl = data.data.url;
+                if (previewImg) previewImg.src = data.data.url;
+                if (previewName) previewName.textContent = file.name;
+                if (previewDiv) previewDiv.style.display = 'block';
+              } else {
+                showToast(data.error || data.message || '上传失败');
+                clearScreenshot();
+              }
+            })
+            .catch(function() {
+              showToast('上传失败，请重试');
+              clearScreenshot();
+            });
+        });
+      }
+      if (removeBtn) removeBtn.addEventListener('click', clearScreenshot);
+
       submitBtn.addEventListener('click', function submitDeposit() {
         var amountEl = document.getElementById('depositAmount');
         var hashEl = document.getElementById('depositHash');
-        var screenshotEl = document.getElementById('depositScreenshot');
         var noteEl = document.getElementById('depositNote');
         var amount = amountEl ? parseFloat(amountEl.value) : 0;
         var hash = (hashEl && hashEl.value) ? hashEl.value.trim() : null;
-        var screenshot_url = (screenshotEl && screenshotEl.value) ? screenshotEl.value.trim() : null;
+        var screenshot_url = uploadedScreenshotUrl || null;
         var note = (noteEl && noteEl.value) ? noteEl.value.trim() : null;
 
         var minAmt = parseFloat(config.deposit_min_amount);
         if (isNaN(minAmt)) minAmt = 10;
         if (!amount || amount < minAmt) {
-          showToast('Please enter valid amount (min ' + minAmt + ' USDT)');
+          showToast('请输入有效金额（最低 ' + minAmt + ' USDT）');
           return;
         }
         var reqHash = config.deposit_require_hash_or_screenshot !== '0';
         if (reqHash && !hash && !screenshot_url) {
-          showToast('Please provide transaction hash or screenshot URL');
+          showToast('请提供交易哈希或上传截图');
           return;
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        submitBtn.textContent = '提交中...';
         fetch('/api/finance/deposit', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -312,17 +372,17 @@
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.success) {
-              showToast('Deposit record submitted! Please wait for approval.');
+              showToast('充值记录已提交，请等待审核');
               amountEl.value = '';
               if (hashEl) hashEl.value = '';
-              if (screenshotEl) screenshotEl.value = '';
+              clearScreenshot();
               if (noteEl) noteEl.value = '';
             } else {
-              showToast(data.error || data.message || 'Submission failed');
+              showToast(data.error || data.message || '提交失败');
             }
           })
           .catch(function() {
-            showToast('Network error, please try again');
+            showToast('网络错误，请重试');
           })
           .finally(function() {
             submitBtn.disabled = false;

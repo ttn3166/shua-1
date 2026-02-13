@@ -1066,18 +1066,23 @@
         // --- Core Functions ---
         
         async function fetchAPI(endpoint, options = {}) {
-            if (!token) { window.location.href = 'login.html'; return; }
+            if (!token) { window.location.href = 'login.html'; return null; }
             options.headers = { ...options.headers, 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' };
+            if (options.body !== undefined && !options.headers['Content-Type']) options.headers['Content-Type'] = 'application/json';
             try {
-                const res = await fetch(API_BASE + endpoint, options);
+                const url = (API_BASE + endpoint).replace(/([^:])\/\/+/g, '$1/');
+                const res = await fetch(url, options);
+                let data;
+                try { data = await res.json(); } catch (_) { data = {}; }
                 if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
+                    const msg = data.message || data.error || ('HTTP ' + res.status);
+                    console.error("API Error:", res.status, msg);
+                    return { success: false, message: msg };
                 }
-                const data = await res.json();
                 return data;
             } catch (err) {
                 console.error("API Error:", err);
-                return { success: false, message: '网络请求失败，请检查控制台' };
+                return { success: false, message: err.message || '网络请求失败，请检查网络与控制台' };
             }
         }
 
@@ -1776,18 +1781,22 @@
             if (typeof offset !== 'number') offset = 0;
             financeOffset.withdraw = offset;
             const res = await fetchAPI('/withdrawals?limit=50&offset=' + offset);
-            const list = res.data && res.data.withdrawals ? res.data.withdrawals : [];
+            if (!res) return;
+            const list = (res.data && res.data.withdrawals) ? res.data.withdrawals : [];
             const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
             var el = document.getElementById('financePendingWithdraw'); if (el) el.textContent = pending;
+            if (!res.success) { showToast(res.message || '加载提现列表失败'); }
             renderFinanceTable(list, 'withdraw', res.data && res.data.pagination ? res.data.pagination : null);
         }
         async function loadDeposits(offset) {
             if (typeof offset !== 'number') offset = 0;
             financeOffset.deposit = offset;
             const res = await fetchAPI('/deposits?limit=50&offset=' + offset);
-            const list = res.data && res.data.deposits ? res.data.deposits : [];
+            if (!res) return;
+            const list = (res.data && res.data.deposits) ? res.data.deposits : [];
             const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
             var el = document.getElementById('financePendingDeposit'); if (el) el.textContent = pending;
+            if (!res.success) { showToast(res.message || '加载充值列表失败'); }
             renderFinanceTable(list, 'deposit', res.data && res.data.pagination ? res.data.pagination : null);
         }
 
@@ -1797,16 +1806,17 @@
             if (pagEl) pagEl.innerHTML = '';
             if (!list || list.length === 0) { container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无' + (type === 'withdraw' ? '提现' : '充值') + '记录</p></div>'; return; }
             
-            let html = `<table><thead><tr><th>用户</th><th>金额</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
+            const hasScreenshotCol = type === 'deposit';
+            let html = `<table><thead><tr><th>用户</th><th>金额</th>${hasScreenshotCol ? '<th>截图</th>' : ''}<th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
             list.forEach(item => {
                 const actionBtns = item.status === 'pending' ? `
                     <button class="btn-sm btn-primary" onclick="reviewFinance(${item.id}, '${type}', 'approve')">通过</button>
                     <button class="btn-sm btn-danger" onclick="reviewFinance(${item.id}, '${type}', 'reject')">驳回</button>
                 ` : item.status;
-                
+                const screenshotCell = hasScreenshotCol ? '<td>' + (item.screenshot_url ? '<a href="' + item.screenshot_url + '" target="_blank" rel="noopener">查看截图</a>' : '-') + '</td>' : '';
                 html += `<tr>
                     <td>${item.username}</td>
-                    <td>${item.amount}</td>
+                    <td>${item.amount}</td>${screenshotCell}
                     <td><span class="badge badge-${item.status==='pending'?'warning':(item.status==='approved'?'success':'danger')}">${item.status}</span></td>
                     <td>${new Date(item.created_at).toLocaleString()}</td>
                     <td>${actionBtns}</td>
@@ -1820,8 +1830,9 @@
             if (!confirm(`确定${action === 'approve' ? '通过' : '驳回'}?`)) return;
             const endpoint = type === 'withdraw' ? `/withdrawals/${id}/review` : `/deposits/${id}/review`;
             const res = await fetchAPI(endpoint, { method: 'POST', body: JSON.stringify({ action, reason: 'admin action' }) });
+            if (!res) return;
             if (res.success) { showToast('操作成功'); type === 'withdraw' ? loadWithdrawals() : loadDeposits(); }
-            else { showToast(res.message); }
+            else { showToast(res.message || '操作失败'); }
         }
 
         // --- Settings ---

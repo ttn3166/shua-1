@@ -3,11 +3,54 @@
  * 仅保留：POST /deposit, GET /deposits, POST /withdrawal, GET /withdrawals（无 /admin/* 接口）
  */
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcryptjs');
+const multer = require('multer');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 
 const router = express.Router();
+
+// 充值截图上传目录（放在 public 下以便前端直接访问）
+const UPLOAD_DIR = path.join(__dirname, '../../public/uploads/deposits');
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    cb(null, UPLOAD_DIR);
+  },
+  filename: (req, file, cb) => {
+    const ext = (file.originalname && path.extname(file.originalname).toLowerCase()) || '.jpg';
+    const safeExt = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext) ? ext : '.jpg';
+    cb(null, Date.now() + '-' + Math.random().toString(36).slice(2, 10) + safeExt);
+  }
+});
+const uploadScreenshot = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /^image\/(jpeg|png|gif|webp)$/i.test(file.mimetype);
+    cb(ok ? null : new Error('Only images (JPEG/PNG/GIF/WebP) are allowed'), ok);
+  }
+});
+
+/**
+ * 上传充值截图（登录用户）
+ * POST /api/finance/upload-screenshot
+ * body: multipart/form-data, field name: screenshot
+ */
+router.post('/upload-screenshot', authenticate, uploadScreenshot.single('screenshot'), (req, res) => {
+  if (!req.file) {
+    return error(res, 'No image file uploaded');
+  }
+  const url = '/public/uploads/deposits/' + req.file.filename;
+  return success(res, { url }, 'Upload success');
+}, (err, req, res, next) => {
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return error(res, 'Image size must be under 5MB');
+  }
+  return error(res, err.message || 'Upload failed');
+});
 
 function getSettings(db, keys) {
   const rows = db.prepare(`SELECT key, value FROM settings WHERE key IN (${keys.map(() => '?').join(',')})`).all(...keys);
@@ -43,7 +86,7 @@ router.post('/deposit', authenticate, (req, res) => {
 
     const requireHash = cfg.deposit_require_hash_or_screenshot !== '0';
     if (requireHash && !hash && !screenshot_url) {
-      return error(res, 'Please provide transaction hash or screenshot URL');
+      return error(res, '请提供交易哈希或上传截图');
     }
 
     const dailyLimit = parseFloat(cfg.deposit_daily_limit);
