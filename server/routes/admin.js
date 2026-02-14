@@ -879,7 +879,7 @@ router.post('/withdrawals/:id/review', checkAdmin, (req, res) => {
             
             if (action === 'approve') {
                 // 提交提现时已扣款，此处仅更新状态并记流水，不再检查余额
-                db.prepare('UPDATE withdrawals SET status = "approved", reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?').run(withdrawalId);
+                db.prepare("UPDATE withdrawals SET status = 'approved', reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(withdrawalId);
                 db.prepare('INSERT INTO ledger (user_id, type, amount, reason, created_by) VALUES (?, ?, ?, ?, ?)').run(withdrawal.user_id, 'withdrawal', -withdrawal.amount, '提现审批通过', 1);
             } else {
                 db.prepare("UPDATE withdrawals SET status = 'rejected', note = ?, reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(reason || '管理员驳回', withdrawalId);

@@ -1120,7 +1120,7 @@
                     loadUsers();
                     loadReferralRewards();
                 }
-                if (viewName === 'finance') loadWithdrawals();
+                if (viewName === 'finance') { loadWithdrawals(); loadDepositsCountOnly(); }
                 if (viewName === 'tasks') loadProducts();
                 if (viewName === 'vip') loadVipTiers();
                 if (viewName === 'orderParams') loadOrderParams();
@@ -1787,6 +1787,14 @@
             var el = document.getElementById('financePendingWithdraw'); if (el) el.textContent = pending;
             if (!res.success) { showToast(res.message || '加载提现列表失败'); }
             renderFinanceTable(list, 'withdraw', res.data && res.data.pagination ? res.data.pagination : null);
+        }
+        function loadDepositsCountOnly() {
+            fetchAPI('/deposits?limit=1&offset=0').then(function(r) {
+                if (r && r.data != null) {
+                    var el = document.getElementById('financePendingDeposit');
+                    if (el) el.textContent = (r.data.pending_count != null) ? r.data.pending_count : 0;
+                }
+            });
         }
         async function loadDeposits(offset) {
             if (typeof offset !== 'number') offset = 0;
