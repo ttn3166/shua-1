@@ -1087,10 +1087,7 @@
       window.location.href = '/views/user/set_security_password.html';
     }
 
-    // 语言设置
-    function showLanguage() {
-      showToast('Language selection coming soon');
-    }
+    // 语言设置（由 common.js 提供全局 showLanguage，此处不再定义）
 
     // 邀请好友 - 跳转到专属邀请页面
     function inviteFriends() {
@@ -1179,7 +1176,6 @@
                     el.onclick = function() { window.open(serviceUrl, '_blank'); };
                 }
             });
-            console.log('✅ Service links updated to:', serviceUrl);
         }
     }
 

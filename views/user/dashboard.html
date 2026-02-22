@@ -531,7 +531,10 @@
       <div class="welcome-text">Hi! Welcome</div>
       <div class="welcome-name" id="userName">Guest</div>
     </div>
-    <div class="header-avatar" id="userAvatar">G</div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button type="button" class="header-lang-btn" onclick="typeof showLanguage==='function'&&showLanguage()" title="Language">&#127760; Language</button>
+      <div class="header-avatar" id="userAvatar">G</div>
+    </div>
   </div>
 
   <!-- 公告栏 -->
@@ -702,7 +705,7 @@
 
   <script>
     // ==================== 原有逻辑保留 ====================
-    
+
     // 检查登录状态
     function checkAuth() {
       const token = localStorage.getItem('token');
@@ -732,6 +735,12 @@
 
         var d = result.data;
         document.getElementById('totalBalance').textContent = Number(d.balance != null ? d.balance : 0).toFixed(2);
+        var todayP = Number(d.today_profit != null ? d.today_profit : 0);
+        var totalP = Number(d.total_profit != null ? d.total_profit : 0);
+        var todayEl = document.getElementById('todayProfit');
+        var totalEl = document.getElementById('totalProfit');
+        if (todayEl) todayEl.textContent = (todayP >= 0 ? '+' : '') + todayP.toFixed(2);
+        if (totalEl) totalEl.textContent = totalP.toFixed(2);
         var name = (d.username || '').trim() || 'Guest';
         document.getElementById('userName').textContent = name;
         document.getElementById('userAvatar').textContent = (name === 'Guest' ? 'G' : name[0]).toUpperCase();
@@ -793,14 +802,14 @@
         animation: fadeIn 0.3s ease-out;
         overflow-y: auto;
       `;
-      
+
       modal.innerHTML = `
         <div class="card-elevated" style="max-width: 460px; width: 100%; margin: 20px 0;">
           <div style="text-align: center; margin-bottom: 24px;">
             <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">USDT Withdrawal</h2>
             <p style="color: var(--text-secondary); font-size: 13px;" id="withdrawSubtext">` + subText + `</p>
           </div>
-          
+
           <form id="withdrawForm" onsubmit="submitWithdrawal(event)">
             <div class="form-group">
               <label class="form-label">Withdraw Amount (USDT)</label>
@@ -809,7 +818,7 @@
                 Available: <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT
               </div>
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">Wallet Address (TRC20)</label>
               <input type="text" id="walletAddress" class="form-input" placeholder="Enter your TRC20 address" required>
@@ -822,7 +831,7 @@
               <label class="form-label">Remark (Optional)</label>
               <input type="text" id="withdrawNote" class="form-input" placeholder="Enter remark...">
             </div>
-            
+
             <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; color: #fde68a; text-align: left;">
               <div style="font-weight: 600; margin-bottom: 4px;">Withdrawal Notice:</div>
               <div style="line-height: 1.6;">
@@ -831,7 +840,7 @@
                 • Ensure wallet address is correct
               </div>
             </div>
-            
+
             <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn">
               <span id="withdrawBtnText">Confirm</span>
               <span id="withdrawBtnLoading" class="loading" style="display: none;"></span>
@@ -842,7 +851,7 @@
           </form>
         </div>
       `;
-      
+
       document.body.appendChild(modal);
       loadAvailableBalance();
       var hp = await fetch('/api/user/has-security-password', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } }).then(function(x) { return x.json(); });
@@ -869,21 +878,21 @@
 
     async function submitWithdrawal(event) {
       event.preventDefault();
-      
+
       const amount = parseFloat(document.getElementById('withdrawAmount').value);
       const wallet_address = document.getElementById('walletAddress').value.trim();
       const note = document.getElementById('withdrawNote').value.trim();
       var pwEl = document.getElementById('withdrawSecurityPassword');
       var password = (pwEl && pwEl.value) ? pwEl.value : '';
-      
+
       const withdrawBtn = document.getElementById('withdrawBtn');
       const withdrawBtnText = document.getElementById('withdrawBtnText');
       const withdrawBtnLoading = document.getElementById('withdrawBtnLoading');
-      
+
       withdrawBtn.disabled = true;
       withdrawBtnText.style.display = 'none';
       withdrawBtnLoading.style.display = 'inline-block';
-      
+
       try {
         const token = localStorage.getItem('token');
         const response = await fetch('/api/finance/withdrawal', {
@@ -894,20 +903,20 @@
           },
           body: JSON.stringify({ amount, wallet_address, note, password: password, channel_id: null })
         });
-        
+
         const result = await response.json();
-        
+
         if (!response.ok || !result.success) {
           throw new Error(result.error || 'Withdrawal failed');
         }
-        
+
         closeWithdrawModal();
         showToast('Withdrawal submitted, pending review');
-        
+
         setTimeout(() => {
           loadUserData();
         }, 500);
-        
+
       } catch (error) {
         showToast('Error: ' + error.message);
       } finally {
@@ -930,7 +939,7 @@
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const userId = user.id || '';
       const inviteLink = `${window.location.origin}/views/user/register.html?ref=${userId}`;
-      
+
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(inviteLink).then(() => {
           showToast('Invite link copied!');
@@ -972,12 +981,12 @@
     function startTask(hall, minBalance, commission) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const currentBalance = parseFloat(document.getElementById('totalBalance').textContent) || 0;
-      
+
       if (currentBalance < minBalance) {
         showToast(`❌ Insufficient balance! ${hall} hall requires at least $${minBalance}`);
         return;
       }
-      
+
       goToTasks();
     }
 
@@ -1026,7 +1035,7 @@
       showToast('Complete task first to unlock shopping');
     }
 
-    // 开始抢单：跳转到任务大厅（统一使用 match+confirm 流程，不调用已废弃的 /api/task/start）
+    // 开始抢单：跳转到任务大厅
     function goToTasks() {
       window.location.href = '/grab';
     }
@@ -1049,7 +1058,7 @@
         z-index: 9999;
         animation: fadeIn 0.3s ease-out;
       `;
-      
+
       modal.innerHTML = `
         <div style="text-align: center;">
           <div class="loading" style="width: 60px; height: 60px; border-width: 4px; margin: 0 auto 24px;"></div>
@@ -1057,7 +1066,7 @@
           <div style="font-size: 14px; color: rgba(255,255,255,0.8);">System is finding the best order for you</div>
         </div>
       `;
-      
+
       document.body.appendChild(modal);
     }
 
@@ -1087,13 +1096,13 @@
         padding: 20px;
         animation: fadeIn 0.3s ease-out;
       `;
-      
+
       modal.innerHTML = `
         <div class="card-elevated" style="max-width: 420px; width: 100%;">
           <div style="text-align: center;">
             <h2 style="font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">Order Matched!</h2>
             <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 28px;">Congratulations! Order matched successfully</p>
-            
+
             <div style="background: rgba(79, 172, 254, 0.08); border: 1px solid rgba(79, 172, 254, 0.3); border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 24px; text-align: left;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <span style="color: var(--text-secondary); font-size: 13px;">Order No.</span>
@@ -1113,11 +1122,11 @@
                 <span style="color: var(--accent-color); font-weight: 800; font-size: 22px;">${orderData.total_return} <span style="font-size: 16px;">USDT</span></span>
               </div>
             </div>
-            
+
             <div style="background: rgba(77, 208, 225, 0.1); border: 1px solid rgba(77, 208, 225, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 13px; color: #7dd3f0;">
               Complete within 30 minutes or order will be auto-cancelled
             </div>
-            
+
             <button class="btn btn-primary btn-full btn-lg" onclick="completeOrder(${orderData.order_id})" style="margin-bottom: 12px;">
               Complete Now
             </button>
@@ -1127,7 +1136,7 @@
           </div>
         </div>
       `;
-      
+
       document.body.appendChild(modal);
     }
 
@@ -1150,20 +1159,20 @@
           },
           body: JSON.stringify({ order_id: orderId })
         });
-        
+
         const result = await response.json();
-        
+
         if (!response.ok || !result.success) {
           throw new Error(result.error || 'Submission failed');
         }
-        
+
         closeOrderModal();
         showToast(`Order completed! Commission +${result.data.commission} USDT received`);
-        
+
         setTimeout(() => {
           loadUserData();
         }, 500);
-        
+
       } catch (error) {
         showToast('Error: ' + error.message);
       }
@@ -1174,7 +1183,7 @@
       try {
         const response = await fetch('/api/config');
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           // 1. 更新公告栏
           if (result.data.announcement) {
@@ -1183,7 +1192,7 @@
             announcementText.textContent = result.data.announcement;
             announcementBar.classList.add('show');
           }
-          
+
           // 2. 更新客服链接
           if (result.data.service_url) {
             const serviceLinks = document.querySelectorAll('.bottom-nav a[onclick*="t.me"], .bottom-nav a[href*="t.me"]');
@@ -1192,7 +1201,7 @@
               link.removeAttribute('onclick');
             });
           }
-          // 3. 首页三个 Banner 图（管理端可配置 URL 或上传）
+          // 3. 首页三个 Banner 图
           var defaultBanners = [
             'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=800',
             'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800',
@@ -1245,7 +1254,6 @@
     let configCache = null;
 
     async function forceUpdateServiceLink() {
-        // 1. 获取配置 (优先读缓存，减少请求)
         let serviceUrl = '#';
         if (configCache) {
             serviceUrl = configCache.service_url;
@@ -1256,8 +1264,7 @@
                 if (data) {
                     configCache = data;
                     serviceUrl = data.service_url;
-                    
-                    // 顺便更新公告 (仅首页)
+
                     const marquee = document.getElementById('announcementText');
                     if (marquee && data.announcement) {
                         marquee.textContent = data.announcement;
@@ -1267,19 +1274,14 @@
             } catch (e) { console.error(e); }
         }
 
-        // 2. 强制重写 contactSupport 函数
         if (serviceUrl && serviceUrl !== '#') {
             window.contactSupport = function() {
                 window.open(serviceUrl, '_blank');
             };
-            console.log('✅ Service link updated to:', serviceUrl);
         }
     }
 
-    // 立即执行一次
     forceUpdateServiceLink();
-
-    // 每 2 秒检查一次 (防止页面动态刷新导致链接重置)
     setInterval(forceUpdateServiceLink, 2000);
   </script>
 </body>

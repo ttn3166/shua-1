@@ -86,7 +86,7 @@ router.post('/deposit', authenticate, (req, res) => {
 
     const requireHash = cfg.deposit_require_hash_or_screenshot !== '0';
     if (requireHash && !hash && !screenshot_url) {
-      return error(res, '请提供交易哈希或上传截图');
+      return error(res, 'Please provide transaction hash or upload screenshot');
     }
 
     const dailyLimit = parseFloat(cfg.deposit_daily_limit);

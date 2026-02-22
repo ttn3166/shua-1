@@ -7,19 +7,27 @@ const { verifyToken } = require('../utils/jwt');
 const { error } = require('../utils/response');
 const multer = require('multer');
 const XLSX = require('xlsx');
+const JSZip = require('jszip');
 
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 
-const bannerUploadDir = path.join(__dirname, '../public/uploads/banners');
+const bannerUploadDir = path.join(__dirname, '../../public/uploads/banners');
+const productUploadDir = path.join(__dirname, '../../public/uploads/products');
 try { fs.mkdirSync(bannerUploadDir, { recursive: true }); } catch (e) {}
+try { fs.mkdirSync(productUploadDir, { recursive: true }); } catch (e) {}
 const bannerUpload = multer({
     storage: multer.diskStorage({
         destination: (req, file, cb) => cb(null, bannerUploadDir),
         filename: (req, file, cb) => cb(null, 'banner_' + Date.now() + path.extname(file.originalname || '.jpg').toLowerCase())
     }),
+    limits: { fileSize: 2 * 1024 * 1024 } // 2MB
+});
+
+const productImageUpload = multer({
+    storage: multer.memoryStorage(),
     limits: { fileSize: 2 * 1024 * 1024 } // 2MB
 });
 
@@ -440,7 +448,7 @@ router.get('/users', checkAdmin, (req, res) => {
             total = countRow ? countRow.total : 0;
         } catch (e) { total = 0; }
 
-        const limitNum = Math.min(parseInt(limit, 10) || 50, 200);
+        const limitNum = Math.min(parseInt(limit, 10) || 20, 500);
         const offsetNum = Math.max(0, parseInt(offset, 10) || 0);
         sql += " ORDER BY id DESC LIMIT ? OFFSET ?";
         params.push(limitNum, offsetNum);
@@ -848,7 +856,7 @@ router.post('/users/:id/reset-security-password', checkAdmin, (req, res) => {
 // ==========================================
 router.get('/withdrawals', checkAdmin, (req, res) => {
     const db = getDb();
-    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
     try {
         const total = db.prepare('SELECT COUNT(*) as c FROM withdrawals').get().c;
@@ -897,7 +905,7 @@ router.post('/withdrawals/:id/review', checkAdmin, (req, res) => {
 // 充值审批
 router.get('/deposits', checkAdmin, (req, res) => {
     const db = getDb();
-    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
     try {
         const total = db.prepare('SELECT COUNT(*) as c FROM deposits').get().c;
@@ -955,7 +963,7 @@ router.get('/products', checkAdmin, (req, res) => {
             image TEXT,
             vip_level INTEGER DEFAULT 0
         )`).run();
-        const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+        const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
         const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
         const total = db.prepare('SELECT COUNT(*) as c FROM products').get().c;
         const products = db.prepare('SELECT * FROM products ORDER BY id DESC LIMIT ? OFFSET ?').all(limit, offset);
@@ -979,9 +987,60 @@ router.post('/products', checkAdmin, (req, res) => {
     }
 });
 
+/**
+ * 从 xlsx 提取内嵌图片，映射到行号（0-based，首行为表头，rowIndex=0 表示第 2 行）
+ * 返回 { rowImages: { rowIndex: Buffer } }
+ */
+async function extractImagesFromXlsx(buffer) {
+  const rowImages = {};
+  try {
+    const zip = await JSZip.loadAsync(buffer);
+    const mediaFiles = [];
+    zip.folder('xl/media').forEach((relativePath, file) => { mediaFiles.push(relativePath); });
+    if (mediaFiles.length === 0) return rowImages;
+
+    const sheetRels = await zip.file('xl/worksheets/_rels/sheet1.xml.rels')?.async('string');
+    if (!sheetRels) return rowImages;
+    const drawingRId = sheetRels.match(/Relationship[^>]*Type="[^"]*drawing[^"]*"[^>]*Id="([^"]+)"/i)?.[1];
+    if (!drawingRId) return rowImages;
+
+    const drawingPath = 'xl/drawings/drawing1.xml';
+    const drawingRelsPath = 'xl/drawings/_rels/drawing1.xml.rels';
+    const drawingRels = await zip.file(drawingRelsPath)?.async('string');
+    const drawingXml = await zip.file(drawingPath)?.async('string');
+    if (!drawingRels || !drawingXml) return rowImages;
+
+    const rIdToMedia = {};
+    drawingRels.replace(/<Relationship[^>]*>/g, (match) => {
+      const idM = match.match(/Id="([^"]+)"/);
+      const targetM = match.match(/Target="([^"]+)"/);
+      if (idM && targetM && targetM[1].indexOf('media') !== -1) {
+        rIdToMedia[idM[1]] = targetM[1].replace(/^\.\.\//, 'xl/');
+      }
+    });
+
+    const anchorRegex = /<xdr:(?:twoCellAnchor|oneCellAnchor)[\s\S]*?<xdr:from>[\s\S]*?<xdr:row>(\d+)<\/xdr:row>[\s\S]*?<xdr:pic[\s\S]*?<a:blip[^>]*r:embed="([^"]+)"/gi;
+    let m;
+    while ((m = anchorRegex.exec(drawingXml)) !== null) {
+      const row = parseInt(m[1], 10);
+      const rId = m[2];
+      const mediaPath = rIdToMedia[rId];
+      if (!mediaPath) continue;
+      const imgFile = zip.file(mediaPath);
+      if (!imgFile) continue;
+      const buf = await imgFile.async('nodebuffer');
+      rowImages[row - 1] = buf;
+    }
+  } catch (e) {
+    console.warn('extractImagesFromXlsx:', e.message);
+  }
+  return rowImages;
+}
+
 // 批量导入商品（Excel .xlsx）
-// 字段：Name(名称), Price(价格), Image(图片URL 可选)；导入后 vip_level=0（全员通用）
-router.post('/products/import', checkAdmin, upload.single('file'), (req, res) => {
+// 字段：Name(名称), Price(价格), Image(图片URL 可选)；Image 列可输入 URL 或在单元格内嵌入图片
+// 导入后 vip_level=0（全员通用）
+router.post('/products/import', checkAdmin, upload.single('file'), async (req, res) => {
     const db = getDb();
     try {
         if (!req.file || !req.file.buffer) {
@@ -1026,22 +1085,46 @@ router.post('/products/import', checkAdmin, upload.single('file'), (req, res) =>
             return '';
         };
 
+        const rowImages = await extractImagesFromXlsx(req.file.buffer);
+
         const insert = db.prepare('INSERT INTO products (title, price, image, vip_level) VALUES (?, ?, ?, 0)');
         let inserted = 0;
         let skipped = 0;
         const errors = [];
 
+        const getExt = (buf) => {
+            if (!buf || buf.length < 4) return '.png';
+            if (buf[0] === 0xFF && buf[1] === 0xD8) return '.jpg';
+            if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E) return '.png';
+            if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return '.gif';
+            return '.png';
+        };
+
         db.transaction(() => {
             rows.forEach((r, idx) => {
                 const name = String(pick(r, ['Name', '名称', 'Title', '商品名称'])).trim();
                 const priceRaw = pick(r, ['Price', '价格', 'UnitPrice', '单价']);
-                const image = String(pick(r, ['Image', '图片', 'Img', '图片URL', 'ImageURL'])).trim() || 'https://placehold.co/100';
+                let imageUrl = String(pick(r, ['Image', '图片', 'Img', '图片URL', 'ImageURL'])).trim();
 
                 const price = Number(priceRaw);
                 if (!name) { skipped++; errors.push({ row: idx + 2, error: 'Name 不能为空' }); return; }
                 if (!isFinite(price) || price <= 0) { skipped++; errors.push({ row: idx + 2, error: 'Price 必须为正数' }); return; }
 
-                insert.run(name, price, image);
+                const embImg = rowImages[idx];
+                if (embImg && embImg.length > 0) {
+                    const ext = getExt(embImg);
+                    const filename = 'prod_' + Date.now() + '_' + idx + ext;
+                    const filepath = path.join(productUploadDir, filename);
+                    try {
+                        fs.writeFileSync(filepath, embImg);
+                        imageUrl = '/public/uploads/products/' + filename;
+                    } catch (e) {
+                        imageUrl = imageUrl || 'https://placehold.co/100';
+                    }
+                }
+                if (!imageUrl) imageUrl = 'https://placehold.co/100';
+
+                insert.run(name, price, imageUrl);
                 inserted++;
             });
         })();
@@ -1066,6 +1149,69 @@ router.delete('/products/:id', checkAdmin, (req, res) => {
         console.error('Delete product error:', err);
         res.status(500).json({ success: false, message: err.message });
     }
+});
+
+// 商品批量删除：按 ID 列表 / 按价格区间 / 全部删除
+router.post('/products/batch-delete', checkAdmin, (req, res) => {
+    const db = getDb();
+    const { ids, by_price, price_min, price_max, delete_all } = req.body || {};
+    try {
+        if (delete_all) {
+            const info = db.prepare('DELETE FROM products').run();
+            return res.json({ success: true, message: '已全部删除，共 ' + info.changes + ' 条', deleted: info.changes });
+        }
+        if (ids && Array.isArray(ids) && ids.length > 0) {
+            const placeholders = ids.map(() => '?').join(',');
+            const stmt = db.prepare('DELETE FROM products WHERE id IN (' + placeholders + ')');
+            const info = stmt.run(...ids);
+            return res.json({ success: true, message: '已删除 ' + info.changes + ' 条', deleted: info.changes });
+        }
+        if (by_price) {
+            const min = price_min != null && price_min !== '' ? parseFloat(price_min) : null;
+            const max = price_max != null && price_max !== '' ? parseFloat(price_max) : null;
+            if (min == null && max == null) {
+                return res.status(400).json({ success: false, message: '请填写最低价或最高价' });
+            }
+            let sql = 'DELETE FROM products WHERE 1=1';
+            const params = [];
+            if (min != null && isFinite(min)) { sql += ' AND price >= ?'; params.push(min); }
+            if (max != null && isFinite(max)) { sql += ' AND price <= ?'; params.push(max); }
+            const info = db.prepare(sql).run(...params);
+            return res.json({ success: true, message: '按价格已删除 ' + info.changes + ' 条', deleted: info.changes });
+        }
+        return res.status(400).json({ success: false, message: '请提供 ids、by_price+价格区间 或 delete_all' });
+    } catch (err) {
+        console.error('Batch delete products error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// 商品图片上传（粘贴/拖拽用，返回可访问的 URL）
+router.post('/upload-product-image', checkAdmin, (req, res, next) => {
+    productImageUpload.single('image')(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ success: false, message: '图片大小不能超过 2MB' });
+            console.error('upload-product-image:', err);
+            return res.status(500).json({ success: false, message: err.message || '图片上传失败' });
+        }
+        next();
+    });
+}, (req, res) => {
+    if (!req.file || !req.file.buffer) {
+        return res.status(400).json({ success: false, message: '请选择或粘贴图片' });
+    }
+    let ext = (req.file.originalname && path.extname(req.file.originalname).toLowerCase()) || '';
+    if (!ext || !/^\.(png|jpg|jpeg|gif|webp)$/i.test(ext)) ext = (req.file.mimetype && req.file.mimetype.includes('png')) ? '.png' : '.jpg';
+    const filename = 'prod_' + Date.now() + ext;
+    const filepath = path.join(productUploadDir, filename);
+    try {
+        fs.writeFileSync(filepath, req.file.buffer);
+    } catch (e) {
+        console.error('upload-product-image write:', e);
+        return res.status(500).json({ success: false, message: '保存图片失败：' + (e.message || '') });
+    }
+    const url = '/public/uploads/products/' + filename;
+    res.json({ success: true, data: { url } });
 });
 
 // 首页 Banner 图上传（返回可访问的 URL）
@@ -1175,14 +1321,14 @@ router.get('/settings', checkAdmin, (req, res) => {
         initSetting('deposit_channels', '[]', '充值方式列表JSON');
         initSetting('deposit_min_amount', '10', '最低充值金额(USDT)');
         initSetting('deposit_require_hash_or_screenshot', '1', '必填哈希或截图(1/0)');
-        initSetting('deposit_tips', '仅支持 TRC20；最低 10 USDT；到账约 1-30 分钟；提交后等待审核。', '充值页底部说明');
+        initSetting('deposit_tips', 'Only TRC20 supported; Min 10 USDT; Arrival approx. 1-30 min; Wait for approval after submission.', 'deposit page tips');
         initSetting('deposit_maintenance', '0', '充值维护(1=关闭)');
         initSetting('deposit_daily_limit', '0', '单用户单日充值上限(0=不限制)');
         initSetting('withdraw_max', '5000', '单笔最高提现(USDT)');
         initSetting('withdraw_fee_type', 'percent', '手续费类型percent|fixed');
         initSetting('withdraw_fee_value', '0', '手续费值');
         initSetting('withdraw_channels', '[]', '提现方式列表JSON');
-        initSetting('withdraw_tips', '到账时间约 1-24 小时，请留意审核结果。', '提现说明');
+        initSetting('withdraw_tips', 'Arrival approx. 1-24 hours. Please check approval status.', 'withdraw tips');
         initSetting('withdraw_maintenance', '0', '提现维护(1=关闭)');
         initSetting('withdraw_daily_count_limit', '0', '单日提现次数(0=不限制)');
         initSetting('withdraw_daily_amount_limit', '0', '单日提现总额(0=不限制)');

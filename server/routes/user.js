@@ -187,6 +187,7 @@ router.get('/me', authenticate, (req, res) => {
     }
 
     let totalProfit = 0;
+    let todayProfit = 0;
     let totalOrders = 0;
     try {
       const stat = db.prepare(
@@ -194,6 +195,10 @@ router.get('/me', authenticate, (req, res) => {
       ).get(userId, 'completed');
       totalProfit = stat ? (stat.profit || 0) : 0;
       totalOrders = stat ? (stat.cnt || 0) : 0;
+      const todayRow = db.prepare(
+        "SELECT COALESCE(SUM(commission), 0) as profit FROM orders WHERE user_id = ? AND status = 'completed' AND date(created_at) = date('now', 'localtime')"
+      ).get(userId);
+      todayProfit = todayRow ? (todayRow.profit || 0) : 0;
     } catch (e) {}
 
     res.json({
@@ -204,6 +209,7 @@ router.get('/me', authenticate, (req, res) => {
         vip_daily_orders: vipConfig.task_limit != null ? vipConfig.task_limit : 40,
         vip_commission_rate: vipConfig.commission_rate != null ? vipConfig.commission_rate : 0.005,
         total_profit: totalProfit,
+        today_profit: todayProfit,
         total_orders: totalOrders
       }
     });

@@ -227,20 +227,29 @@ router.post('/confirm', authenticate, (req, res) => {
     const { orderId, orderNo, amount, commission, totalReturn, orderType = 'normal', dispatchOrderId, productName, unitPrice, quantity } = cached;
 
     try {
-        const user = db.prepare('SELECT balance, task_progress FROM users WHERE id = ?').get(userId);
+        const user = db.prepare('SELECT balance, task_progress, vip_level FROM users WHERE id = ?').get(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
         if (user.balance < amount) return res.json({ success: false, message: 'Insufficient balance.' });
 
+        let vipConfig = db.prepare('SELECT task_limit FROM vip_levels WHERE level = ?').get(user.vip_level != null ? user.vip_level : 1);
+        if (!vipConfig) vipConfig = { task_limit: 40 };
+        const dailyOrders = vipConfig.task_limit != null ? vipConfig.task_limit : 40;
+        const newProgress = (user.task_progress || 0) + 1;
+        const reachedDailyLimit = newProgress >= dailyOrders;
+
         db.transaction(() => {
-            // 更新 match 时创建的 pending 订单为 completed，而非新建订单
             db.prepare('UPDATE orders SET status = ? WHERE id = ? AND user_id = ? AND status = ?')
                 .run('completed', orderId, userId, 'pending');
 
             db.prepare('UPDATE users SET balance = balance - ? + ?, task_progress = task_progress + 1 WHERE id = ?')
                 .run(amount, totalReturn, userId);
 
+            if (reachedDailyLimit) {
+                db.prepare('UPDATE users SET allow_grab = 0 WHERE id = ?').run(userId);
+            }
+
             if (dispatchOrderId) {
-                db.prepare('UPDATE dispatched_orders SET status = ?, triggered_at = datetime("now") WHERE id = ?')
+                db.prepare("UPDATE dispatched_orders SET status = ?, triggered_at = datetime('now') WHERE id = ?")
                     .run('used', dispatchOrderId);
             }
 
@@ -267,9 +276,11 @@ router.post('/confirm', authenticate, (req, res) => {
                 quantity: quantity,
                 commission,
                 total_return: totalReturn,
-                task_progress: (user.task_progress || 0) + 1
+                task_progress: newProgress,
+                daily_completed: reachedDailyLimit,
+                allow_grab: reachedDailyLimit ? 0 : 1
             },
-            message: 'Task completed. Principal + commission returned.'
+            message: reachedDailyLimit ? 'Task completed. Daily limit reached; grabbing paused until admin re-enables.' : 'Task completed. Principal + commission returned.'
         });
     } catch (err) {
         console.error('Confirm Error:', err);
@@ -298,7 +309,7 @@ router.post('/submit', authenticate, (req, res) => {
     const { order_id } = req.body;
     
     if (!order_id) {
-        return error(res, '订单ID不能为空');
+        return error(res, 'Order ID is required');
     }
     
     try {
@@ -317,19 +328,27 @@ router.post('/submit', authenticate, (req, res) => {
         const isMatchFlow = order.source === 'match';
 
         if (isMatchFlow) {
-            // match 流程：未确认的 pending 订单，需扣款后返还本金+佣金
-            const user = db.prepare('SELECT balance, task_progress FROM users WHERE id = ?').get(userId);
+            const user = db.prepare('SELECT balance, task_progress, vip_level FROM users WHERE id = ?').get(userId);
             if (!user) return error(res, 'User not found', 404);
             if (user.balance < orderAmount) return error(res, 'Insufficient balance');
             const commission = order.commission != null ? order.commission : parseFloat((orderAmount * 0.005).toFixed(4));
             const totalReturn = orderAmount + commission;
 
+            let vipConfig = db.prepare('SELECT task_limit FROM vip_levels WHERE level = ?').get(user.vip_level != null ? user.vip_level : 1);
+            if (!vipConfig) vipConfig = { task_limit: 40 };
+            const dailyOrders = vipConfig.task_limit != null ? vipConfig.task_limit : 40;
+            const newProgress = (user.task_progress || 0) + 1;
+            const reachedDailyLimit = newProgress >= dailyOrders;
+
             db.transaction(() => {
                 db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('completed', order_id);
                 db.prepare('UPDATE users SET balance = balance - ? + ?, task_progress = task_progress + 1 WHERE id = ?')
                     .run(orderAmount, totalReturn, userId);
+                if (reachedDailyLimit) {
+                    db.prepare('UPDATE users SET allow_grab = 0 WHERE id = ?').run(userId);
+                }
                 if (order.dispatch_order_id) {
-                    db.prepare('UPDATE dispatched_orders SET status = ?, triggered_at = datetime("now") WHERE id = ?')
+                    db.prepare("UPDATE dispatched_orders SET status = ?, triggered_at = datetime('now') WHERE id = ?")
                         .run('used', order.dispatch_order_id);
                 }
                 db.prepare(`
@@ -349,7 +368,9 @@ router.post('/submit', authenticate, (req, res) => {
                 amount: orderAmount,
                 commission,
                 total_return: totalReturn,
-                message: 'Order completed. Principal and commission returned.'
+                daily_completed: reachedDailyLimit,
+                allow_grab: reachedDailyLimit ? 0 : 1,
+                message: reachedDailyLimit ? 'Order completed. Daily limit reached; grabbing paused until admin re-enables.' : 'Order completed. Principal and commission returned.'
             }, 'Order completed');
         }
 

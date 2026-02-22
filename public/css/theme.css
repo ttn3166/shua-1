@@ -77,6 +77,24 @@ a:hover {
   color: #00f2fe;
 }
 
+/* 首页/导航用语言按钮（与 Google 翻译挂件配合） */
+.header-lang-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+.header-lang-btn:hover {
+  background: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.6);
+}
+
 /* ==================== 容器 ==================== */
 .container {
   width: 100%;

@@ -307,7 +307,6 @@
                 <div style="margin-bottom: 8px;">
                     <button type="button" onclick="document.getElementById('userAdvancedFilters').style.display = document.getElementById('userAdvancedFilters').style.display === 'none' ? 'block' : 'none';" style="background: none; border: none; color: #718096; cursor: pointer; font-size: 12px;">▼ 高级搜索</button>
                 </div>
-                
                 <!-- 用户类型标签页切换 -->
                 <div style="margin: 20px 0; display: flex; align-items: center; justify-content: space-between;">
                     <div class="user-tabs" style="display: flex; gap: 10px;">
@@ -328,7 +327,18 @@
                         <tbody></tbody>
                     </table>
                 </div>
-                <div id="userPagination" style="margin-top: 12px; font-size: 13px; color: #718096;"></div>
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                    <span>每页</span>
+                    <select id="userPageSizeSelect" onchange="userPageSize=parseInt(this.value,10);currentUserPage=1;loadUsers();" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                    </select>
+                    <span>条</span>
+                    <span id="userPagination"></span>
+                </div>
             </div>
 
             <div class="content-card" style="margin-top: 20px;">
@@ -357,7 +367,14 @@
                     <button type="button" id="financeTabWithdraw" class="active" onclick="switchFinanceTab('withdraw')">提现审批</button>
                     <button type="button" id="financeTabDeposit" onclick="switchFinanceTab('deposit')">充值审批</button>
                 </div>
-                <div id="financePagination" style="margin-bottom:12px;font-size:13px;color:#718096;"></div>
+                <div style="margin-bottom:12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                    <span>每页</span>
+                    <select id="financePageSizeSelect" onchange="financePageSize=parseInt(this.value,10);financeOffset.withdraw=0;financeOffset.deposit=0;var t=document.getElementById('financeTabWithdraw');if(t&&t.classList.contains('active'))loadWithdrawals(0);else loadDeposits(0);" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                        <option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option>
+                    </select>
+                    <span>条</span>
+                    <span id="financePagination"></span>
+                </div>
                 <div id="financeList"></div>
             </div>
         </div>
@@ -378,7 +395,15 @@
                             <option value="3">VIP 3</option>
                             <option value="4">VIP 4</option>
                         </select>
-                        <input type="text" id="prodImg" placeholder="图片URL (可选)">
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block;font-size:13px;color:#718096;margin-bottom:6px;">图片：输入 URL 或粘贴/拖拽图片</label>
+                            <input type="text" id="prodImg" placeholder="图片URL (可选)" style="margin-bottom:8px;">
+                            <div id="prodImageZone" style="border:2px dashed #e2e8f0;border-radius:10px;padding:20px;text-align:center;background:#fafafa;cursor:pointer;min-height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+                                <span id="prodImageHint" style="color:#718096;font-size:13px;">Ctrl+V 粘贴 或 拖拽图片到此处</span>
+                                <img id="prodImagePreview" src="" alt="" style="max-width:120px;max-height:120px;object-fit:contain;display:none;border-radius:8px;">
+                                <button type="button" id="prodImageClear" onclick="clearProductImage()" style="display:none;padding:4px 12px;font-size:12px;background:#eee;border:none;border-radius:6px;cursor:pointer;">清除图片</button>
+                            </div>
+                        </div>
                         <button class="btn-primary" onclick="addProduct()" style="width: 100%">添加商品</button>
                         <div style="display:flex; gap: 10px; margin-top: 10px;">
                             <button class="btn-primary" onclick="triggerProductsImport()" style="flex: 1; background: #4c51bf;">批量导入 (.xlsx)</button>
@@ -386,16 +411,37 @@
                         </div>
                         <input id="prodImportFile" type="file" accept=".xlsx" style="display:none" onchange="importProductsExcel()" />
                         <div style="margin-top: 10px; font-size: 12px; color: #718096; line-height: 1.5;">
-                            Excel 字段：Name（名称）、Price（单价）、Image（图片URL，可选）。导入商品默认设置为「全员通用」。
+                            Excel 字段：Name（名称）、Price（单价）、Image（图片URL 或 单元格内嵌入图片）。Image 列可填写 URL，也可在单元格内直接插入图片。导入商品默认「全员通用」。
                         </div>
                     </div>
                 </div>
                 <div class="content-card">
                     <div class="card-title">商品列表</div>
+                    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:12px;">
+                        <button type="button" class="btn-sm btn-danger" onclick="batchDeleteProducts()">批量删除选中</button>
+                        <span style="color:#718096;font-size:13px;">按价格删除：</span>
+                        <input type="number" id="batchPriceMin" placeholder="最低价" step="0.01" style="width:90px;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;">
+                        <span>～</span>
+                        <input type="number" id="batchPriceMax" placeholder="最高价" step="0.01" style="width:90px;padding:6px 8px;border-radius:6px;border:1px solid #e2e8f0;">
+                        <button type="button" class="btn-sm btn-danger" onclick="batchDeleteByPrice()">按价格删除</button>
+                        <button type="button" class="btn-sm btn-danger" onclick="deleteAllProducts()" style="margin-left:8px;">全部删除</button>
+                    </div>
                     <table id="productsTable" style="margin-top: 20px;">
-                        <thead><tr><th>ID</th><th>图片</th><th>名称</th><th>价格</th><th>VIP</th><th>操作</th></tr></thead>
+                        <thead><tr><th><input type="checkbox" id="productsSelectAll" title="全选"></th><th>ID</th><th>图片</th><th>名称</th><th>价格</th><th>VIP</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                    <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                        <span>每页</span>
+                        <select id="productPageSizeSelect" onchange="productPageSize=parseInt(this.value,10);productPage=1;loadProducts(1);" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                        </select>
+                        <span>条</span>
+                        <span id="productPagination"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -536,6 +582,18 @@
                         </tbody>
                     </table>
                 </div>
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                    <span>每页</span>
+                    <select id="agentPageSizeSelect" onchange="agentPageSize=parseInt(this.value,10);agentPage=1;loadAgents();" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                    </select>
+                    <span>条</span>
+                    <span id="agentPagination"></span>
+                </div>
             </div>
         </div>
 
@@ -601,8 +659,13 @@
                             </tbody>
                         </table>
                     </div>
-                    <div style="margin-top: 15px; text-align: center;">
-                        <button onclick="loadMoreTransactions()" class="btn-primary" style="padding: 8px 20px;">加载更多</button>
+                    <div style="margin-top: 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                        <span>每页</span>
+                        <select id="transactionPageSizeSelect" onchange="transactionPageSize=parseInt(this.value,10);currentTransactionOffset=0;loadAllTransactions(0);" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                            <option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="500">500</option>
+                        </select>
+                        <span>条</span>
+                        <span id="transactionPagination"></span>
                     </div>
                 </div>
             </div>
@@ -639,7 +702,18 @@
                         </tbody>
                     </table>
                 </div>
-                <div style="margin-top: 15px; color: #718096; font-size: 12px;" id="loginLogsPagination"></div>
+                <div style="margin-top: 15px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #718096;">
+                    <span>每页</span>
+                    <select id="loginLogsPageSizeSelect" onchange="loginLogsPageSize=parseInt(this.value,10);loginLogsOffset=0;loadLoginLogs(0);" style="padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                    </select>
+                    <span>条</span>
+                    <span id="loginLogsPagination"></span>
+                </div>
             </div>
         </div>
 
@@ -1121,7 +1195,7 @@
                     loadReferralRewards();
                 }
                 if (viewName === 'finance') { loadWithdrawals(); loadDepositsCountOnly(); }
-                if (viewName === 'tasks') loadProducts();
+                if (viewName === 'tasks') { loadProducts(); setupProductImageZone(); }
                 if (viewName === 'vip') loadVipTiers();
                 if (viewName === 'orderParams') loadOrderParams();
                 if (viewName === 'agents') loadAgents();
@@ -1262,6 +1336,8 @@
         async function loadUsers(type, page) {
             if (type) currentUserType = type;
             if (page) currentUserPage = page;
+            var sel = document.getElementById('userPageSizeSelect');
+            if (sel) sel.value = userPageSize;
             var qs = buildUserQueryParams(currentUserPage);
             const res = await fetchAPI('/users?' + qs);
             const tbody = document.querySelector('#usersTable tbody');
@@ -1307,10 +1383,10 @@
                                 }
                             </td>
                             <td>
-                                <label class="switch" style="margin: 0;">
-                                    <input type="checkbox" ${u.allow_grab === 1 ? 'checked' : ''} onchange="toggleGrab(${u.id}, '${u.username}')">
-                                    <span class="slider"></span>
-                                </label>
+                                ${u.allow_grab === 1 
+                                    ? '<button type="button" class="btn-sm btn-danger" onclick="toggleGrab(' + u.id + ', \'' + (u.username || '').replace(/'/g, "\\'") + '\')" title="关闭后用户无法抢单">关闭抢单</button>'
+                                    : '<button type="button" class="btn-sm" style="background:#38a169;color:white;" onclick="toggleGrab(' + u.id + ', \'' + (u.username || '').replace(/'/g, "\\'") + '\')" title="开启后用户才可以抢单">开启抢单</button>'
+                                }
                             </td>
                             <td style="text-align: center;">
                                 <div style="display: flex; align-items: center; gap: 8px; justify-content: center;">
@@ -1338,13 +1414,20 @@
             }
             var pag = res.data && res.data.pagination;
             var pagEl = document.getElementById('userPagination');
-            if (pagEl && pag) {
-                var totalPages = Math.ceil((pag.total || 0) / userPageSize) || 1;
-                var html = '共 ' + (pag.total || 0) + ' 条 · 第 ' + currentUserPage + '/' + totalPages + ' 页';
+            if (pagEl) {
+                var total = pag ? (pag.total || 0) : 0;
+                var totalPages = Math.ceil(total / userPageSize) || 1;
+                var html = '共 ' + total + ' 条记录 · 每页 ' + userPageSize + ' 条 · 第 ' + currentUserPage + '/' + totalPages + ' 页';
                 if (totalPages > 1) {
                     html += ' · ';
                     if (currentUserPage > 1) html += '<a href="javascript:loadUsers(null,' + (currentUserPage - 1) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
-                    if (currentUserPage < totalPages) html += '<a href="javascript:loadUsers(null,' + (currentUserPage + 1) + ')" style="color:#3182ce;">下一页</a>';
+                    html += ' ';
+                    for (var p = 1; p <= totalPages; p++) {
+                        if (p === currentUserPage) html += '<span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                        else html += '<a href="javascript:loadUsers(null,' + p + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                    }
+                    html += ' ';
+                    if (currentUserPage < totalPages) html += '<a href="javascript:loadUsers(null,' + (currentUserPage + 1) + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
                 }
                 pagEl.innerHTML = html;
             }
@@ -1545,12 +1628,30 @@
         }
 
         // --- Products ---
-        async function loadProducts() {
-            const res = await fetchAPI('/products');
+        var productPage = 1;
+        var productPageSize = 10;
+        async function loadProducts(page) {
+            if (typeof page === 'number') productPage = page;
+            var sel = document.getElementById('productPageSizeSelect');
+            if (sel) sel.value = productPageSize;
+            var offset = (productPage - 1) * productPageSize;
+            const res = await fetchAPI('/products?limit=' + productPageSize + '&offset=' + offset);
             const tbody = document.querySelector('#productsTable tbody');
             tbody.innerHTML = '';
-            if (res.success && res.data.products) {
-                res.data.products.forEach(p => {
+            if (!res) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#718096;">加载失败，请刷新页面</td></tr>';
+                return;
+            }
+            if (!res.success) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#ff5858;">' + (res.message || '加载失败') + '</td></tr>';
+                return;
+            }
+            var prods = res.data && res.data.products ? res.data.products : [];
+            var total = (res.data && res.data.total != null) ? res.data.total : 0;
+            if (prods.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#718096;">暂无商品，请添加</td></tr>';
+            } else {
+                prods.forEach(p => {
                     const vipText = (p.vip_level == null || Number(p.vip_level) === 0) ? '通用' : ('VIP ' + p.vip_level);
                     const imgUrl = (p.image && String(p.image).trim()) ? String(p.image).replace(/"/g, '&quot;').replace(/'/g, '&#39;') : '';
                     const placeholder = 'https://placehold.co/48x48/e2e8f0/718096?text=N/A';
@@ -1559,6 +1660,7 @@
                         : '<span style="color:#718096;font-size:12px;">无图</span>';
                     tbody.innerHTML += `
                         <tr>
+                            <td><input type="checkbox" class="product-cb" data-id="${p.id}"></td>
                             <td>${p.id}</td>
                             <td>${imgHtml}</td>
                             <td>${(p.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
@@ -1569,17 +1671,152 @@
                     `;
                 });
             }
+            var pagEl = document.getElementById('productPagination');
+            if (pagEl) {
+                var totalPages = Math.ceil(total / productPageSize) || 1;
+                var html = '共 ' + total + ' 条记录 · 每页 ' + productPageSize + ' 条 · 第 ' + productPage + '/' + totalPages + ' 页';
+                if (totalPages > 1) {
+                    html += ' · ';
+                    if (productPage > 1) html += '<a href="javascript:loadProducts(' + (productPage - 1) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                    for (var p = 1; p <= totalPages; p++) {
+                        if (p === productPage) html += ' <span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                        else html += ' <a href="javascript:loadProducts(' + p + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                    }
+                    html += ' ';
+                    if (productPage < totalPages) html += '<a href="javascript:loadProducts(' + (productPage + 1) + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                }
+                pagEl.innerHTML = html;
+            }
+            var tbl = document.getElementById('productsTable');
+            if (tbl && !tbl._selectAllBound) {
+                tbl._selectAllBound = true;
+                tbl.addEventListener('click', function(e) {
+                    var el = e.target;
+                    if (el && el.id === 'productsSelectAll' && el.type === 'checkbox') {
+                        document.querySelectorAll('#productsTable .product-cb').forEach(function(cb) { cb.checked = el.checked; });
+                    }
+                });
+            }
         }
 
         async function addProduct() {
+            const title = document.getElementById('prodTitle').value.trim();
+            const price = document.getElementById('prodPrice').value;
+            const image = document.getElementById('prodImg').value.trim() || 'https://placehold.co/100';
+            if (!title) { showToast('请输入商品名称'); return; }
             const data = {
-                title: document.getElementById('prodTitle').value,
-                price: document.getElementById('prodPrice').value,
+                title: title,
+                price: price,
                 vip_level: document.getElementById('prodVip').value,
-                image: document.getElementById('prodImg').value || `https://placehold.co/100`
+                image: image
             };
             const res = await fetchAPI('/products', { method: 'POST', body: JSON.stringify(data) });
-            if (res.success) { showToast('商品添加成功'); loadProducts(); }
+            if (res && res.success) {
+                showToast('商品添加成功');
+                loadProducts();
+                clearProductForm();
+            } else {
+                showToast((res && res.message) || '添加失败');
+            }
+        }
+
+        function clearProductForm() {
+            document.getElementById('prodTitle').value = '';
+            document.getElementById('prodPrice').value = '';
+            document.getElementById('prodVip').value = '0';
+            clearProductImage();
+        }
+
+        function clearProductImage() {
+            document.getElementById('prodImg').value = '';
+            var preview = document.getElementById('prodImagePreview');
+            var hint = document.getElementById('prodImageHint');
+            var clearBtn = document.getElementById('prodImageClear');
+            preview.src = '';
+            preview.style.display = 'none';
+            hint.style.display = 'block';
+            if (clearBtn) clearBtn.style.display = 'none';
+        }
+
+        async function uploadProductImage(file) {
+            if (!file || !file.type.startsWith('image/')) { showToast('请选择图片文件'); return null; }
+            var fd = new FormData();
+            fd.append('image', file);
+            try {
+                var res = await fetch(API_BASE + '/upload-product-image', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + (token || '') },
+                    body: fd
+                });
+                var data = await res.json().catch(function() { return {}; });
+                if (data && data.success && data.data && data.data.url) {
+                    return data.data.url;
+                }
+                showToast(data && data.message ? data.message : '图片上传失败');
+                return null;
+            } catch (e) {
+                showToast('图片上传失败');
+                return null;
+            }
+        }
+
+        function setupProductImageZone() {
+            var zone = document.getElementById('prodImageZone');
+            var preview = document.getElementById('prodImagePreview');
+            var hint = document.getElementById('prodImageHint');
+            var clearBtn = document.getElementById('prodImageClear');
+            var prodImg = document.getElementById('prodImg');
+            if (!zone || zone._imageZoneBound) return;
+            zone._imageZoneBound = true;
+
+            function showPreview(url) {
+                prodImg.value = url;
+                preview.src = url;
+                preview.style.display = 'block';
+                hint.style.display = 'none';
+                if (clearBtn) clearBtn.style.display = 'block';
+            }
+
+            function handleFile(file) {
+                if (!file || !file.type.startsWith('image/')) return;
+                uploadProductImage(file).then(function(url) {
+                    if (url) showPreview(url);
+                });
+            }
+
+            var fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            fileInput.onchange = function() { if (this.files && this.files[0]) handleFile(this.files[0]); this.value = ''; };
+            zone.appendChild(fileInput);
+            zone.addEventListener('click', function(e) {
+                if (e.target === fileInput || (clearBtn && clearBtn.contains(e.target))) return;
+                fileInput.click();
+            });
+            zone.addEventListener('dragover', function(e) { e.preventDefault(); e.stopPropagation(); zone.style.borderColor = '#667eea'; zone.style.background = '#f0f4ff'; });
+            zone.addEventListener('dragleave', function(e) { e.preventDefault(); zone.style.borderColor = '#e2e8f0'; zone.style.background = '#fafafa'; });
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                zone.style.borderColor = '#e2e8f0';
+                zone.style.background = '#fafafa';
+                var files = e.dataTransfer && e.dataTransfer.files;
+                if (files && files[0]) handleFile(files[0]);
+            });
+
+            document.addEventListener('paste', function(e) {
+                if (document.activeElement && (document.activeElement.id === 'prodImg' || document.activeElement.id === 'prodTitle' || document.activeElement.id === 'prodPrice' || zone.contains(document.activeElement))) {
+                    var items = e.clipboardData && e.clipboardData.items;
+                    for (var i = 0; items && i < items.length; i++) {
+                        if (items[i].type.indexOf('image') !== -1) {
+                            e.preventDefault();
+                            handleFile(items[i].getAsFile());
+                            return;
+                        }
+                    }
+                }
+            });
         }
 
         function triggerProductsImport() {
@@ -1634,6 +1871,36 @@
             if (!confirm('确定删除?')) return;
             const res = await fetchAPI(`/products/${id}`, { method: 'DELETE' });
             if (res.success) { showToast('已删除'); loadProducts(); }
+        }
+        function getSelectedProductIds() {
+            var ids = [];
+            document.querySelectorAll('.product-cb:checked').forEach(function(cb) { ids.push(parseInt(cb.getAttribute('data-id'), 10)); });
+            return ids.filter(function(id) { return !isNaN(id); });
+        }
+        async function batchDeleteProducts() {
+            var ids = getSelectedProductIds();
+            if (!ids.length) { showToast('请先勾选要删除的商品'); return; }
+            if (!confirm('确定删除选中的 ' + ids.length + ' 个商品？')) return;
+            const res = await fetchAPI('/products/batch-delete', { method: 'POST', body: JSON.stringify({ ids: ids }) });
+            if (res && res.success) { showToast(res.message || '已删除'); loadProducts(); }
+            else { showToast((res && res.message) || '删除失败'); }
+        }
+        async function batchDeleteByPrice() {
+            var minEl = document.getElementById('batchPriceMin');
+            var maxEl = document.getElementById('batchPriceMax');
+            var min = (minEl && minEl.value !== '') ? parseFloat(minEl.value) : null;
+            var max = (maxEl && maxEl.value !== '') ? parseFloat(maxEl.value) : null;
+            if (min == null && max == null) { showToast('请填写最低价或最高价'); return; }
+            var msg = (min != null && max != null) ? ('价格 ' + min + '～' + max + ' 区间') : (min != null ? ('价格 ≥ ' + min) : ('价格 ≤ ' + max));
+            if (!confirm('确定删除 ' + msg + ' 的所有商品？')) return;
+            const res = await fetchAPI('/products/batch-delete', { method: 'POST', body: JSON.stringify({ by_price: true, price_min: min, price_max: max }) });
+            if (res.success) { showToast(res.message || '已删除'); loadProducts(); if (minEl) minEl.value = ''; if (maxEl) maxEl.value = ''; } else { showToast(res.message || '删除失败'); }
+        }
+        async function deleteAllProducts() {
+            if (!confirm('确定删除全部商品？此操作不可恢复。')) return;
+            const res = await fetchAPI('/products/batch-delete', { method: 'POST', body: JSON.stringify({ delete_all: true }) });
+            if (res && res.success) { showToast(res.message || '已全部删除'); loadProducts(); }
+            else { showToast((res && res.message) || '删除失败'); }
         }
 
         // --- VIP (统一走 /vip-levels) ---
@@ -1776,11 +2043,14 @@
             if (tab === 'withdraw') loadWithdrawals(); else loadDeposits();
         }
 
+        var financePageSize = 10;
         var financeOffset = { withdraw: 0, deposit: 0 };
         async function loadWithdrawals(offset) {
             if (typeof offset !== 'number') offset = 0;
             financeOffset.withdraw = offset;
-            const res = await fetchAPI('/withdrawals?limit=50&offset=' + offset);
+            var sel = document.getElementById('financePageSizeSelect');
+            if (sel) sel.value = financePageSize;
+            const res = await fetchAPI('/withdrawals?limit=' + financePageSize + '&offset=' + offset);
             if (!res) return;
             const list = (res.data && res.data.withdrawals) ? res.data.withdrawals : [];
             const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
@@ -1799,7 +2069,9 @@
         async function loadDeposits(offset) {
             if (typeof offset !== 'number') offset = 0;
             financeOffset.deposit = offset;
-            const res = await fetchAPI('/deposits?limit=50&offset=' + offset);
+            var sel = document.getElementById('financePageSizeSelect');
+            if (sel) sel.value = financePageSize;
+            const res = await fetchAPI('/deposits?limit=' + financePageSize + '&offset=' + offset);
             if (!res) return;
             const list = (res.data && res.data.deposits) ? res.data.deposits : [];
             const pending = (res.data && res.data.pending_count != null) ? res.data.pending_count : list.filter(function(x){ return x.status === 'pending'; }).length;
@@ -1811,8 +2083,40 @@
         function renderFinanceTable(list, type, pagination) {
             const container = document.getElementById('financeList');
             const pagEl = document.getElementById('financePagination');
-            if (pagEl) pagEl.innerHTML = '';
-            if (!list || list.length === 0) { container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无' + (type === 'withdraw' ? '提现' : '充值') + '记录</p></div>'; return; }
+            if (!list || list.length === 0) {
+                if (pagEl) pagEl.innerHTML = '';
+                container.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>暂无' + (type === 'withdraw' ? '提现' : '充值') + '记录</p></div>';
+                return;
+            }
+            var offset = type === 'withdraw' ? financeOffset.withdraw : financeOffset.deposit;
+            var total = (pagination && pagination.total != null) ? pagination.total : list.length;
+            var totalPages = Math.ceil(total / financePageSize) || 1;
+            var currentPage = Math.floor(offset / financePageSize) + 1;
+            if (pagEl) {
+                var pagHtml = '共 ' + total + ' 条记录 · 每页 ' + financePageSize + ' 条 · 第 ' + currentPage + '/' + totalPages + ' 页';
+                if (totalPages > 1) {
+                    pagHtml += ' · ';
+                    if (currentPage > 1) {
+                        var prevOff = offset - financePageSize;
+                        if (type === 'withdraw') pagHtml += '<a href="javascript:loadWithdrawals(' + prevOff + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                        else pagHtml += '<a href="javascript:loadDeposits(' + prevOff + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                    }
+                    pagHtml += ' ';
+                    for (var p = 1; p <= totalPages; p++) {
+                        var poff = (p - 1) * financePageSize;
+                        if (p === currentPage) pagHtml += '<span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                        else if (type === 'withdraw') pagHtml += '<a href="javascript:loadWithdrawals(' + poff + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                        else pagHtml += '<a href="javascript:loadDeposits(' + poff + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                    }
+                    pagHtml += ' ';
+                    if (currentPage < totalPages) {
+                        var nextOff = offset + financePageSize;
+                        if (type === 'withdraw') pagHtml += '<a href="javascript:loadWithdrawals(' + nextOff + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                        else pagHtml += '<a href="javascript:loadDeposits(' + nextOff + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                    }
+                }
+                pagEl.innerHTML = pagHtml;
+            }
             
             const hasScreenshotCol = type === 'deposit';
             let html = `<table><thead><tr><th>用户</th><th>金额</th>${hasScreenshotCol ? '<th>截图</th>' : ''}<th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
@@ -2058,33 +2362,52 @@
 
         // --- 登录日志 (IP) ---
         let loginLogsOffset = 0;
-        async function loadLoginLogs() {
+        var loginLogsPageSize = 10;
+        async function loadLoginLogs(offset) {
+            if (typeof offset === 'number') loginLogsOffset = offset;
             const tbody = document.querySelector('#loginLogsTable');
             const paginationEl = document.getElementById('loginLogsPagination');
             if (!tbody) return;
+            var sel = document.getElementById('loginLogsPageSizeSelect');
+            if (sel) sel.value = loginLogsPageSize;
             const userId = document.getElementById('loginLogsUserId') && document.getElementById('loginLogsUserId').value.trim();
             try {
-                let url = '/login-logs?limit=50&offset=' + (loginLogsOffset || 0);
+                let url = '/login-logs?limit=' + loginLogsPageSize + '&offset=' + (loginLogsOffset || 0);
                 if (userId) url += '&user_id=' + encodeURIComponent(userId);
                 const res = await fetchAPI(url);
                 if (res.success && res.data && res.data.logs) {
                     const logs = res.data.logs;
                     const pagination = res.data.pagination || {};
+                    const total = pagination.total != null ? pagination.total : logs.length;
                     if (logs.length > 0) {
                         tbody.innerHTML = logs.map(item => '<tr><td>' + item.id + '</td><td>' + item.user_id + '</td><td>' + (item.username || '-') + '</td><td style="font-family:monospace;">' + (item.ip || '-') + '</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:12px;" title="' + (item.user_agent || '') + '">' + (item.user_agent ? (item.user_agent.length > 40 ? item.user_agent.substring(0, 40) + '...' : item.user_agent) : '-') + '</td><td>' + (item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-') + '</td></tr>').join('');
                     } else {
                         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px;">暂无登录记录</td></tr>';
                     }
                     if (paginationEl) {
-                        paginationEl.textContent = '共 ' + (pagination.total || logs.length) + ' 条';
+                        var totalPages = Math.ceil(total / loginLogsPageSize) || 1;
+                        var currentPage = Math.floor(loginLogsOffset / loginLogsPageSize) + 1;
+                        var html = '共 ' + total + ' 条记录 · 每页 ' + loginLogsPageSize + ' 条 · 第 ' + currentPage + '/' + totalPages + ' 页';
+                        if (totalPages > 1) {
+                            html += ' · ';
+                            if (currentPage > 1) html += '<a href="javascript:loadLoginLogs(' + (loginLogsOffset - loginLogsPageSize) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                            for (var p = 1; p <= totalPages; p++) {
+                                var poff = (p - 1) * loginLogsPageSize;
+                                if (p === currentPage) html += ' <span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                                else html += ' <a href="javascript:loadLoginLogs(' + poff + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                            }
+                            if (currentPage < totalPages) html += ' <a href="javascript:loadLoginLogs(' + (loginLogsOffset + loginLogsPageSize) + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                        }
+                        paginationEl.innerHTML = html;
                     }
                 } else {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;padding:40px;">加载失败</td></tr>';
+                    if (paginationEl) paginationEl.innerHTML = '';
                 }
             } catch (e) {
                 console.error('加载登录日志失败:', e);
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ff5858;">加载失败</td></tr>';
-                if (paginationEl) paginationEl.textContent = '';
+                if (paginationEl) paginationEl.innerHTML = '';
             }
         }
 
@@ -2449,9 +2772,15 @@
         }
 
         // === 业务员管理逻辑 ===
-        async function loadAgents() {
+        var agentPage = 1;
+        var agentPageSize = 10;
+        async function loadAgents(page) {
+            if (typeof page === 'number') agentPage = page;
             try {
-                const res = await fetchAPI('/agents');
+                var sel = document.getElementById('agentPageSizeSelect');
+                if (sel) sel.value = agentPageSize;
+                var offset = (agentPage - 1) * agentPageSize;
+                const res = await fetchAPI('/agents?limit=' + agentPageSize + '&offset=' + offset);
                 const tbody = document.getElementById('agentsTable');
                 tbody.innerHTML = '';
                 
@@ -2487,6 +2816,25 @@
                     });
                 } else {
                     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#999;">暂无业务员</td></tr>';
+                }
+                var pag = res.data && res.data.pagination;
+                var total = pag && pag.total != null ? pag.total : 0;
+                var pagEl = document.getElementById('agentPagination');
+                if (pagEl) {
+                    var totalPages = Math.ceil(total / agentPageSize) || 1;
+                    var html = '共 ' + total + ' 条记录 · 每页 ' + agentPageSize + ' 条 · 第 ' + agentPage + '/' + totalPages + ' 页';
+                    if (totalPages > 1) {
+                        html += ' · ';
+                        if (agentPage > 1) html += '<a href="javascript:loadAgents(' + (agentPage - 1) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                        html += ' ';
+                        for (var p = 1; p <= totalPages; p++) {
+                            if (p === agentPage) html += '<span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                            else html += '<a href="javascript:loadAgents(' + p + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                        }
+                        html += ' ';
+                        if (agentPage < totalPages) html += '<a href="javascript:loadAgents(' + (agentPage + 1) + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                    }
+                    pagEl.innerHTML = html;
                 }
             } catch (e) { console.error(e); showToast('加载失败'); }
         }
@@ -2530,6 +2878,7 @@
 
         // === 报表统计系统 ===
         let currentTransactionOffset = 0;
+        var transactionPageSize = 10;
         
         function switchReportTab(tab) {
             const tabDaily = document.getElementById('tabDailyReport');
@@ -2585,14 +2934,14 @@
             }
         }
 
-        async function loadAllTransactions() {
+        async function loadAllTransactions(offset) {
+            if (typeof offset === 'number') currentTransactionOffset = offset;
             try {
-                const res = await fetchAPI('/transactions/all?limit=100&offset=' + currentTransactionOffset);
+                var sel = document.getElementById('transactionPageSizeSelect');
+                if (sel) sel.value = transactionPageSize;
+                const res = await fetchAPI('/transactions/all?limit=' + transactionPageSize + '&offset=' + currentTransactionOffset);
                 const tbody = document.getElementById('transactionsTable');
-                
-                if (currentTransactionOffset === 0) {
-                    tbody.innerHTML = '';
-                }
+                tbody.innerHTML = '';
                 
                 if (res.success && res.data.transactions.length > 0) {
                     res.data.transactions.forEach(t => {
@@ -2618,17 +2967,33 @@
                             </tr>
                         `;
                     });
-                } else if (currentTransactionOffset === 0) {
+                } else {
                     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无流水记录</td></tr>';
+                }
+                var pag = res.data && res.data.pagination;
+                var total = pag && pag.total != null ? pag.total : 0;
+                var totalPages = Math.ceil(total / transactionPageSize) || 1;
+                var currentPage = Math.floor(currentTransactionOffset / transactionPageSize) + 1;
+                var pagEl = document.getElementById('transactionPagination');
+                if (pagEl) {
+                    var html = '共 ' + total + ' 条记录 · 每页 ' + transactionPageSize + ' 条 · 第 ' + currentPage + '/' + totalPages + ' 页';
+                    if (totalPages > 1) {
+                        html += ' · ';
+                        if (currentPage > 1) html += '<a href="javascript:loadAllTransactions(' + (currentTransactionOffset - transactionPageSize) + ')" style="color:#3182ce;margin-right:8px;">上一页</a>';
+                        html += ' ';
+                        for (var p = 1; p <= totalPages; p++) {
+                            var poff = (p - 1) * transactionPageSize;
+                            if (p === currentPage) html += '<span style="margin:0 4px;font-weight:600;color:#3182ce;">' + p + '</span>';
+                            else html += '<a href="javascript:loadAllTransactions(' + poff + ')" style="color:#3182ce;margin:0 4px;">' + p + '</a>';
+                        }
+                        html += ' ';
+                        if (currentPage < totalPages) html += '<a href="javascript:loadAllTransactions(' + (currentTransactionOffset + transactionPageSize) + ')" style="color:#3182ce;margin-left:8px;">下一页</a>';
+                    }
+                    pagEl.innerHTML = html;
                 }
             } catch (e) {
                 console.error('加载流水记录失败:', e);
             }
-        }
-
-        function loadMoreTransactions() {
-            currentTransactionOffset += 100;
-            loadAllTransactions();
         }
 
         async function logout() {

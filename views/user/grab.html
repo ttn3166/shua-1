@@ -76,6 +76,7 @@
     </div>
     <div class="grab-btn-container">
         <button class="grab-btn" id="grabBtn" onclick="startGrab()">START<br>GRABBING</button>
+        <p class="hint" id="grabHint" style="display:none; margin-top:10px; font-size:13px;"></p>
         <p class="hint">System Automatic Dispatch</p>
     </div>
     <div class="notice-box">
@@ -120,6 +121,20 @@
                 document.getElementById('balance').textContent = Number(d.balance != null ? d.balance : 0).toFixed(2);
                 document.getElementById('progress').textContent = d.task_progress != null ? d.task_progress : 0;
                 document.getElementById('dailyOrders').textContent = d.vip_daily_orders != null ? d.vip_daily_orders : 40;
+                var grabHint = document.getElementById('grabHint');
+                var grabBtn = document.getElementById('grabBtn');
+                if (grabHint) {
+                    if (d.allow_grab === 0) {
+                        grabHint.textContent = 'Grab is closed. Please contact admin to enable it.';
+                        grabHint.style.display = 'block';
+                        grabHint.style.color = '#e53e3e';
+                        if (grabBtn) grabBtn.disabled = true;
+                    } else {
+                        grabHint.textContent = '';
+                        grabHint.style.display = 'none';
+                        if (grabBtn) grabBtn.disabled = false;
+                    }
+                }
             } catch (e) {
                 console.error(e);
                 showToast('Failed to load data');
@@ -142,7 +157,13 @@
                     currentMatchToken = res.data.match_token;
                     showTaskModal(res.data);
                 } else {
-                    showToast(res.message || 'Match failed');
+                    var msg = res.message || 'Match failed';
+                    if (msg.indexOf('disabled') !== -1 || msg === 'Account grabbing is disabled.') {
+                        msg = 'Grab is closed. Please contact admin to enable it.';
+                        var gh = document.getElementById('grabHint');
+                        if (gh) { gh.textContent = msg; gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
+                    }
+                    showToast(msg);
                 }
             } catch (e) {
                 console.error(e);
@@ -161,10 +182,10 @@
                 productHtml += '<div class="modal-row product-row"><span class="label">Product</span><span class="value">' + String(data.product_name).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span></div>';
             }
             if (data && data.unit_price != null) {
-                productHtml += '<div class="modal-row"><span class="label">单价</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
+                productHtml += '<div class="modal-row"><span class="label">Unit Price</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
             }
             if (data && data.quantity != null) {
-                productHtml += '<div class="modal-row"><span class="label">数量</span><span class="value">' + Number(data.quantity) + '</span></div>';
+                productHtml += '<div class="modal-row"><span class="label">Quantity</span><span class="value">' + Number(data.quantity) + '</span></div>';
             }
             modal.innerHTML = '<div class="modal-card">' +
                 '<div class="modal-title">📦 Task Details</div>' +
@@ -206,7 +227,15 @@
                 closeTaskModal();
                 currentMatchToken = null;
                 if (res.success && res.data) {
-                    showToast('✅ Task completed! +' + Number(res.data.commission).toFixed(2) + ' USDT commission');
+                    if (res.data.daily_completed) {
+                        showToast('Daily tasks completed! Grab is paused. Admin must re-enable to continue.');
+                        var gh = document.getElementById('grabHint');
+                        if (gh) { gh.textContent = 'Daily tasks completed. Grab is paused. Contact admin to re-enable.'; gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
+                        var grabBtn = document.getElementById('grabBtn');
+                        if (grabBtn) grabBtn.disabled = true;
+                    } else {
+                        showToast('✅ Task completed! +' + Number(res.data.commission).toFixed(2) + ' USDT commission');
+                    }
                     loadUserData();
                 } else {
                     showToast(res.message || 'Confirm failed');

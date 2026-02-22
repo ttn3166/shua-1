@@ -87,10 +87,24 @@
     .divider::after {
       margin-left: 12px;
     }
+    .login-page-lang {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .login-page-lang:hover { color: var(--gold-primary); background: rgba(0,0,0,0.04); }
   </style>
   <script src="/public/js/common.js"></script>
 </head>
 <body>
+  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="login-page-lang" title="Language">🌐 Language</a>
   <div class="login-container">
     <!-- 登录表单卡片 -->
     <div class="card-elevated">

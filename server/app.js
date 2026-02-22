@@ -272,11 +272,18 @@ function forceUpdateContent() {
         </div>`;
 
     try {
-        const stmt = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
-        stmt.run('invitation_rule', inviteContent);
-        stmt.run('vip_rule', vipContent);
-        stmt.run('faq', faqContent);
-        console.log("✅ PERFECT ENGLISH CONTENT INJECTED!");
+        // 仅当该项为空或不存在时才写入，避免每次重启覆盖管理后台已编辑的规则
+        const getVal = db.prepare("SELECT value FROM settings WHERE key = ?");
+        const insertOrUpdate = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
+        const keys = ['invitation_rule', 'vip_rule', 'faq'];
+        const contents = [inviteContent, vipContent, faqContent];
+        for (let i = 0; i < keys.length; i++) {
+            const row = getVal.get(keys[i]);
+            if (!row || !row.value || String(row.value).trim() === '') {
+                insertOrUpdate.run(keys[i], contents[i]);
+                console.log("✅ Default content set for " + keys[i]);
+            }
+        }
     } catch (e) {
         console.error("Injection failed:", e);
     }

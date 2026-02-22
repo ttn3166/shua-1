@@ -90,7 +90,7 @@
       <div class="login-header">
         <div class="logo">💎</div>
         <h1 class="login-title">Agent Partner</h1>
-        <p class="login-subtitle">代理商合作伙伴中心</p>
+        <p class="login-subtitle">Agent Partner Center</p>
       </div>
 
       <!-- 欢迎提示 -->
@@ -105,7 +105,7 @@
       <!-- 表单 -->
       <form id="agentLoginForm">
         <div class="form-group">
-          <label class="form-label" for="username">代理商账号</label>
+          <label class="form-label" for="username">Agent Account</label>
           <input 
             type="text" 
             id="username" 
@@ -117,7 +117,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">密码</label>
+          <label class="form-label" for="password">Password</label>
           <input 
             type="password" 
             id="password" 
@@ -198,7 +198,7 @@
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || '登录失败');
+          throw new Error(result.error || 'Login failed');
         }
 
         // 验证角色权限

@@ -160,3 +160,71 @@ if (!document.getElementById('common-animations')) {
     `;
     document.head.appendChild(style);
 }
+
+// ============================================
+// Google 翻译挂件（用户端多语言）
+// ============================================
+(function () {
+    var GOOGLE_TRANSLATE_CONFIG = {
+        pageLanguage: 'zh-CN',
+        includedLanguages: 'en,vi,th,id,hi,pt,es,zh-TW',
+        widgetBottom: 80,
+        widgetRight: 20,
+        msgLoadFail: 'Translation temporarily unavailable. Please check your network or try again later.',
+        msgLoading: 'Loading language options…'
+    };
+
+    if (document.getElementById('google_translate_element')) return;
+
+    var bottom = 'max(' + GOOGLE_TRANSLATE_CONFIG.widgetBottom + 'px, env(safe-area-inset-bottom, 0px))';
+    var right = 'max(' + GOOGLE_TRANSLATE_CONFIG.widgetRight + 'px, env(safe-area-inset-right, 0px))';
+    var el = document.createElement('div');
+    el.id = 'google_translate_element';
+    el.style.cssText = 'position:fixed;bottom:' + bottom + ';right:' + right + ';z-index:9999;display:none;';
+    document.body.appendChild(el);
+
+    var style = document.createElement('style');
+    style.id = 'google-translate-styles';
+    style.textContent = [
+        'body { top: 0 !important; }',
+        '.goog-te-banner-frame { display: none !important; }',
+        '.goog-tooltip { display: none !important; }',
+        '.goog-te-gadget-simple {',
+        '  background-color: rgba(255,255,255,0.9) !important;',
+        '  border: 1px solid #e2e8f0 !important;',
+        '  padding: 8px !important;',
+        '  border-radius: 20px !important;',
+        '  box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;',
+        '}',
+        '.goog-te-gadget-icon { display: none !important; }'
+    ].join('\n');
+    document.head.appendChild(style);
+
+    window.googleTranslateElementInit = function () {
+        if (typeof google === 'undefined' || !google.translate || !google.translate.TranslateElement) return;
+        new google.translate.TranslateElement({
+            pageLanguage: GOOGLE_TRANSLATE_CONFIG.pageLanguage,
+            includedLanguages: GOOGLE_TRANSLATE_CONFIG.includedLanguages,
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: false
+        }, 'google_translate_element');
+    };
+
+    var script = document.createElement('script');
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    script.onerror = function () {
+        console.warn('Google Translate failed to load');
+        if (typeof showToast === 'function') showToast(GOOGLE_TRANSLATE_CONFIG.msgLoadFail, 'warning');
+    };
+    document.body.appendChild(script);
+
+    window.showLanguage = function () {
+        var widget = document.getElementById('google_translate_element');
+        if (!widget) {
+            if (typeof showToast === 'function') showToast(GOOGLE_TRANSLATE_CONFIG.msgLoading, 'info');
+            return;
+        }
+        widget.style.display = (widget.style.display === 'none' || widget.style.display === '') ? 'block' : 'none';
+    };
+})();
