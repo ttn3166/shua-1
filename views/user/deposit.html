@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#667eea">
   <title>Deposit - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
+  <script src="/public/js/common.js"></script>
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -131,6 +132,9 @@
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     </a>
     <h1 class="header-title">USDT Deposit</h1>
+    <div class="header-lang-circle" id="headerLangBtn" role="button" title="Language" aria-label="Select language" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;background:rgba(102,126,234,0.12);margin-left:auto;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
   </header>
 
   <main class="content-container">
@@ -211,6 +215,16 @@
         setTimeout(function() { el.classList.remove('show'); }, 2500);
       }
 
+      function getTipsForCurrentLanguage(backendTips, defaultEn) {
+        var raw = (document.cookie || '').split(';').filter(function(s) { return s.indexOf('googtrans=') !== -1; })[0];
+        var val = raw ? raw.split('=')[1] : '';
+        var target = (val && val.split('/').length >= 3) ? val.split('/')[2].trim() : '';
+        if (!target || target === 'zh-CN') return backendTips || defaultEn;
+        return defaultEn;
+      }
+
+      var DEPOSIT_TIPS_EN = 'TRC20 only; Minimum 10 USDT; Arrival in about 1–30 minutes; Wait for review after submission.';
+
       function loadConfig() {
         fetch('/api/config')
           .then(function(r) { return r.json(); })
@@ -223,7 +237,7 @@
               submitBtn.style.display = 'none';
               document.querySelector('.deposit-card section:last-of-type').style.display = 'none';
               var tipsEl = document.getElementById('depositTipsText');
-              if (tipsEl) tipsEl.textContent = config.deposit_tips || 'Under maintenance.';
+              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, 'Under maintenance.');
               return;
             }
             try { channels = JSON.parse(config.deposit_channels || '[]'); } catch (e) { channels = []; }
@@ -248,7 +262,7 @@
             document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash ' + (reqHash ? '*' : '(Optional)');
             document.querySelector('label[for="depositScreenshotFile"]').innerHTML = 'Upload Screenshot ' + (reqHash ? '*' : '(Optional)');
             var tipsEl = document.getElementById('depositTipsText');
-            if (tipsEl) tipsEl.textContent = config.deposit_tips || 'Only TRC20; wait for admin approval after submission.';
+            if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, DEPOSIT_TIPS_EN);
           })
           .catch(function() {
             addressBox.textContent = 'Failed to load. Please try again.';
@@ -401,6 +415,10 @@
       });
 
       loadConfig();
+      var langBtn = document.getElementById('headerLangBtn');
+      if (langBtn && typeof window.showLanguage === 'function') {
+        langBtn.addEventListener('click', function () { window.showLanguage(); });
+      }
     })();
   </script>
 </body>
