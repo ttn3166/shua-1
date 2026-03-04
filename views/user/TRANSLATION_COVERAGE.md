@@ -2,7 +2,7 @@
 
 ## 检查结果：全部已应用
 
-所有 **16 个** 用户端页面均已引入 `/public/js/common.js`，因此：
+所有用户端页面均已引入 `/public/js/common.js`，因此：
 - 页面加载时会根据 `googtrans` cookie 自动应用已选语言（越南语、英语等）
 - 语言选择在整站生效（cookie path=/），从任意页跳转到其他页都会保持当前语言
 
@@ -28,12 +28,17 @@
 | about.html（关于） | ✅ | 语言沿用 cookie |
 | vip_rule.html（VIP 规则） | ✅ | 语言沿用 cookie |
 | download.html（下载） | ✅ | 语言沿用 cookie |
+| deposit_record.html（充值记录） | ✅ | ✅ 头部右侧地球图标 |
+| withdrawal_record.html（提现记录） | ✅ | ✅ 头部右侧地球图标 |
+| terms.html（用户协议） | ✅ | ✅ 顶部右侧地球图标 |
+| privacy.html（隐私政策） | ✅ | ✅ 顶部右侧地球图标 |
+| risk_disclaimer.html（风险提示） | ✅ | ✅ 顶部右侧地球图标 |
 
 ---
 
 ## 说明
 
-- **有语言入口的页面**：index、dashboard、profile、deposit，用户可在该页直接点击切换语言。
+- **有语言入口的页面**：index、dashboard、profile、deposit、deposit_record、withdrawal_record、terms、privacy、risk_disclaimer，用户可在该页直接点击切换语言。
 - **无单独语言按钮的页面**：从首页/个人中心/登录页选好语言后，再进入这些页面会保持已选语言并整页翻译。
 - **提款**：在 dashboard / profile 内为弹窗，弹窗 HTML 已预置在页面中，会随整页一起被翻译。
 

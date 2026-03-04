@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Disclaimer - TaskMall</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+        .glass { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .content-area { line-height: 1.8; color: #374151; }
+        .content-area h1 { font-size: 22px; font-weight: 700; margin: 20px 0 10px; color: #667eea; }
+        .content-area h2 { font-size: 18px; font-weight: 600; margin: 16px 0 8px; color: #4a5568; }
+        .content-area p { margin: 12px 0; }
+        .content-area ul, .content-area ol { padding-left: 24px; margin: 12px 0; }
+        .content-area li { margin: 6px 0; }
+        .content-area .notice-box { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 14px; margin: 16px 0; font-size: 14px; }
+    </style>
+    <script src="/public/js/common.js"></script>
+</head>
+<body class="flex flex-col min-h-screen">
+    <div class="p-4 flex items-center text-white">
+        <button onclick="history.back()" class="mr-4 hover:opacity-80 transition" aria-label="Back">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <h1 class="text-lg font-bold">Risk Disclaimer</h1>
+        <div id="headerLangBtn" role="button" title="Language" aria-label="Select language" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer hover:opacity-90 transition" style="background:rgba(255,255,255,0.2);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+    </div>
+
+    <div class="flex-1 p-4">
+        <div class="glass rounded-2xl p-6 shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-3">⚠️</div>
+                <h2 class="text-2xl font-bold text-gray-800">Risk Disclaimer</h2>
+                <p class="text-sm text-gray-500 mt-2">Please read carefully</p>
+            </div>
+
+            <div id="ruleContent" class="content-area"></div>
+        </div>
+    </div>
+
+    <script>
+        var DEFAULT_CONTENT = '<div class="notice-box"><strong>Important:</strong> TaskMall is a task-based earning platform. Please use the service responsibly and only with funds you can afford to use for tasks.</div><h1>1. Task & Balance</h1><p>Task amounts will be deducted from your balance when you confirm an order. Principal and commission are returned after you complete the task. Ensure you have sufficient balance and understand the flow before confirming.</p><h1>2. Withdrawals</h1><p>Withdrawals are subject to platform rules, limits, and review. Processing times may vary. You are responsible for providing a correct wallet address.</p><h1>3. No Guarantee</h1><p>We do not guarantee specific returns or outcomes. Task availability and commission rates may change. Use the platform at your own discretion.</p><h1>4. Compliance</h1><p>You must comply with local laws. If your jurisdiction restricts or prohibits such services, do not use TaskMall.</p><h1>5. Contact</h1><p>For questions about risks or operations, please contact our customer service.</p>';
+        fetch('/api/config').then(function(r){ return r.json(); }).then(function(data){
+            var el = document.getElementById('ruleContent');
+            if (data.success && data.data && data.data.risk_disclaimer_content) { el.innerHTML = data.data.risk_disclaimer_content; }
+            else { el.innerHTML = DEFAULT_CONTENT; }
+        }).catch(function(){ document.getElementById('ruleContent').innerHTML = DEFAULT_CONTENT; });
+    </script>
+</body>
+</html>

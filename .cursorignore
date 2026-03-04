@@ -1,0 +1,3 @@
+# 数据库与上传资源：避免被 AI 索引导致编辑器崩溃
+data/
+public/uploads/

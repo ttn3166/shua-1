@@ -194,7 +194,7 @@
     (function() {
       var token = localStorage.getItem('token');
       if (!token) {
-        window.location.href = '/views/user/index.html';
+        window.location.replace('/views/user/index.html');
         return;
       }
 
@@ -225,6 +225,12 @@
 
       var DEPOSIT_TIPS_EN = 'TRC20 only; Minimum 10 USDT; Arrival in about 1–30 minutes; Wait for review after submission.';
 
+      function escHtml(s) {
+        if (s == null) return '';
+        s = String(s);
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
       function loadConfig() {
         fetch('/api/config')
           .then(function(r) { return r.json(); })
@@ -248,7 +254,7 @@
               selectedChannelId = def.id;
               var sel = document.getElementById('depositChannelSelect');
               sel.style.display = 'block';
-              sel.innerHTML = '<label style="display:block;margin-bottom:6px;font-weight:600;">Payment method</label><select id="depositChannelSelectInput" style="width:100%;padding:10px;border-radius:8px;">' + enabled.map(function(c) { return '<option value="' + c.id + '"' + (c.id === selectedChannelId ? ' selected' : '') + '>' + (c.name || c.id) + '</option>'; }).join('') + '</select>';
+              sel.innerHTML = '<label style="display:block;margin-bottom:6px;font-weight:600;">Payment method</label><select id="depositChannelSelectInput" style="width:100%;padding:10px;border-radius:8px;">' + enabled.map(function(c) { return '<option value="' + escHtml(c.id) + '"' + (c.id === selectedChannelId ? ' selected' : '') + '>' + escHtml(c.name || c.id) + '</option>'; }).join('') + '</select>';
               sel.querySelector('select').addEventListener('change', function() { selectedChannelId = this.value; showChannel(); });
               showChannel();
             } else {

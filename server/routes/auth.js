@@ -19,6 +19,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// 管理员登录限流：每 IP 每分钟最多 5 次
+const adminLoginLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { success: false, error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 function setAuthCookie(req, res, token) {
   const isHttps = !!(req.secure || (req.headers['x-forwarded-proto'] || '').toString().includes('https'));
   res.cookie('token', token, {
@@ -34,45 +43,84 @@ function setAuthCookie(req, res, token) {
  * C 端用户注册
  * POST /api/auth/register
  */
+const USERNAME_MIN_LEN = 2;
+const USERNAME_MAX_LEN = 32;
+const PASSWORD_MIN_LEN = 8;
+const PASSWORD_MAX_LEN = 12;
+
+function validateUsername(u) {
+  if (u == null || typeof u !== 'string') return false;
+  const s = u.trim();
+  return s.length >= USERNAME_MIN_LEN && s.length <= USERNAME_MAX_LEN;
+}
+
+/**
+ * 校验密码强度：长度 8～12 位，且至少包含一个字母和一个数字
+ */
+function validatePassword(p) {
+  if (p == null || typeof p !== 'string') return { ok: false, msg: '密码格式无效' };
+  const s = String(p);
+  if (s.length < PASSWORD_MIN_LEN) return { ok: false, msg: `密码至少 ${PASSWORD_MIN_LEN} 位` };
+  if (s.length > PASSWORD_MAX_LEN) return { ok: false, msg: `密码不能超过 ${PASSWORD_MAX_LEN} 位` };
+  const hasLetter = /[a-zA-Z]/.test(s);
+  const hasNumber = /[0-9]/.test(s);
+  if (!hasLetter || !hasNumber) return { ok: false, msg: '密码须同时包含字母和数字' };
+  return { ok: true };
+}
+
 router.post('/register', (req, res) => {
   const { username, password, ref, code } = req.body;
   
   if (!username || !password) {
-    return error(res, 'Username and password are required');
+    return error(res, '请填写用户名和密码');
+  }
+  if (!validateUsername(username)) {
+    return error(res, `用户名长度需为 ${USERNAME_MIN_LEN}～${USERNAME_MAX_LEN} 个字符`);
+  }
+  const pwdCheck = validatePassword(password);
+  if (!pwdCheck.ok) {
+    return error(res, pwdCheck.msg);
   }
   
   // 检查用户是否已存在
-  const existing = req.db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = req.db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim());
   if (existing) {
-    return error(res, 'Username already exists', 409);
+    return error(res, '该用户名已被注册', 409);
   }
   
-  // 1. 查找推荐人（代理） - 兼容旧逻辑
+  // 1. 查找推荐人（代理）：支持 ref 为代理 ID、用户名 或 邀请码（代理链接常用 ?ref=邀请码）
   let agentId = null;
-  if (ref) {
-    const agent = req.db.prepare(
-      'SELECT id, agent_path FROM users WHERE (id = ? OR username = ?) AND role = ?'
+  let agentInviteCode = null;
+  const inviteCodeParam = code || ref;
+  if (ref || code) {
+    let agent = req.db.prepare(
+      'SELECT id, agent_path, invite_code FROM users WHERE (id = ? OR username = ?) AND role = ?'
     ).get(Number(ref) || 0, String(ref), 'Agent');
-    
+    if (!agent && inviteCodeParam) {
+      agent = req.db.prepare(
+        'SELECT id, agent_path, invite_code FROM users WHERE invite_code = ? AND role = ?'
+      ).get(String(inviteCodeParam), 'Agent');
+    }
     if (agent) {
       agentId = agent.id;
+      agentInviteCode = agent.invite_code || null;
     }
   }
-  
-  // 2. 查找普通用户推荐人（通过邀请码）- 新功能
+
+  // 2. 查找普通用户推荐人（通过邀请码）：仅当不是代理推荐时，才可能是用户推荐
   let referrerInviteCode = null;
-  const inviteCodeParam = code || ref; // 兼容 code 和 ref 参数
-  
-  if (inviteCodeParam) {
+  if (inviteCodeParam && !agentInviteCode) {
     const referrer = req.db.prepare(
       'SELECT id, username, invite_code FROM users WHERE invite_code = ? AND role = ?'
     ).get(inviteCodeParam, 'User');
-    
     if (referrer) {
       referrerInviteCode = referrer.invite_code;
       console.log(`✅ 用户 ${username} 被 ${referrer.username} (邀请码: ${referrerInviteCode}) 推荐`);
     }
   }
+
+  // 代理推荐时也写入 referred_by，便于后台/代理端按 referred_by 统计
+  const referredBy = referrerInviteCode || agentInviteCode || null;
   
   // 创建用户 - 自动生成邀请码
   const passwordHash = bcrypt.hashSync(password, 10);
@@ -90,10 +138,10 @@ router.post('/register', (req, res) => {
   
   const result = req.db.prepare(
     'INSERT INTO users (username, password_hash, role, agent_id, referred_by, invite_code) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(username, passwordHash, 'User', agentId, referrerInviteCode, inviteCode);
+  ).run(name, passwordHash, 'User', agentId, referredBy, inviteCode);
   
   const userId = result.lastInsertRowid;
-  console.log(`✅ 新用户 ${username} 注册成功，邀请码: ${inviteCode}`);
+  console.log(`✅ 新用户 ${name} 注册成功，邀请码: ${inviteCode}`);
   
   // 更新代理路径
   if (agentId) {
@@ -188,7 +236,14 @@ router.post('/login', authLimiter, (req, res) => {
 
   // 同时写入 HttpOnly Cookie（兼容无痕/跨端口）
   setAuthCookie(req, res, token);
-  
+  // 记录登录日志（与管理员登录一致，保证日志完整）
+  try {
+    req.db.prepare(
+      'INSERT INTO login_logs (user_id, username, ip, user_agent) VALUES (?, ?, ?, ?)'
+    ).run(user.id, user.username, req.ip || '', req.get('user-agent') || '');
+  } catch (logErr) {
+    console.error('User login log error:', logErr);
+  }
   return success(res, {
     token,
     user: {
@@ -205,17 +260,20 @@ router.post('/login', authLimiter, (req, res) => {
  * 管理员登录
  * POST /api/auth/admin/login
  */
-router.post('/admin/login', (req, res) => {
+router.post('/admin/login', adminLoginLimiter, (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
-    return error(res, 'Username and password are required');
+    return error(res, '请填写用户名和密码');
+  }
+  if (!validateUsername(username)) {
+    return error(res, `用户名长度需为 ${USERNAME_MIN_LEN}～${USERNAME_MAX_LEN} 个字符`);
   }
   
   // 查找管理员用户（不包括 Agent）
   const user = req.db.prepare(
     'SELECT * FROM users WHERE username = ? AND role IN (?, ?, ?, ?)'
-  ).get(username, 'SuperAdmin', 'Admin', 'Finance', 'Support');
+  ).get(String(username).trim(), 'SuperAdmin', 'Admin', 'Finance', 'Support');
   
   if (!user) {
     return error(res, 'Invalid credentials', 401);
@@ -259,13 +317,16 @@ router.post('/agent/login', authLimiter, (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
-    return error(res, 'Username and password are required');
+    return error(res, '请填写用户名和密码');
   }
-  
+  if (!validateUsername(username)) {
+    return error(res, `用户名长度需为 ${USERNAME_MIN_LEN}～${USERNAME_MAX_LEN} 个字符`);
+  }
+  const name = String(username).trim();
   // 查找代理用户
   const user = req.db.prepare(
     'SELECT * FROM users WHERE username = ? AND role = ?'
-  ).get(username, 'Agent');
+  ).get(name, 'Agent');
   
   if (!user) {
     return error(res, 'Invalid credentials', 401);
@@ -301,32 +362,42 @@ router.post('/agent/login', authLimiter, (req, res) => {
 /**
  * 退出登录（清 Cookie + 记录退出日志）
  * POST /api/auth/logout
+ * 支持无 token 调用：token 过期时前端仍可调用，仅清 Cookie 并返回成功，避免 401
  */
-router.post('/logout', authenticate, (req, res) => {
-  try {
-    res.clearCookie('token', {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/'
-    });
+router.post('/logout', (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  let token = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) token = authHeader.slice(7);
+  if (!token && req.headers.cookie) {
+    try {
+      const parsed = require('cookie').parse(req.headers.cookie);
+      token = parsed.token || null;
+    } catch (e) {}
+  }
+  const decoded = token ? require('../utils/jwt').verifyToken(token) : null;
+
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/'
+  });
+
+  if (decoded && req.db) {
     try {
       req.db.prepare(`
         INSERT INTO login_logs (user_id, username, ip, user_agent, action, created_at)
         VALUES (?, ?, ?, ?, 'logout', datetime('now'))
       `).run(
-        req.user.id,
-        req.user.username,
+        decoded.id,
+        decoded.username,
         (req.ip || req.headers['x-forwarded-for'] || 'unknown').toString().trim().split(',')[0],
         req.headers['user-agent'] || 'unknown'
       );
     } catch (logErr) {
       console.error('Logout log error:', logErr);
     }
-    return res.json({ success: true, message: 'Logged out successfully' });
-  } catch (err) {
-    console.error('Logout error:', err);
-    return res.json({ success: false, message: 'Logout failed' });
   }
+  return res.json({ success: true, message: 'Logged out successfully' });
 });
 
 module.exports = router;

@@ -52,17 +52,7 @@ try {
     `).run();
     console.log("✅ referral_rewards 表已就绪");
     
-    // 6. 确保 settings 表存在并初始化推荐奖励配置
-    dbInstance.prepare(`
-        CREATE TABLE IF NOT EXISTS settings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT UNIQUE NOT NULL,
-            value TEXT NOT NULL,
-            description TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    `).run();
-    
+    // 6. 初始化推荐奖励配置（settings 表由 db.js initTables 统一创建）
     const rewardSetting = dbInstance.prepare('SELECT value FROM settings WHERE key = ?').get('referral_reward_amount');
     if (!rewardSetting) {
         dbInstance.prepare('INSERT INTO settings (key, value, description) VALUES (?, ?, ?)').run(
@@ -189,6 +179,7 @@ router.get('/me', authenticate, (req, res) => {
     let totalProfit = 0;
     let todayProfit = 0;
     let totalOrders = 0;
+    let pendingOrdersCount = 0;
     try {
       const stat = db.prepare(
         'SELECT COALESCE(SUM(commission), 0) as profit, COUNT(*) as cnt FROM orders WHERE user_id = ? AND status = ?'
@@ -199,6 +190,8 @@ router.get('/me', authenticate, (req, res) => {
         "SELECT COALESCE(SUM(commission), 0) as profit FROM orders WHERE user_id = ? AND status = 'completed' AND date(created_at) = date('now', 'localtime')"
       ).get(userId);
       todayProfit = todayRow ? (todayRow.profit || 0) : 0;
+      const pendingRow = db.prepare('SELECT COUNT(*) as cnt FROM orders WHERE user_id = ? AND status = ?').get(userId, 'pending');
+      pendingOrdersCount = pendingRow ? (pendingRow.cnt || 0) : 0;
     } catch (e) {}
 
     res.json({
@@ -210,7 +203,8 @@ router.get('/me', authenticate, (req, res) => {
         vip_commission_rate: vipConfig.commission_rate != null ? vipConfig.commission_rate : 0.005,
         total_profit: totalProfit,
         today_profit: todayProfit,
-        total_orders: totalOrders
+        total_orders: totalOrders,
+        pending_orders_count: pendingOrdersCount
       }
     });
   } catch (e) {

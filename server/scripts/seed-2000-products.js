@@ -1,0 +1,353 @@
+/**
+ * 录入 2000 条商品：标题、价格、图片一一对应（图片为占位图显示商品名，确保图文一致）
+ * 商品名与价格参考亚马逊/虾皮风格，价格与品类匹配
+ * Run: node server/scripts/seed-2000-products.js
+ */
+const { getDb } = require('../db');
+
+// 商品模板：[标题, 最低价, 最高价] — 价格与品类一致
+const TEMPLATES = [
+  // 数码 3C
+  ['iPhone 15 Pro 手机壳 防摔透明', 12, 28],
+  ['Samsung Galaxy 钢化膜 高清防指纹', 8, 18],
+  ['Type-C 快充数据线 1米 编织', 9, 22],
+  ['无线蓝牙耳机 降噪 长续航', 35, 89],
+  ['机械键盘 青轴 背光 游戏', 89, 199],
+  ['无线鼠标 静音 人体工学', 25, 55],
+  ['移动电源 20000mAh 快充', 35, 75],
+  ['笔记本支架 铝合金 可调节', 28, 65],
+  ['iPad 保护套 带笔槽', 22, 48],
+  ['蓝牙音箱 便携 防水', 45, 99],
+  ['USB-C 扩展坞 7合1', 45, 95],
+  ['外接硬盘 1TB 便携', 65, 129],
+  ['网络摄像头 1080P 带麦克风', 55, 119],
+  ['手机支架 车载 重力感应', 15, 35],
+  ['智能手环 心率 睡眠监测', 35, 79],
+  ['平板支架 可旋转 桌面', 18, 42],
+  ['手机散热器 半导体 游戏', 25, 55],
+  ['麦克风 电容 直播 K歌', 88, 199],
+  ['路由器 WiFi6 千兆', 99, 229],
+  ['显示器 24寸 75Hz 护眼', 199, 399],
+  // 服饰鞋包
+  ['纯棉短袖 T恤 男女同款', 29, 69],
+  ['牛仔裤 高腰 修身 弹力', 79, 159],
+  ['运动鞋 透气 轻便 跑步', 129, 269],
+  ['双肩包 电脑隔层 防水', 89, 189],
+  ['帆布腰带 针扣 多色', 25, 55],
+  ['太阳镜 偏光 防紫外线', 39, 89],
+  ['针织开衫 薄款 春秋', 69, 139],
+  ['卫衣 连帽 加绒', 79, 159],
+  ['休闲裤 九分 直筒', 69, 129],
+  ['女士钱包 真皮 多卡位', 45, 99],
+  ['棒球帽 可调节 刺绣', 35, 69],
+  ['围巾 羊绒混纺 长款', 49, 99],
+  ['帆布鞋 低帮 经典', 89, 179],
+  ['皮带 头层牛皮 自动扣', 55, 119],
+  ['袜子 中筒 纯棉 5双装', 25, 49],
+  // 家居厨房
+  ['空气炸锅 5.5L 触控', 199, 399],
+  ['电热水壶 1.8L 保温', 69, 139],
+  ['不粘锅 平底 28cm 带盖', 79, 159],
+  ['刀具套装 5件 不锈钢', 99, 229],
+  ['保鲜盒 密封 多规格 10件', 49, 99],
+  ['瑜伽垫 加厚 防滑 183cm', 39, 79],
+  ['台灯 LED 触控 护眼', 45, 99],
+  ['收纳盒 抽屉式 多层', 29, 65],
+  ['窗帘 遮光 两片装', 69, 149],
+  ['加湿器 静音 上加水', 79, 159],
+  ['电饭煲 3L 智能 预约', 199, 399],
+  ['榨汁机 便携 充电', 89, 179],
+  ['扫地机器人 扫拖一体', 899, 1899],
+  ['挂烫机 手持 蒸汽', 79, 159],
+  ['垃圾桶 脚踏 带盖 大号', 35, 69],
+  ['晾衣架 落地 多层', 49, 99],
+  ['床上四件套 纯棉 1.5m', 129, 259],
+  ['枕头 记忆棉 护颈', 69, 139],
+  ['地垫 门口 吸水 防滑', 29, 59],
+  ['置物架 厨房 多层 不锈钢', 55, 119],
+  // 美妆个护
+  ['洗面奶 氨基酸 温和', 35, 79],
+  ['面霜 保湿 50ml', 49, 119],
+  ['防晒霜 SPF50 清爽', 45, 99],
+  ['电动牙刷 声波 2支装', 129, 269],
+  ['吹风机 负离子 恒温', 89, 199],
+  ['面膜 补水 10片装', 39, 89],
+  ['唇膏 滋润 多色', 25, 55],
+  ['化妆刷 套刷 8支', 49, 109],
+  ['卸妆水 温和 500ml', 35, 79],
+  ['护手霜 滋润 3支装', 29, 59],
+  ['香水 淡香 30ml', 99, 229],
+  ['指甲油 可撕 6色', 29, 65],
+  ['眉笔 双头 防汗', 19, 45],
+  ['睫毛膏 纤长 不晕染', 35, 79],
+  ['眼影盘 12色 哑光珠光', 55, 129],
+  ['粉底液 持妆 30ml', 79, 179],
+  ['身体乳 美白 400ml', 39, 89],
+  ['洗发水 无硅油 500ml', 45, 99],
+  ['沐浴露 留香 1L', 29, 65],
+  ['剃须刀 电动 全身水洗', 89, 199],
+  // 运动户外
+  ['哑铃 可调节 一对', 129, 269],
+  ['瑜伽球 防爆 65cm', 35, 69],
+  ['跳绳 计数 负重', 25, 55],
+  ['跑步腰包 手机 钥匙', 29, 59],
+  ['运动水杯 吸管 500ml', 35, 69],
+  ['健身手套 防滑 透气', 25, 55],
+  ['阻力带 5档 套装', 39, 79],
+  ['俯卧撑支架 防滑', 35, 69],
+  ['泡沫轴 按摩 放松', 49, 99],
+  ['骑行头盔 透气 可调', 89, 179],
+  ['露营帐篷 3人 防风', 199, 429],
+  ['睡袋 可拼接 秋冬', 129, 269],
+  ['登山杖 碳素 一对', 79, 159],
+  ['户外手电 强光 充电', 45, 99],
+  ['保温杯 不锈钢 500ml', 59, 129],
+  ['泳镜 防雾 近视可选', 35, 79],
+  ['护膝 运动 一对', 39, 79],
+  ['健身服 速干 套装', 89, 179],
+  ['篮球 室内外 7号', 69, 139],
+  ['羽毛球拍 碳素 一对', 129, 269],
+  // 母婴
+  ['奶瓶 宽口 防胀气 240ml', 45, 99],
+  ['纸尿裤 L码 大包装', 89, 179],
+  ['婴儿湿巾 80抽 10包', 49, 99],
+  ['婴儿推车 轻便 可折叠', 399, 899],
+  ['婴儿床 实木 无漆', 299, 699],
+  ['吸奶器 电动 双头', 159, 349],
+  ['婴儿沐浴露 无泪 500ml', 35, 69],
+  ['婴儿润肤乳 无香 200ml', 39, 79],
+  ['奶瓶消毒器 蒸汽 多功能', 99, 219],
+  ['婴儿餐椅 可调节 便携', 199, 429],
+  ['婴儿睡袋 分腿 秋冬', 79, 159],
+  ['婴儿玩具 摇铃 牙胶 套装', 49, 99],
+  ['婴儿床围 防撞 透气', 69, 139],
+  ['温奶器 恒温 快速', 59, 129],
+  ['婴儿指甲剪 安全', 25, 49],
+  ['婴儿洗衣液 无添加 1L', 45, 89],
+  ['婴儿枕头 定型 0-1岁', 49, 99],
+  ['婴儿浴盆 可折叠', 79, 159],
+  ['婴儿背带  ergonomic', 129, 269],
+  ['婴儿监控器 夜视 双向', 149, 329],
+  // 食品零食
+  ['坚果礼盒 混合 500g', 59, 129],
+  ['黑巧克力 礼盒 多口味', 49, 99],
+  ['咖啡豆 阿拉比卡 1kg', 79, 169],
+  ['茶叶 红茶 罐装 200g', 45, 99],
+  ['燕麦片 即食 1kg', 35, 69],
+  ['蜂蜜 纯天然 500g', 49, 99],
+  ['饼干 礼盒 多口味', 39, 79],
+  ['牛肉干 原味 独立包装', 45, 89],
+  ['果干 混合 大包装', 35, 69],
+  ['麦片 营养 早餐 1kg', 45, 89],
+  ['奶粉 成人 高钙 400g', 59, 129],
+  ['蛋白粉 乳清 1kg', 129, 269],
+  ['维生素 复合 100粒', 49, 109],
+  ['益生菌 30袋 常温', 79, 169],
+  ['鱼油 深海 60粒', 59, 129],
+  ['蜂蜜柚子茶 瓶装 500g', 35, 69],
+  ['芝麻糊 即冲 袋装', 29, 59],
+  ['红枣 新疆 500g', 39, 79],
+  ['枸杞 宁夏 250g', 45, 89],
+  ['花茶 组合 礼盒', 59, 129],
+  // 办公文具
+  ['笔记本 A5 活页 多内芯', 25, 55],
+  ['中性笔 0.5 12支 多色', 15, 35],
+  ['桌面收纳 多层 笔筒', 35, 69],
+  ['便签纸 多色 10本', 19, 39],
+  ['计算器 科学 太阳能', 29, 59],
+  ['笔记本电脑支架 铝合金', 69, 139],
+  ['文件夹  A4 多页 10个', 25, 55],
+  ['白板 磁性 60x90', 79, 159],
+  ['订书机 省力 加订书钉', 25, 55],
+  ['胶带 透明 多卷', 15, 35],
+  ['荧光笔 6色 双头', 19, 45],
+  ['活页夹 3孔 A4', 25, 55],
+  ['便签 索引 多色', 15, 35],
+  ['桌面垫 鼠标垫 大号', 29, 59],
+  ['台历 桌面 2025', 35, 69],
+  ['文件筐 多层 铁艺', 45, 89],
+  ['回形针 一盒 多色', 9, 22],
+  ['长尾夹 混合 一盒', 15, 35],
+  ['剪刀 办公 不锈钢', 25, 49],
+  ['打孔器 单孔 便携', 19, 45],
+  // 宠物
+  ['猫粮 成猫 2kg', 59, 129],
+  ['狗粮 成犬 3kg', 69, 139],
+  ['猫砂 膨润土 10L', 35, 69],
+  ['宠物碗 不锈钢 双碗', 35, 69],
+  ['猫爬架 多层 剑麻', 129, 269],
+  ['狗窝 可拆洗 四季', 79, 159],
+  ['宠物梳 除毛 按摩', 29, 59],
+  ['宠物零食 鸡肉干 200g', 35, 69],
+  ['牵引绳 自动伸缩 5m', 49, 99],
+  ['宠物背包 航空 外出', 89, 179],
+  ['猫玩具 逗猫棒 套装', 25, 55],
+  ['狗玩具 耐咬 发声', 29, 59],
+  ['宠物饮水机 静音 过滤', 79, 159],
+  ['宠物浴液 除蚤 500ml', 39, 79],
+  ['猫抓板 瓦楞纸 多块', 35, 69],
+  ['宠物垫 凉席 可洗', 45, 89],
+  ['宠物湿巾 无酒精 80抽', 29, 59],
+  ['宠物指甲剪 带灯', 25, 49],
+  ['宠物除臭 喷雾 500ml', 35, 69],
+  ['鱼缸 超白 带过滤', 129, 269],
+  // 车品
+  ['车载手机支架 磁吸', 25, 55],
+  ['行车记录仪 1080P 夜视', 129, 269],
+  ['车载充电器 双口 快充', 35, 69],
+  ['车载香薰 出风口 多味', 25, 55],
+  ['汽车脚垫 全包围', 129, 269],
+  ['车载吸尘器 无线', 79, 159],
+  ['车载充气泵 数显', 59, 129],
+  ['汽车坐垫 四季 透气', 89, 179],
+  ['车载垃圾桶 可折叠', 25, 49],
+  ['玻璃水 防冻 -25℃ 2瓶', 25, 49],
+  ['车载冰箱 冷暖 12V', 199, 429],
+  ['车载应急电源 启动', 199, 429],
+  ['方向盘套 真皮 手缝', 49, 99],
+  ['遮阳挡 前挡 折叠', 35, 69],
+  ['车载置物袋 椅背', 29, 59],
+  ['胎压监测 外置 太阳能', 79, 159],
+  ['车载蓝牙 免提', 45, 89],
+  ['洗车机 高压 家用', 159, 329],
+  ['车衣 防晒 车罩', 79, 159],
+  ['车载挂钩 承重', 15, 35],
+  // 珠宝配饰
+  ['项链 银饰 锁骨链', 59, 129],
+  ['耳钉 925银 简约', 35, 79],
+  ['手链 转运珠 红绳', 45, 99],
+  ['戒指 开口 可调节', 49, 109],
+  ['胸针 复古 别针', 39, 89],
+  ['发夹 珍珠 多只', 25, 55],
+  ['手表带 皮质 替换', 45, 99],
+  ['手镯 合金 镶钻', 59, 129],
+  ['项链 珍珠 多层', 79, 169],
+  ['耳环 长款 气质', 45, 99],
+  ['戒指 对戒 情侣', 129, 269],
+  ['脚链 银饰 细链', 35, 79],
+  ['发箍 宽边 头饰', 29, 59],
+  ['戒指 莫桑石', 99, 229],
+  ['项链 玉坠 平安扣', 89, 199],
+  ['耳夹 无耳洞', 25, 55],
+  ['手链 串珠 多圈', 39, 89],
+  ['胸针 商务', 45, 99],
+  ['项链 钛钢 不易过敏', 35, 79],
+  ['手镯 玉镯 和田', 199, 499],
+  // 玩具潮玩
+  ['积木 拼装 主题 大颗粒', 59, 129],
+  ['盲盒 手办 系列', 49, 99],
+  ['拼图 1000片 风景', 45, 89],
+  ['遥控车 越野 充电', 89, 179],
+  ['毛绒玩偶 大号 抱枕', 49, 99],
+  ['桌游 策略 多人', 79, 159],
+  ['模型 拼装 飞机', 129, 269],
+  ['儿童画板 磁性 双面', 69, 139],
+  ['科学实验 套装 儿童', 59, 129],
+  ['粘土 24色 可混色', 35, 69],
+  ['飞行器 遥控 四轴', 129, 269],
+  ['芭比 娃娃 套装', 89, 179],
+  ['恐龙 模型 套装', 49, 99],
+  ['乐高 兼容 主题', 79, 159],
+  ['魔方 三阶 竞速', 25, 55],
+  ['卡牌 收藏 礼盒', 45, 99],
+  ['扭蛋 系列 多款', 15, 35],
+  ['沙画 儿童 套装', 35, 69],
+  ['泡泡机 电动 大容量', 35, 69],
+  ['儿童相机 拍照 玩具', 79, 159],
+];
+
+// 变体后缀，用于生成 2000 条不重复感强的标题
+const VARIANTS = ['', ' 多色可选', ' 热销', ' 新品', ' 升级款', ' 大容量', ' 便携装', ' 礼盒装', ' 经典款', ' 旗舰款'];
+
+// 本地产品图片：按品类与商品对应（手机壳/钢化膜/数据线→p01/p29，耳机→p02，键盘→p03，鼠标→p04…）
+const PRODUCT_IMAGES = [
+  'p01-phone-case.png', 'p01-phone-case.png', 'p29-cable.png', 'p02-earphones.png', 'p03-keyboard.png',
+  'p04-mouse.png', 'p05-power-bank.png', 'p30-laptop-stand.png', 'p01-phone-case.png', 'p02-earphones.png',
+  'p29-cable.png', 'p05-power-bank.png', 'p02-earphones.png', 'p26-car-mount.png', 'p02-earphones.png',
+  'p30-laptop-stand.png', 'p01-phone-case.png', 'p02-earphones.png', 'p29-cable.png', 'p03-keyboard.png',
+  'p06-tshirt.png', 'p07-jeans.png', 'p08-sneakers.png', 'p09-backpack.png', 'p07-jeans.png',
+  'p06-tshirt.png', 'p06-tshirt.png', 'p06-tshirt.png', 'p07-jeans.png', 'p27-necklace.png',
+  'p06-tshirt.png', 'p06-tshirt.png', 'p08-sneakers.png', 'p07-jeans.png', 'p06-tshirt.png',
+  'p10-air-fryer.png', 'p11-kettle.png', 'p12-pan.png', 'p12-pan.png', 'p12-pan.png',
+  'p13-yoga-mat.png', 'p14-desk-lamp.png', 'p12-pan.png', 'p10-air-fryer.png', 'p11-kettle.png',
+  'p10-air-fryer.png', 'p10-air-fryer.png', 'p10-air-fryer.png', 'p14-desk-lamp.png', 'p14-desk-lamp.png',
+  'p14-desk-lamp.png', 'p15-pillow.png', 'p15-pillow.png', 'p13-yoga-mat.png', 'p12-pan.png',
+  'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p17-toothbrush.png', 'p18-hair-dryer.png',
+  'p19-face-mask.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png',
+  'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png',
+  'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png', 'p16-skincare.png',
+  'p16-skincare.png', 'p16-skincare.png', 'p18-hair-dryer.png', 'p16-skincare.png',
+  'p20-dumbbell.png', 'p13-yoga-mat.png', 'p20-dumbbell.png', 'p09-backpack.png', 'p20-dumbbell.png',
+  'p20-dumbbell.png', 'p20-dumbbell.png', 'p20-dumbbell.png', 'p20-dumbbell.png', 'p20-dumbbell.png',
+  'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p20-dumbbell.png', 'p21-tent.png',
+  'p20-dumbbell.png', 'p20-dumbbell.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png',
+  'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png', 'p21-tent.png',
+  'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png',
+  'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png',
+  'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png',
+  'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png', 'p22-baby-bottle.png',
+  'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png',
+  'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png',
+  'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png',
+  'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png', 'p23-nuts.png',
+  'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png',
+  'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png',
+  'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png',
+  'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png', 'p24-notebook.png',
+  'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png',
+  'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png',
+  'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png',
+  'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png', 'p25-cat-food.png',
+  'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png',
+  'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png',
+  'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png',
+  'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png', 'p26-car-mount.png',
+  'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png',
+  'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png',
+  'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png',
+  'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png', 'p27-necklace.png',
+  'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png',
+  'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png',
+  'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png',
+  'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png', 'p28-blocks.png',
+];
+
+const BASE_URL = '/public/uploads/products/';
+
+function randomInRange(min, max) {
+  return Math.round((min + Math.random() * (max - min)) * 100) / 100;
+}
+
+function main() {
+  const db = getDb();
+  const deleteAll = db.prepare('DELETE FROM products');
+  const insert = db.prepare(
+    'INSERT INTO products (title, price, image, vip_level) VALUES (?, ?, ?, 0)'
+  );
+
+  deleteAll.run();
+
+  const target = 2000;
+  let inserted = 0;
+
+  for (let i = 0; i < target; i++) {
+    const tIdx = i % TEMPLATES.length;
+    const [name, priceMin, priceMax] = TEMPLATES[tIdx];
+    const variant = VARIANTS[Math.floor(i / TEMPLATES.length) % VARIANTS.length];
+    const title = name + variant;
+    const price = randomInRange(priceMin, priceMax);
+    const imgFile = PRODUCT_IMAGES[tIdx] || 'p01-phone-case.png';
+    const image = BASE_URL + imgFile;
+
+    try {
+      insert.run(title, price, image);
+      inserted++;
+    } catch (e) {
+      console.warn('Skip:', title, e.message);
+    }
+  }
+
+  console.log('Done. Inserted', inserted, 'products. 图片使用本地生成的产品图，与品类对应。');
+}
+
+main();

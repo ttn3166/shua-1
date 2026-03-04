@@ -475,6 +475,21 @@
       font-weight: 700;
     }
 
+    .nav-pending-badge {
+      display: inline-block;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      background: #e53e3e;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
     /* 中间大按钮 */
     .nav-item.center {
       position: relative;
@@ -541,6 +556,10 @@
         transform: translateX(-50%) translateY(0) scale(1);
       }
     }
+
+    /* 未登录时隐藏列表区，避免闪一下再跳转登录页 */
+    body.auth-pending .filter-tabs,
+    body.auth-pending .orders-container { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 
     /* ============= 响应式优化 ============= */
     @media (max-width: 375px) {
@@ -627,7 +646,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="nav-label">History</div>
+      <div class="nav-label">History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
     </div>
     <div class="nav-item center" onclick="window.location.href='/grab'">
       <div class="nav-icon-large">
@@ -679,10 +698,15 @@
       }, 2500);
     }
 
-    // 加载订单列表
-    async function loadOrders() {
+    // 加载订单列表（isRetry: 内部重试用，不对外暴露）
+    async function loadOrders(isRetry) {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          document.getElementById('loadingState').style.display = 'none';
+          showEmptyState('error', 'Failed to Load', 'Unable to fetch order history. Please try again.');
+          return;
+        }
         const response = await fetch('/api/task/my-orders', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -700,10 +724,16 @@
         // 隐藏加载状态
         document.getElementById('loadingState').style.display = 'none';
         
+        updatePendingBadge();
         renderOrders();
 
       } catch (error) {
         console.error('加载订单失败:', error);
+        // 首次失败时自动重试一次，解决首屏偶发无数据问题
+        if (!isRetry) {
+          setTimeout(function() { loadOrders(true); }, 1200);
+          return;
+        }
         document.getElementById('loadingState').style.display = 'none';
         showEmptyState('error', 'Failed to Load', 'Unable to fetch order history. Please try again.');
       }
@@ -883,14 +913,23 @@
       }
     }
 
-    // 页面加载
-    window.addEventListener('DOMContentLoaded', () => {
-      if (checkAuth()) {
-        loadConfig();
-        setTimeout(() => {
-          loadOrders();
-        }, 800);  // 延迟加载，展示骨架屏效果
+    // 从 URL 应用 tab（如 ?tab=pending）便于从抢单页「去完成」直达
+    function applyTabFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab && ['pending', 'completed', 'frozen', 'all'].includes(tab)) {
+        filterOrders(tab);
       }
+    }
+
+    // 页面加载：立即请求订单数据，避免首屏无数据需刷新才出现
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!checkAuth()) return;
+      document.body.classList.remove('auth-pending');
+      loadConfig();
+      (function run() {
+        loadOrders().then(function() { applyTabFromUrl(); });
+      })();
     });
 
     // === 强力链接修复器 ===
@@ -924,7 +963,6 @@
                     el.onclick = function() { window.open(serviceUrl, '_blank'); };
                 }
             });
-            console.log('✅ Service links updated to:', serviceUrl);
         }
     }
 

@@ -31,6 +31,9 @@ dist/
 .cache/
 *.tar.gz
 
+# User uploads (banners, products, deposits)
+public/uploads/
+
 # Optional
 .user.ini
 .Recycle_bin/

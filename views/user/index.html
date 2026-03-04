@@ -120,12 +120,12 @@
       <!-- 表单 -->
       <form id="loginForm">
         <div class="form-group">
-          <label class="form-label" for="username">Username / Email</label>
+          <label class="form-label" for="username">Username</label>
           <input 
             type="text" 
             id="username" 
             class="form-input" 
-            placeholder="Enter Username"
+            placeholder="Enter your username"
             required
             autocomplete="username"
           >
@@ -153,6 +153,9 @@
       <div class="form-footer">
         No account? <a href="/views/user/register.html">Register</a>
       </div>
+      <div class="form-footer" style="margin-top:10px; font-size:12px;">
+        <a href="/views/user/terms.html">Terms</a> <span style="margin:0 6px; color: var(--text-muted);">·</span> <a href="/views/user/privacy.html">Privacy</a>
+      </div>
 
       <div class="divider">or</div>
 
@@ -163,6 +166,11 @@
   </div>
 
   <script>
+    // 已登录用户访问登录页直接进入首页，与注册页逻辑一致
+    if (localStorage.getItem('token')) {
+      window.location.replace('/views/user/dashboard.html');
+    }
+
     const form = document.getElementById('loginForm');
     const errorAlert = document.getElementById('error-alert');
     const loginBtn = document.getElementById('loginBtn');
@@ -226,8 +234,8 @@
         localStorage.setItem('token', result.data.token);
         localStorage.setItem('user', JSON.stringify(result.data.user));
 
-        // 跳转到主页
-        window.location.href = '/views/user/dashboard.html';
+        // 跳转到主页并带欢迎参数，首屏可显示 Welcome back
+        window.location.href = '/views/user/dashboard.html?welcome=1';
       } catch (error) {
         showError(error.message);
       } finally {

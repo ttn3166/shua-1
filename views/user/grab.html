@@ -22,6 +22,7 @@
         .grab-btn:active { transform: scale(0.96); }
         .grab-btn:disabled { opacity: 0.8; cursor: not-allowed; transform: none; }
         .grab-btn-container .hint { color: #718096; margin-top: 14px; font-size: 12px; }
+        .grab-btn-container .grab-trust-hint { margin-top: 4px; font-size: 11px; opacity: 0.9; }
         .notice-box { margin: 0 15px 24px; padding: 14px 16px; background: rgba(66, 153, 225, 0.08); border: 1px solid rgba(66, 153, 225, 0.2); border-radius: 12px; font-size: 13px; color: #2d3748; }
         .notice-box .title { font-weight: 700; margin-bottom: 6px; color: #2b6cb0; }
         .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; border-top: 1px solid #e2e8f0; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 1000; }
@@ -29,8 +30,22 @@
         .nav-bar a.active { color: #4299e1; font-weight: 600; }
         .nav-bar .nav-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
         .nav-bar .nav-icon.center { width: 48px; height: 48px; background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; border-radius: 50%; margin-top: -24px; border: 4px solid white; box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4); }
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: rgba(0,0,0,0.85); color: white; border-radius: 24px; font-size: 14px; z-index: 2000; display: none; }
+        .nav-pending-badge { display: inline-block; min-width: 16px; height: 16px; line-height: 16px; padding: 0 4px; font-size: 10px; font-weight: 700; color: white; background: #e53e3e; border-radius: 8px; margin-left: 4px; vertical-align: middle; }
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: rgba(0,0,0,0.85); color: white; border-radius: 24px; font-size: 14px; z-index: 2000; display: none; max-width: 90%; }
         .toast.show { display: block; }
+        .toast a.toast-link { color: #63b3ed; text-decoration: underline; margin-left: 6px; white-space: nowrap; }
+        .modal-product-img-wrap { text-align: center; margin-bottom: 12px; }
+        .modal-product-img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; background: #e2e8f0; border: 1px solid #e2e8f0; }
+        .modal-order-meta { font-size: 11px; color: #718096; text-align: center; margin-bottom: 12px; display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .modal-order-meta span { display: inline-flex; align-items: center; gap: 4px; }
+        .modal-trust-line { font-size: 11px; color: #38a169; text-align: center; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .modal-divider { height: 1px; background: #e2e8f0; margin: 12px 0; }
+        .modal-order-no-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .modal-order-no-row .label { color: #718096; font-size: 14px; flex-shrink: 0; }
+        .modal-order-no-row .value { font-weight: 700; font-size: 12px; font-family: monospace; min-width: 0; word-break: break-all; }
+        .btn-copy { flex-shrink: 0; padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #e2e8f0; color: #4a5568; border: none; cursor: pointer; }
+        .modal-balance-row { background: rgba(66,153,225,0.08); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; }
+        .modal-balance-row.insufficient { background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3); }
         /* Task detail modal */
         .modal-overlay { position: fixed; top:0;left:0;right:0;bottom:0; background: rgba(102,126,234,0.95); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 20px; animation: fadeIn 0.3s; overflow-y: auto; }
         .modal-card { background: white; border-radius: 20px; padding: 20px; max-width: 400px; width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.2); max-height: 85vh; overflow-y: auto; }
@@ -55,8 +70,9 @@
     </style>
     <script src="/public/js/common.js"></script>
 </head>
-<body>
+<body class="auth-pending">
     <div id="toast" class="toast"></div>
+    <div style="text-align:center; padding:10px 15px 0; font-size:12px; color:rgba(255,255,255,0.85);">TaskMall Task Hall — Grab & Earn</div>
     <div class="vip-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
             <h2>VIP <span id="vipLevel">1</span></h2>
@@ -78,6 +94,7 @@
         <button class="grab-btn" id="grabBtn" onclick="startGrab()">START<br>GRABBING</button>
         <p class="hint" id="grabHint" style="display:none; margin-top:10px; font-size:13px;"></p>
         <p class="hint">System Automatic Dispatch</p>
+        <p class="hint grab-trust-hint">Real orders · Principal + commission returned after completion</p>
     </div>
     <div class="notice-box">
         <div class="title">Important Notice</div>
@@ -85,7 +102,7 @@
     </div>
     <nav class="nav-bar">
         <a href="/views/user/dashboard.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></span>Home</a>
-        <a href="/views/user/history.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>History</a>
+        <a href="/views/user/history.html" id="navHistoryLink"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></a>
         <a href="/grab" class="active"><span class="nav-icon center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></span>Start</a>
         <a href="#" id="navService"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg></span>Service</a>
         <a href="/views/user/profile.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></span>Profile</a>
@@ -96,14 +113,20 @@
             if (!token) { window.location.href = '/views/user/index.html'; return false; }
             return true;
         }
-        function showToast(msg) {
+        function showToast(msg, linkOption) {
             var el = document.getElementById('toast');
-            el.textContent = msg;
+            if (linkOption && linkOption.url) {
+                var escaped = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                el.innerHTML = escaped + ' <a class="toast-link" href="' + linkOption.url.replace(/"/g, '&quot;') + '">' + (linkOption.text || 'Go') + '</a>';
+            } else {
+                el.textContent = msg;
+            }
             el.classList.add('show');
-            setTimeout(function() { el.classList.remove('show'); }, 2500);
+            setTimeout(function() { el.classList.remove('show'); }, linkOption ? 4500 : 2500);
         }
         async function loadUserData() {
             if (!checkAuth()) return;
+            document.body.classList.remove('auth-pending');
             var token = localStorage.getItem('token');
             try {
                 var res = await fetch('/api/user/me', { headers: { 'Authorization': 'Bearer ' + token } });
@@ -123,6 +146,11 @@
                 document.getElementById('dailyOrders').textContent = d.vip_daily_orders != null ? d.vip_daily_orders : 40;
                 var grabHint = document.getElementById('grabHint');
                 var grabBtn = document.getElementById('grabBtn');
+                var badge = document.getElementById('navHistoryBadge');
+                if (badge) {
+                    var n = (d.pending_orders_count != null ? parseInt(d.pending_orders_count, 10) : 0) || 0;
+                    if (n > 0) { badge.textContent = n > 99 ? '99+' : n; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+                }
                 if (grabHint) {
                     if (d.allow_grab === 0) {
                         grabHint.textContent = 'Grab is closed. Please contact admin to enable it.';
@@ -141,9 +169,12 @@
             }
         }
         var currentMatchToken = null;
+        var grabInProgress = false;
 
         async function startGrab() {
             if (!checkAuth()) return;
+            if (grabInProgress) return;
+            grabInProgress = true;
             var btn = document.getElementById('grabBtn');
             btn.disabled = true;
             btn.innerHTML = 'Matching...';
@@ -158,18 +189,24 @@
                     showTaskModal(res.data);
                 } else {
                     var msg = res.message || 'Match failed';
-                    if (msg.indexOf('disabled') !== -1 || msg === 'Account grabbing is disabled.') {
+                    if (res.code === 'PENDING_ORDER' || res.order_id) {
+                        showToast(msg || 'You have an uncompleted order. Please complete it first.', { text: 'Go to History', url: '/views/user/history.html?tab=pending' });
+                    } else if (msg.indexOf('disabled') !== -1 || msg === 'Account grabbing is disabled.') {
                         msg = 'Grab is closed. Please contact admin to enable it.';
                         var gh = document.getElementById('grabHint');
                         if (gh) { gh.textContent = msg; gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
+                        showToast(msg);
+                    } else {
+                        showToast(msg);
                     }
-                    showToast(msg);
                 }
             } catch (e) {
                 console.error(e);
                 showToast('Network error');
                 btn.disabled = false;
                 btn.innerHTML = 'START<br>GRABBING';
+            } finally {
+                grabInProgress = false;
             }
         }
 
@@ -177,9 +214,23 @@
             var modal = document.createElement('div');
             modal.className = 'modal-overlay';
             modal.id = 'taskModal';
+            modal.setAttribute('role', 'dialog');
+            modal.setAttribute('aria-modal', 'true');
+            modal.setAttribute('aria-label', 'Task details');
+            var balanceEl = document.getElementById('balance');
+            var currentBalance = balanceEl ? parseFloat(String(balanceEl.textContent).replace(/[^0-9.-]/g, '')) || 0 : 0;
+            var amount = Number(data.amount) || 0;
+            var insufficient = currentBalance < amount;
+            var productImgHtml = '';
+            if (data && data.product_image) {
+                productImgHtml = '<div class="modal-product-img-wrap"><img class="modal-product-img" src="' + String(data.product_image).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" alt="Product" onerror="this.style.display=\'none\'"></div>';
+            } else {
+                productImgHtml = '<div class="modal-product-img-wrap"><div class="modal-product-img" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:#718096;">No image</div></div>';
+            }
             var productHtml = '';
-            if (data && data.product_name) {
-                productHtml += '<div class="modal-row product-row"><span class="label">Product</span><span class="value">' + String(data.product_name).replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span></div>';
+            var titleDisplay = (data && (data.product_title || data.product_name)) ? String(data.product_title || data.product_name).replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+            if (titleDisplay) {
+                productHtml += '<div class="modal-row product-row"><span class="label">Product</span><span class="value">' + titleDisplay + '</span></div>';
             }
             if (data && data.unit_price != null) {
                 productHtml += '<div class="modal-row"><span class="label">Unit Price</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
@@ -187,29 +238,74 @@
             if (data && data.quantity != null) {
                 productHtml += '<div class="modal-row"><span class="label">Quantity</span><span class="value">' + Number(data.quantity) + '</span></div>';
             }
+            var orderNo = data.order_no || '';
+            var balanceRowClass = insufficient ? ' modal-balance-row insufficient' : ' modal-balance-row';
+            var balanceTip = insufficient ? '<div class="modal-tip" style="margin-top:8px;">Insufficient balance. Please deposit first, then complete this order under History → Pending.</div>' : '';
+            var confirmDisabled = insufficient ? ' disabled' : '';
+            var now = new Date();
+            var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+            var orderMeta = '<div class="modal-order-meta"><span>🕐 Matched at ' + timeStr + '</span><span>⏱ Valid for 5 min</span></div>';
             modal.innerHTML = '<div class="modal-card">' +
                 '<div class="modal-title">📦 Task Details</div>' +
                 '<div class="modal-subtitle">Confirm task info before starting</div>' +
-                '<div class="modal-amount">' + Number(data.amount).toFixed(2) + ' USDT</div>' +
-                '<div style="font-size:12px;color:#718096;text-align:center;margin-bottom:12px;">Task Amount</div>' +
-                '<div class="modal-row"><span class="label">Order No.</span><span class="value" style="font-size:12px;font-family:monospace;">' + (data.order_no || '') + '</span></div>' +
+                orderMeta +
+                productImgHtml +
+                '<div class="modal-amount">' + amount.toFixed(2) + ' USDT</div>' +
+                '<div style="font-size:12px;color:#718096;text-align:center;margin-bottom:12px;">Task Amount (to deduct)</div>' +
+                '<div class="' + balanceRowClass + '">' +
+                '<div class="modal-row" style="border:none;padding:0;"><span class="label">Current Balance</span><span class="value">' + currentBalance.toFixed(2) + ' USDT</span></div>' +
+                '<div class="modal-row" style="border:none;padding:0;"><span class="label">This order deducts</span><span class="value">' + amount.toFixed(2) + ' USDT</span></div></div>' +
+                balanceTip +
+                '<div class="modal-order-no-row"><span class="label">Order No.</span><span class="value" id="modalOrderNo">' + orderNo.replace(/</g,'&lt;') + '</span><button type="button" class="btn-copy" onclick="copyOrderNo(\'' + orderNo.replace(/'/g, '\\\'') + '\', this)">Copy</button></div>' +
                 productHtml +
                 '<div class="modal-row"><span class="label">Commission Rate</span><span class="value">' + ((data.commission_rate || 0) * 100).toFixed(1) + '%</span></div>' +
                 '<div class="modal-row"><span class="label">Estimated Commission</span><span class="value" style="color:#38a169;">+' + Number(data.commission).toFixed(2) + ' USDT</span></div>' +
-                '<div class="modal-total"><div class="label">Total Return</div><div class="value">' + Number(data.total_return).toFixed(2) + ' USDT</div></div>' +
+                '<div class="modal-total"><div class="label">Total Return</div><div class="value">' + Number(data.total_return).toFixed(2) + ' USDT</div><div class="modal-trust-line">✓ Principal + commission returned automatically after completion</div></div>' +
                 '<div class="modal-btns">' +
                 '<button class="modal-btn-cancel" onclick="closeTaskModal()">Cancel</button>' +
-                '<button class="modal-btn-confirm" id="confirmBtn" onclick="confirmGrab()">Confirm</button>' +
+                '<button class="modal-btn-confirm" id="confirmBtn" onclick="confirmGrab()"' + confirmDisabled + '>Confirm</button>' +
                 '</div>' +
-                '<div class="modal-tip">💡 Confirm to deduct task amount; principal + commission will be returned immediately after confirmation.</div>' +
+                '<div class="modal-tip">💡 Complete the order as specified; after confirmation, principal + commission will be returned automatically.</div>' +
                 '</div>';
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeTaskModal();
+            });
+            var escHandler = function(e) {
+                if (e.key === 'Escape' && document.getElementById('taskModal')) {
+                    document.removeEventListener('keydown', escHandler);
+                    closeTaskModal();
+                }
+            };
+            modal._escHandler = escHandler;
+            document.addEventListener('keydown', escHandler);
             document.body.appendChild(modal);
         }
+        function copyOrderNo(orderNo, btnEl) {
+            if (!orderNo) return;
+            var done = function() {
+                if (btnEl) { btnEl.textContent = 'Copied!'; btnEl.disabled = true; setTimeout(function() { btnEl.textContent = 'Copy'; btnEl.disabled = false; }, 2000); }
+                showToast('Order No. copied');
+            };
+            var fail = function() { showToast('Copy failed'); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(orderNo).then(function() { done(); }, function() { fallbackCopy(orderNo, btnEl); });
+            } else { fallbackCopy(orderNo, btnEl); }
+        }
+        function fallbackCopy(text, btnEl) {
+            var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); if (btnEl) { btnEl.textContent = 'Copied!'; btnEl.disabled = true; setTimeout(function() { btnEl.textContent = 'Copy'; btnEl.disabled = false; }, 2000); } showToast('Order No. copied'); } catch (e) { showToast('Copy failed'); }
+            document.body.removeChild(ta);
+        }
 
-        function closeTaskModal() {
+        function closeTaskModal(skipSavedToast) {
+            var hadToken = !!currentMatchToken;
             var m = document.getElementById('taskModal');
-            if (m) m.remove();
+            if (m) {
+                if (m._escHandler) document.removeEventListener('keydown', m._escHandler);
+                m.remove();
+            }
             currentMatchToken = null;
+            if (hadToken && !skipSavedToast) showToast('Order saved. You can complete it under History → Pending.');
         }
 
         async function confirmGrab() {
@@ -224,7 +320,7 @@
                     body: JSON.stringify({ match_token: currentMatchToken })
                 });
                 var res = await response.json();
-                closeTaskModal();
+                closeTaskModal(true);
                 currentMatchToken = null;
                 if (res.success && res.data) {
                     if (res.data.daily_completed) {
@@ -238,7 +334,12 @@
                     }
                     loadUserData();
                 } else {
-                    showToast(res.message || 'Confirm failed');
+                    var errMsg = res.message || 'Confirm failed';
+                    if (errMsg.toLowerCase().indexOf('insufficient') !== -1) {
+                        showToast('Insufficient balance. Please deposit then complete this order under History → Pending.');
+                    } else {
+                        showToast(errMsg);
+                    }
                 }
             } catch (e) {
                 console.error(e);

@@ -101,7 +101,7 @@
     .profile-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
     .profile-name { font-size: 20px; font-weight: 700; color: #1a202c; margin-bottom: 6px; }
     .profile-meta { font-size: 13px; color: #718096; margin-bottom: 4px; }
-    .profile-meta span { color: #667eea; font-family: monospace; }
+    .profile-meta span { color: #1a202c; font-family: monospace; font-weight: 600; }
     .profile-balance { font-size: 16px; font-weight: 700; color: #e53e3e; margin-top: 6px; }
     .credit-badge {
       display: inline-flex;
@@ -551,6 +551,21 @@
       font-weight: 600;
     }
 
+    .nav-pending-badge {
+      display: inline-block;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      background: #e53e3e;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
     /* 中间大按钮 */
     .nav-item.center {
       position: relative;
@@ -799,6 +814,30 @@
         <div class="menu-arrow">›</div>
       </div>
 
+      <div class="menu-item" onclick="window.location.href='/views/user/deposit_record.html'">
+        <div class="menu-left">
+          <div class="menu-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l3.364 3.364M21 12H3" />
+            </svg>
+          </div>
+          <div class="menu-label">Deposit Record</div>
+        </div>
+        <div class="menu-arrow">›</div>
+      </div>
+
+      <div class="menu-item" onclick="window.location.href='/views/user/withdrawal_record.html'">
+        <div class="menu-left">
+          <div class="menu-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </div>
+          <div class="menu-label">Withdrawal Record</div>
+        </div>
+        <div class="menu-arrow">›</div>
+      </div>
+
       <div class="menu-item" onclick="changeLoginPassword()">
         <div class="menu-left">
           <div class="menu-icon">
@@ -823,7 +862,7 @@
         <div class="menu-arrow">›</div>
       </div>
 
-      <div class="menu-item" onclick="showLanguage()">
+      <div class="menu-item" onclick="typeof showLanguage==='function'&&showLanguage();return false;">
         <div class="menu-left">
           <div class="menu-icon">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -879,7 +918,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="nav-label">History</div>
+      <div class="nav-label">History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
     </div>
     <div class="nav-item center" onclick="window.location.href='/grab'">
       <div class="nav-icon-large">
@@ -946,7 +985,7 @@
           imgEl.onerror = function() { this.classList.remove('show'); };
           imgEl.onload = function() { this.classList.add('show'); };
         }
-        document.getElementById('profileUID').textContent = String(d.id != null ? d.id : '000000').padStart(6, '0');
+        document.getElementById('profileUID').textContent = String(28055000 + (d.id != null ? parseInt(d.id, 10) : 0));
         var inviteEl = document.getElementById('profileInviteCode');
         if (inviteEl) inviteEl.textContent = d.invite_code || '------';
         document.getElementById('profileBalance').textContent = Number(d.balance != null ? d.balance : 0).toFixed(2);
@@ -955,6 +994,11 @@
         document.getElementById('totalProfit').textContent = Number(d.total_profit != null ? d.total_profit : 0).toFixed(2);
         document.getElementById('totalOrders').textContent = d.total_orders != null ? d.total_orders : 0;
         document.getElementById('creditScore').textContent = d.credit_score != null ? d.credit_score : 850;
+        var badge = document.getElementById('navHistoryBadge');
+        if (badge) {
+          var n = (d.pending_orders_count != null ? parseInt(d.pending_orders_count, 10) : 0) || 0;
+          if (n > 0) { badge.textContent = n > 99 ? '99+' : n; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+        }
         var stored = JSON.parse(localStorage.getItem('user') || '{}');
         stored.username = d.username;
         stored.id = d.id;
@@ -1008,6 +1052,17 @@
       const note = document.getElementById('withdrawNote').value.trim();
       var pwEl = document.getElementById('withdrawSecurityPassword');
       var password = (pwEl && pwEl.value) ? pwEl.value : '';
+      var cfg = { withdraw_fee_type: 'percent', withdraw_fee_value: '0' };
+      try { var r = await fetch('/api/config').then(function(x) { return x.json(); }); if (r.success && r.data) cfg = r.data; } catch (e) {}
+      var fee = 0;
+      if (parseFloat(cfg.withdraw_fee_value || 0) > 0) {
+        fee = (cfg.withdraw_fee_type || 'percent').toLowerCase() === 'fixed' ? parseFloat(cfg.withdraw_fee_value) : amount * parseFloat(cfg.withdraw_fee_value) / 100;
+      }
+      var totalDeduct = amount + fee;
+      var msg = '确定提交提现 ' + amount + ' USDT？';
+      if (fee > 0) msg += ' 手续费 ' + fee.toFixed(2) + ' USDT，合计扣款 ' + totalDeduct.toFixed(2) + ' USDT。';
+      msg += ' 提交后将等待审核。';
+      if (!confirm(msg)) return;
       const withdrawBtn = document.getElementById('withdrawBtn');
       const withdrawBtnText = document.getElementById('withdrawBtnText');
       const withdrawBtnLoading = document.getElementById('withdrawBtnLoading');

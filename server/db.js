@@ -202,6 +202,13 @@ function initTables() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    -- 系统设置表（统一在此创建，避免多处建表 schema 不一致）
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      description TEXT
+    );
   `);
 
   // 迁移：为 match 流程支持 pending 订单添加 source、dispatch_order_id 列
@@ -282,6 +289,28 @@ function initTables() {
     }
   } catch (e) {
     console.warn('withdrawals 表迁移跳过:', e.message);
+  }
+
+  // 迁移：users 增加 agent_permissions（代理权限 JSON 数组）
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+    if (!userCols.includes('agent_permissions')) {
+      db.exec("ALTER TABLE users ADD COLUMN agent_permissions TEXT");
+      console.log('✅ users.agent_permissions 列已添加');
+    }
+  } catch (e) {
+    console.warn('users.agent_permissions 迁移跳过:', e.message);
+  }
+
+  // 迁移：users 增加 admin_remark（管理端备注/标签）
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+    if (!userCols.includes('admin_remark')) {
+      db.exec("ALTER TABLE users ADD COLUMN admin_remark TEXT DEFAULT NULL");
+      console.log('✅ users.admin_remark 列已添加');
+    }
+  } catch (e) {
+    console.warn('users.admin_remark 迁移跳过:', e.message);
   }
 
   console.log('✅ 数据库表初始化完成');

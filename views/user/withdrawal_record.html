@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#667eea">
+  <title>Withdrawal Record - TaskMall</title>
+  <link rel="stylesheet" href="/public/css/theme.css">
+  <script src="/public/js/common.js"></script>
+  <style>
+    body {
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .header-bar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .back-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      background: rgba(102, 126, 234, 0.1);
+    }
+    .back-btn:active { transform: scale(0.95); }
+    .back-btn svg { width: 20px; height: 20px; color: #667eea; }
+    .header-title { font-size: 18px; font-weight: 700; color: #1a202c; }
+    .content-wrap { padding: 24px 20px; max-width: 520px; margin: 0 auto; }
+    .record-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+    .record-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: #cbd5e0;
+    }
+    .record-card[data-status="paid"]::before,
+    .record-card[data-status="approved"]::before { background: linear-gradient(to bottom, #00c853, #00e676); }
+    .record-card[data-status="pending"]::before { background: linear-gradient(to bottom, #f59e0b, #fbbf24); }
+    .record-card[data-status="rejected"]::before { background: linear-gradient(to bottom, #e53e3e, #fc8181); }
+    .record-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .record-row:last-child { margin-bottom: 0; }
+    .record-label { font-size: 13px; color: #718096; }
+    .record-value { font-size: 14px; font-weight: 600; color: #1a202c; }
+    .record-amount { font-size: 18px; font-weight: 700; color: #667eea; }
+    .record-status {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .record-status.pending { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    .record-status.approved, .record-status.paid { background: rgba(0, 200, 83, 0.15); color: #059669; }
+    .record-status.rejected { background: rgba(229, 62, 62, 0.15); color: #dc2626; }
+    .record-wallet { font-family: monospace; font-size: 11px; word-break: break-all; color: #4a5568; max-width: 60%; text-align: right; }
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      color: rgba(255,255,255,0.9);
+      font-size: 15px;
+    }
+    .empty-state .empty-icon { margin-bottom: 12px; opacity: 0.9; }
+    .empty-state .empty-icon svg { width: 64px; height: 64px; stroke: rgba(255,255,255,0.9); }
+    .record-loading { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; color: rgba(255,255,255,0.8); }
+    .record-loading .spinner { width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header class="header-bar">
+    <a href="javascript:history.back()" class="back-btn" aria-label="Back">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <h1 class="header-title">Withdrawal Record</h1>
+    <div class="header-lang-circle" id="headerLangBtn" role="button" title="Language" aria-label="Select language" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;background:rgba(102,126,234,0.12);margin-left:auto;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
+  </header>
+
+  <main class="content-wrap">
+    <div id="recordList"></div>
+    <div id="emptyState" class="empty-state" style="display:none;">
+      <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg></div>
+      <span class="empty-text">No withdrawal records yet.</span>
+    </div>
+  </main>
+
+  <script>
+    (function() {
+      var token = localStorage.getItem('token');
+      if (!token) {
+        window.location.replace('/views/user/index.html');
+        return;
+      }
+
+      function statusText(s) {
+        s = (s || 'pending').toLowerCase();
+        if (s === 'approved' || s === 'paid') return 'Paid';
+        if (s === 'rejected') return 'Rejected';
+        return 'Pending';
+      }
+
+      function formatDate(str) {
+        if (!str) return '-';
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return str;
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      }
+
+      function renderRecord(w) {
+        var status = (w.status || 'pending').toLowerCase();
+        var wallet = w.wallet_address || '';
+        var shortWallet = wallet.length > 14 ? wallet.slice(0, 8) + '...' + wallet.slice(-8) : wallet;
+        return '<div class="record-card" data-status="' + status + '">' +
+          '<div class="record-row"><span class="record-label">Amount</span><span class="record-value record-amount">' + Number(w.amount).toFixed(2) + ' USDT</span></div>' +
+          '<div class="record-row"><span class="record-label">Status</span><span class="record-status ' + status + '">' + statusText(status) + '</span></div>' +
+          '<div class="record-row"><span class="record-label">Time</span><span class="record-value">' + formatDate(w.created_at) + '</span></div>' +
+          (wallet ? '<div class="record-row"><span class="record-label">Wallet</span><span class="record-value record-wallet">' + shortWallet + '</span></div>' : '') +
+          (w.note ? '<div class="record-row"><span class="record-label">Note</span><span class="record-value">' + (w.note.length > 30 ? w.note.slice(0, 30) + '...' : w.note) + '</span></div>' : '') +
+          '</div>';
+      }
+
+      var listEl = document.getElementById('recordList');
+      var emptyEl = document.getElementById('emptyState');
+
+      listEl.innerHTML = '<div class="record-loading"><div class="spinner"></div><span>Loading...</span></div>';
+
+      fetch('/api/finance/withdrawals', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          if (!res.success) {
+            listEl.innerHTML = '';
+            emptyEl.querySelector('.empty-text').textContent = 'Failed to load records.';
+            emptyEl.style.display = 'block';
+            return;
+          }
+          var withdrawals = res.data || [];
+          listEl.innerHTML = '';
+          withdrawals.forEach(function(w) {
+            listEl.insertAdjacentHTML('beforeend', renderRecord(w));
+          });
+          if (withdrawals.length === 0) {
+            emptyEl.querySelector('.empty-text').textContent = 'No withdrawal records yet.';
+            emptyEl.style.display = 'block';
+          } else {
+            emptyEl.style.display = 'none';
+          }
+        })
+        .catch(function() {
+          listEl.innerHTML = '';
+          emptyEl.querySelector('.empty-text').textContent = 'Network error. Please try again.';
+          emptyEl.style.display = 'block';
+        });
+      var langBtn = document.getElementById('headerLangBtn');
+      if (langBtn && typeof window.showLanguage === 'function') langBtn.addEventListener('click', function () { window.showLanguage(); });
+    })();
+  </script>
+</body>
+</html>

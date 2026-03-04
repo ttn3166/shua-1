@@ -133,9 +133,8 @@
     <script>
         const token = localStorage.getItem('token');
         if (!token) {
-            window.location.href = '/views/user/index.html';
-        }
-        
+            window.location.replace('/views/user/index.html');
+        } else {
         let shareLink = '';
         let inviteCode = '';
 
@@ -228,6 +227,7 @@
 
         // 页面加载时获取数据
         loadInviteInfo();
+        }
     </script>
 </body>
 </html>

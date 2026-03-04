@@ -4,13 +4,13 @@
 
 /**
  * 显示Toast提示
+ * @param {string} message - 提示文案
+ * @param {string} type - 'info'|'success'|'warning'|'error'
+ * @param {number} [duration] - 显示毫秒数，不传则 error 为 3500，其余 2500
  */
-function showToast(message, type = 'info') {
-    // 移除已存在的toast
+function showToast(message, type = 'info', duration) {
     const existingToast = document.getElementById('global-toast');
-    if (existingToast) {
-        existingToast.remove();
-    }
+    if (existingToast) existingToast.remove();
 
     const toast = document.createElement('div');
     toast.id = 'global-toast';
@@ -41,18 +41,31 @@ function showToast(message, type = 'info') {
 
     document.body.appendChild(toast);
 
+    const ms = duration != null ? duration : (type === 'error' ? 3500 : 2500);
     setTimeout(() => {
         toast.style.animation = 'slideUp 0.3s ease-out';
         setTimeout(() => toast.remove(), 300);
-    }, 2500);
+    }, ms);
 }
 
 /**
- * 格式化货币
+ * 格式化货币（无千分位）
  */
 function formatCurrency(amount, decimals = 2) {
     if (amount == null || isNaN(amount)) return '0.00';
     return Number(amount).toFixed(decimals);
+}
+
+/**
+ * 格式化金额（带千分位，用于展示）
+ */
+function formatMoney(amount, decimals = 2) {
+    if (amount == null || isNaN(amount)) return '0.00';
+    const n = Number(amount);
+    const fixed = n.toFixed(decimals);
+    const parts = fixed.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
 }
 
 /**
@@ -165,9 +178,19 @@ if (!document.getElementById('common-animations')) {
 // Google 翻译挂件（用户端多语言）+ 备用语言列表
 // ============================================
 (function () {
+    // 立即注入隐藏谷歌栏的样式，确保任意页面一加载就生效
+    (function injectHideStyleEarly() {
+        var h = document.head || document.getElementsByTagName('head')[0];
+        if (!h) return;
+        var s = document.createElement('style');
+        s.id = 'google-translate-hide-early';
+        s.textContent = 'body{top:0!important}.goog-te-banner-frame,.skiptranslate,body>.skiptranslate,#goog-gt-tt,.goog-tooltip,.goog-te-balloon-frame{display:none!important;visibility:hidden!important;height:0!important;overflow:hidden!important;max-height:0!important;margin:0!important;padding:0!important;border:none!important}iframe.skiptranslate,iframe.goog-te-banner-frame{display:none!important}';
+        h.appendChild(s);
+    })();
+
     var GOOGLE_TRANSLATE_CONFIG = {
         pageLanguage: 'zh-CN',
-        includedLanguages: 'en,vi,th,id,hi,pt,es,zh-TW',
+        includedLanguages: 'en,vi,th,id,hi,pt,es,zh-TW,ru,uk,be,it,ar,he,tr',
         widgetBottom: 80,
         widgetRight: 20,
         msgLoadFail: 'Translation temporarily unavailable. Please check your network or try again later.',
@@ -184,7 +207,14 @@ if (!document.getElementById('common-animations')) {
         { code: 'hi', label: 'हिन्दी' },
         { code: 'pt', label: 'Português' },
         { code: 'es', label: 'Español' },
-        { code: 'zh-TW', label: '繁體中文' }
+        { code: 'zh-TW', label: '繁體中文' },
+        { code: 'ru', label: 'Русский' },
+        { code: 'uk', label: 'Українська' },
+        { code: 'be', label: 'Беларуская' },
+        { code: 'it', label: 'Italiano' },
+        { code: 'ar', label: 'العربية' },
+        { code: 'he', label: 'עברית' },
+        { code: 'tr', label: 'Türkçe' }
     ];
 
     function setGoogleTransCookie(targetLang) {
@@ -293,13 +323,8 @@ if (!document.getElementById('common-animations')) {
         if (document.cookie.indexOf('googtrans=') === -1) {
             var lang = (navigator.language || navigator.userLanguage || '').toLowerCase();
             var code = 'en';
-            if (lang.indexOf('vi') === 0) code = 'vi';
-            else if (lang.indexOf('th') === 0) code = 'th';
-            else if (lang.indexOf('id') === 0) code = 'id';
-            else if (lang.indexOf('hi') === 0) code = 'hi';
-            else if (lang.indexOf('pt') === 0) code = 'pt';
-            else if (lang.indexOf('es') === 0) code = 'es';
-            else if (lang.indexOf('zh-tw') === 0 || lang.indexOf('zh_tw') === 0) code = 'zh-TW';
+            var map = [['vi','vi'],['th','th'],['id','id'],['hi','hi'],['pt','pt'],['es','es'],['zh-tw','zh-TW'],['zh_tw','zh-TW'],['ru','ru'],['uk','uk'],['be','be'],['it','it'],['ar','ar'],['he','he'],['tr','tr']];
+            for (var i = 0; i < map.length; i++) { if (lang.indexOf(map[i][0]) === 0) { code = map[i][1]; break; } }
             document.cookie = 'googtrans=/zh-CN/' + code + '; path=/; max-age=31536000; SameSite=Lax';
         }
 
@@ -310,11 +335,10 @@ if (!document.getElementById('common-animations')) {
             '#google_translate_element { display: none !important; }',
             '.notranslate, [translate="no"] { font-family: inherit !important; }',
             '/* Hide ALL Google Translate UI – user only sees our custom panel */',
-            '.goog-te-banner-frame { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }',
-            'body > .skiptranslate { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }',
-            '.skiptranslate iframe { display: none !important; visibility: hidden !important; }',
-            '#goog-gt-tt { display: none !important; }',
-            '.goog-tooltip { display: none !important; }',
+            '.goog-te-banner-frame, .goog-te-banner-frame.skiptranslate { display: none !important; visibility: hidden !important; height: 0 !important; max-height: 0 !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important; }',
+            'body > .skiptranslate, .skiptranslate { display: none !important; visibility: hidden !important; height: 0 !important; max-height: 0 !important; overflow: hidden !important; }',
+            '.skiptranslate iframe, iframe.skiptranslate, iframe.goog-te-banner-frame { display: none !important; visibility: hidden !important; height: 0 !important; }',
+            '#goog-gt-tt, .goog-tooltip, [id^="goog-gt-"], [class*="goog-te-banner"] { display: none !important; visibility: hidden !important; height: 0 !important; overflow: hidden !important; }',
             '.goog-te-gadget-simple {',
             '  background-color: rgba(255,255,255,0.9) !important;',
             '  border: 1px solid #e2e8f0 !important;',
@@ -331,20 +355,34 @@ if (!document.getElementById('common-animations')) {
         ].join('\n');
         head.appendChild(style);
 
+        var hideSelectors = [
+            'body > .skiptranslate', '.skiptranslate', '.goog-te-banner-frame', '.goog-te-banner-frame.skiptranslate',
+            '#goog-gt-tt', '.goog-te-balloon-frame', '.goog-tooltip',
+            'iframe.goog-te-banner-frame', 'iframe.skiptranslate',
+            '[id^="goog-gt-"]', '[class*="goog-te-banner"]'
+        ];
         function hideGoogleTranslateUI() {
-            var sel = ['body > .skiptranslate', '.goog-te-banner-frame', '#goog-gt-tt', '.goog-te-balloon-frame', 'iframe.goog-te-banner-frame'];
-            sel.forEach(function (s) {
+            hideSelectors.forEach(function (s) {
                 try {
                     document.querySelectorAll(s).forEach(function (el) {
                         el.style.setProperty('display', 'none', 'important');
                         el.style.setProperty('visibility', 'hidden', 'important');
                         el.style.setProperty('height', '0', 'important');
+                        el.style.setProperty('max-height', '0', 'important');
                         el.style.setProperty('overflow', 'hidden', 'important');
                     });
                 } catch (e) {}
             });
             if (document.body) document.body.style.setProperty('top', '0', 'important');
         }
+        function startHideObserver() {
+            if (!document.body || typeof MutationObserver === 'undefined') return;
+            var obs = new MutationObserver(function () { hideGoogleTranslateUI(); });
+            obs.observe(document.body, { childList: true, subtree: true });
+            setTimeout(function () { obs.disconnect(); }, 15000);
+        }
+        hideGoogleTranslateUI();
+        startHideObserver();
         window.googleTranslateElementInit = function () {
             if (typeof google === 'undefined' || !google.translate || !google.translate.TranslateElement) return;
             new google.translate.TranslateElement({
@@ -354,12 +392,13 @@ if (!document.getElementById('common-animations')) {
                 autoDisplay: false
             }, 'google_translate_element');
             hideGoogleTranslateUI();
+            startHideObserver();
             var t = 0;
             var tid = setInterval(function () {
                 hideGoogleTranslateUI();
-                t += 200;
-                if (t >= 3000) clearInterval(tid);
-            }, 200);
+                t += 250;
+                if (t >= 10000) clearInterval(tid);
+            }, 250);
         };
 
         var script = document.createElement('script');
@@ -377,4 +416,11 @@ if (!document.getElementById('common-animations')) {
     } else {
         initGoogleTranslate();
     }
+
+    // 从子页面返回时若从 bfcache 恢复，会显示旧语言；强制刷新以按 cookie 重新翻译
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted && typeof window.location !== 'undefined') {
+            window.location.reload();
+        }
+    });
 })();

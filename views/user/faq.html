@@ -21,10 +21,15 @@
             line-height: 1.8;
             color: #374151;
         }
-        .content-area h1 { font-size: 24px; font-weight: 700; margin: 20px 0 10px; color: #667eea; }
-        .content-area h2 { font-size: 20px; font-weight: 600; margin: 16px 0 8px; color: #764ba2; }
-        .content-area h3 { font-size: 18px; font-weight: 600; margin: 14px 0 6px; color: #4b5563; }
-        .content-area p { margin: 12px 0; }
+        .content-area h1 { font-size: 24px; font-weight: 700; margin: 24px 0 12px; color: #667eea; }
+        .content-area h2 { font-size: 20px; font-weight: 600; margin: 20px 0 10px; color: #764ba2; }
+        .content-area h3 { font-size: 16px; font-weight: 700; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #1f2937; }
+        .content-area p { margin: 0 0 16px; }
+        .content-area .faq-q { font-weight: 600; color: #1f2937; margin: 18px 0 6px; }
+        .content-area .faq-a { margin: 0 0 12px; padding-left: 0; color: #4b5563; }
+        .content-area .faq-section { font-size: 16px; font-weight: 700; margin: 28px 0 14px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; color: #1f2937; }
+        .content-area .faq-section:first-child { margin-top: 0; }
+        .content-area .faq-block { margin: 0 0 18px; line-height: 1.75; color: #4b5563; }
         .content-area ul, .content-area ol { padding-left: 24px; margin: 12px 0; }
         .content-area li { margin: 6px 0; }
         .content-area strong { color: #1f2937; font-weight: 600; }
@@ -67,13 +72,39 @@
     </style>
 
     <script>
-        // Load FAQ content
+        // 将纯文本 FAQ 转为带分段、换行的 HTML，避免挤在一堆
+        function formatFaqHtml(raw) {
+            if (!raw || typeof raw !== 'string') return '';
+            var s = raw.trim();
+            if (!s) return '';
+            // 若已是完整 HTML（含块级标签），直接返回
+            if (/<div[\s>]|<p[\s>]|<h[1-6][\s>]/.test(s)) return s;
+            // 纯文本：先按双换行分段，再在段内把单换行转为 <br>
+            var paras = s.split(/\n\s*\n/);
+            var out = [];
+            for (var i = 0; i < paras.length; i++) {
+                var block = paras[i].trim();
+                if (!block) continue;
+                var line = block.split(/\n/).map(function(l) { return l.trim(); }).join('<br>');
+                line = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var firstLine = block.split(/\n/)[0].trim();
+                var isSection = block.indexOf('\n') === -1 && (
+                    /^[IVXLCDM]+\.\s+.+$/i.test(firstLine) ||
+                    /^[一二三四五六七八九十]+[\.\s]\s*.+$/.test(firstLine) ||
+                    /^[0-9]+\.\s+[A-Z].+$/i.test(firstLine)
+                );
+                if (isSection) out.push('<h3 class="faq-section">' + firstLine.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h3>');
+                else out.push('<p class="faq-block">' + line + '</p>');
+            }
+            return out.join('');
+        }
+
         fetch('/api/config')
             .then(res => res.json())
             .then(data => {
                 const content = document.getElementById('ruleContent');
                 if (data.success && data.data.faq) {
-                    content.innerHTML = data.data.faq;
+                    content.innerHTML = formatFaqHtml(data.data.faq);
                 } else {
                     content.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #999;">

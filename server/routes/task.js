@@ -13,11 +13,61 @@
  * 已移除（旧任务系统）: POST /:id/claim、POST /:id/complete，不再提供
  */
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { authenticate } = require('../middleware/auth');
 const { getDb } = require('../db');
 const { success, error } = require('../utils/response');
 
 const router = express.Router();
+
+/**
+ * 三级团队返佣：仅当订单已完成并给当前用户发放佣金后，在同一个事务内调用。
+ * 通过 referred_by 向上追溯一级、二级、三级推荐人（含 Agent），按配置比例发放奖励并记流水。
+ * @param {object} db - 数据库实例（当前事务内）
+ * @param {number} refereeUserId - 完成订单的用户 ID（下级）
+ * @param {number} orderCommission - 该单给下级的佣金金额
+ * @param {string} orderNo - 订单号
+ */
+function distributeTeamCommission(db, refereeUserId, orderCommission, orderNo) {
+  const referee = db.prepare('SELECT username, referred_by FROM users WHERE id = ?').get(refereeUserId);
+  if (!referee || !referee.referred_by) return;
+  const refereeName = referee.username || ('用户' + refereeUserId);
+  const r1 = db.prepare("SELECT value FROM settings WHERE key = 'level_1_commission_rate'").get();
+  const r2 = db.prepare("SELECT value FROM settings WHERE key = 'level_2_commission_rate'").get();
+  const r3 = db.prepare("SELECT value FROM settings WHERE key = 'level_3_commission_rate'").get();
+  const rate1 = (r1 && r1.value != null) ? parseFloat(r1.value) / 100 : 0.15;
+  const rate2 = (r2 && r2.value != null) ? parseFloat(r2.value) / 100 : 0.10;
+  const rate3 = (r3 && r3.value != null) ? parseFloat(r3.value) / 100 : 0.05;
+  const rates = [rate1, rate2, rate3];
+  let currentInviteCode = referee.referred_by;
+  for (let level = 0; level < 3; level++) {
+    const referrer = db.prepare('SELECT id, username, referred_by FROM users WHERE invite_code = ?').get(currentInviteCode);
+    if (!referrer) break;
+    const rate = rates[level];
+    const amount = parseFloat((orderCommission * rate).toFixed(4));
+    if (amount > 0) {
+      db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(amount, referrer.id);
+      const desc = '来自下级 ' + refereeName + ' 的订单返利';
+      try {
+        db.prepare("INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, 'team_commission', ?, ?, datetime('now'))").run(referrer.id, amount, desc);
+      } catch (e) {}
+      try {
+        db.prepare("INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by, created_at) VALUES (?, 'team_commission', ?, ?, ?, ?, datetime('now'))").run(referrer.id, amount, orderNo || '', desc, referrer.id);
+      } catch (e2) {}
+    }
+    currentInviteCode = referrer.referred_by;
+    if (!currentInviteCode) break;
+  }
+}
+
+// 抢单确认限流：每 IP 每分钟最多 30 次，防刷单
+const confirmLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { success: false, message: '操作过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // 匹配缓存：match_token -> { userId, orderNo, amount, commission, totalReturn, commissionRate }，5分钟过期
 const matchCache = new Map();
@@ -194,6 +244,8 @@ router.post('/match', authenticate, (req, res) => {
                 order_no: orderNo,
                 amount: orderAmount,
                 product_name: productName,
+                product_title: productTitle,
+                product_image: productImage,
                 unit_price: unitPrice,
                 quantity: quantity,
                 commission,
@@ -211,7 +263,7 @@ router.post('/match', authenticate, (req, res) => {
  * 第二步：确认接单（扣款 + 立即返还本金+佣金）
  * POST /api/task/confirm
  */
-router.post('/confirm', authenticate, (req, res) => {
+router.post('/confirm', confirmLimiter, authenticate, (req, res) => {
     const db = getDb();
     const userId = req.user.id;
     const { match_token } = req.body;
@@ -264,6 +316,7 @@ router.post('/confirm', authenticate, (req, res) => {
                     VALUES (?, ?, ?, ?, datetime('now'))
                 `).run(userId, 'task_commission', commission, `Task commission: ${orderNo}`);
             } catch (e) {}
+            distributeTeamCommission(db, userId, commission, orderNo);
         })();
 
         res.json({
@@ -361,6 +414,7 @@ router.post('/submit', authenticate, (req, res) => {
                         VALUES (?, ?, ?, ?, datetime('now'))
                     `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`);
                 } catch (e) {}
+                distributeTeamCommission(db, userId, commission, order.order_no);
             })();
 
             return success(res, {
@@ -374,23 +428,23 @@ router.post('/submit', authenticate, (req, res) => {
             }, 'Order completed');
         }
 
-        // start 流程：已扣至冻结的订单，解冻并发放
+        // start 流程：已扣至冻结的订单，解冻并发放（含三级返佣，同一事务）
         const user = db.prepare('SELECT vip_level FROM users WHERE id = ?').get(userId);
         let vipConfig = db.prepare('SELECT * FROM vip_levels WHERE level = ?').get(user.vip_level != null ? user.vip_level : 1);
         if (!vipConfig) vipConfig = { commission_rate: 0.005 };
         const commission = parseFloat((orderAmount * vipConfig.commission_rate).toFixed(4));
         const totalReturn = orderAmount + commission;
 
-        db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('completed', order_id);
-        db.prepare(`
-            UPDATE users 
-            SET frozen_balance = frozen_balance - ?, 
-                balance = balance + ?
-            WHERE id = ?
-        `).run(orderAmount, totalReturn, userId);
-        
-        // 6. 更新任务状态（如果有 user_tasks 表）
-        try {
+        db.transaction(() => {
+          db.prepare('UPDATE orders SET status = ? WHERE id = ?').run('completed', order_id);
+          db.prepare(`
+              UPDATE users 
+              SET frozen_balance = frozen_balance - ?, 
+                  balance = balance + ?
+              WHERE id = ?
+          `).run(orderAmount, totalReturn, userId);
+
+          try {
             db.prepare(`
                 UPDATE user_tasks 
                 SET status = ?, completed_at = CURRENT_TIMESTAMP 
@@ -398,23 +452,22 @@ router.post('/submit', authenticate, (req, res) => {
                 ORDER BY created_at DESC 
                 LIMIT 1
             `).run('completed', userId);
-        } catch (e) {}
-        
-        // 7. 记录流水
-        db.prepare(`
-            INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(userId, 'order_reward', totalReturn, order.order_no, 'Order completed', userId);
-        
-        // 8. 记录到 transactions 表（用于报表统计）
-        try {
+          } catch (e) {}
+
+          db.prepare(`
+              INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by)
+              VALUES (?, ?, ?, ?, ?, ?)
+          `).run(userId, 'order_reward', totalReturn, order.order_no, 'Order completed', userId);
+
+          try {
             db.prepare(`
                 INSERT INTO transactions (user_id, type, amount, description, created_at)
                 VALUES (?, ?, ?, ?, datetime('now'))
             `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`);
-        } catch (e) {}
-        
-        // 9. 返回结果
+          } catch (e) {}
+          distributeTeamCommission(db, userId, commission, order.order_no);
+        })();
+
         return success(res, {
             order_no: order.order_no,
             amount: orderAmount,

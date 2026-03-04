@@ -7,6 +7,19 @@
   <title>Register - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
+    .register-page-lang {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .register-page-lang:hover { color: var(--gold-primary); background: rgba(0,0,0,0.04); }
     body {
       display: flex;
       align-items: center;
@@ -51,6 +64,12 @@
       color: var(--text-muted);
       font-size: 14px;
     }
+    .privacy-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      opacity: 0.9;
+    }
 
     .form-footer {
       margin-top: 24px;
@@ -89,6 +108,7 @@
   <script src="/public/js/common.js"></script>
 </head>
 <body>
+  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="register-page-lang" title="Language">🌐 Language</a>
   <div class="register-container">
     <!-- 注册表单卡片 -->
     <div class="card-elevated">
@@ -96,6 +116,7 @@
         <div class="logo">T</div>
         <h1 class="register-title">Create Account</h1>
         <p class="register-subtitle">Join TaskMall, Start Earning Today</p>
+        <p class="privacy-note">Username & password only. No personal info required.</p>
       </div>
 
       <!-- Invite code notice (displayed when obtained from URL) -->
@@ -111,12 +132,12 @@
       <!-- 表单 -->
       <form id="registerForm">
         <div class="form-group">
-          <label class="form-label" for="username">Username / Email</label>
+          <label class="form-label" for="username">Username</label>
           <input 
             type="text" 
             id="username" 
             class="form-input" 
-            placeholder="Enter Username"
+            placeholder="Choose a username"
             required
             autocomplete="username"
           >
@@ -128,11 +149,13 @@
             type="password" 
             id="password" 
             class="form-input" 
-            placeholder="Enter Password"
+            placeholder="Enter Password (8-12 chars, letters + numbers)"
             required
-            minlength="6"
+            minlength="8"
+            maxlength="12"
             autocomplete="new-password"
           >
+          <p class="form-hint" style="margin-top:6px;font-size:12px;color:var(--text-muted, #64748b);">8-12 characters, must include both letters and numbers</p>
         </div>
 
         <div class="form-group">
@@ -168,10 +191,18 @@
       <div class="form-footer">
         Have account? <a href="/views/user/index.html">Login</a>
       </div>
+      <div class="form-footer" style="margin-top:12px; font-size:12px;">
+        By registering you agree to our <a href="/views/user/terms.html">Terms of Service</a> and <a href="/views/user/privacy.html">Privacy Policy</a>.
+      </div>
     </div>
   </div>
 
   <script>
+    // 已登录用户访问注册页直接进入首页，逻辑与登录页一致
+    if (localStorage.getItem('token')) {
+      window.location.replace('/views/user/dashboard.html');
+    }
+
     const form = document.getElementById('registerForm');
     const errorAlert = document.getElementById('error-alert');
     const successAlert = document.getElementById('success-alert');
@@ -244,8 +275,16 @@
         return;
       }
 
-      if (password.length < 6) {
-        showError('Password must be at least 6 characters');
+      if (password.length < 8) {
+        showError('Password must be 8-12 characters');
+        return;
+      }
+      if (password.length > 12) {
+        showError('Password must be 8-12 characters');
+        return;
+      }
+      if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+        showError('Password must include both letters and numbers');
         return;
       }
 
@@ -283,9 +322,9 @@
         localStorage.setItem('token', result.data.token);
         localStorage.setItem('user', JSON.stringify(result.data.user));
 
-        // 延迟跳转
+        // 延迟跳转，带注册成功参数便于首屏欢迎提示
         setTimeout(() => {
-          window.location.href = '/views/user/dashboard.html';
+          window.location.href = '/views/user/dashboard.html?registered=1';
         }, 1000);
 
       } catch (error) {

@@ -39,6 +39,117 @@
       display: flex;
     }
 
+    .mall-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 20px;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+    }
+    .mall-tagline {
+      text-align: center;
+      padding: 8px 20px 20px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.9);
+      font-weight: 500;
+    }
+    .product-search-wrap {
+      padding: 0 20px 12px;
+    }
+    .product-search-wrap input {
+      width: 100%;
+      padding: 12px 16px 12px 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.08);
+      font-size: 14px;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23718096' width='20' height='20'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") no-repeat 12px center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .category-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 20px 16px;
+    }
+    .category-chips .chip {
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #fff;
+      color: #4a5568;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .category-chips .chip:hover, .category-chips .chip.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: transparent;
+    }
+    .product-card .badge-hot {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      z-index: 1;
+    }
+    .product-card .badge-new {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      z-index: 1;
+    }
+    .mall-footer {
+      margin: 24px 20px 20px;
+      padding: 20px 16px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      text-align: center;
+      font-size: 12px;
+      color: #718096;
+    }
+    .mall-footer a { color: #667eea; font-weight: 600; text-decoration: none; }
+    .mall-footer .footer-dots { margin: 0 6px; color: #cbd5e0; }
+    .back-to-top {
+      position: fixed;
+      bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.45);
+      cursor: pointer;
+      z-index: 500;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .back-to-top.show { display: flex; }
+    .back-to-top:hover { transform: scale(1.05); }
+    .back-to-top svg { width: 22px; height: 22px; }
+
     .announcement-icon {
       width: 20px;
       height: 20px;
@@ -341,6 +452,7 @@
     }
 
     .product-card {
+      position: relative;
       background: white;
       border: 1px solid var(--border-color);
       border-radius: 12px;
@@ -450,6 +562,21 @@
 
     .nav-item.active .nav-label {
       color: #1a202c;
+    }
+
+    .nav-pending-badge {
+      display: inline-block;
+      min-width: 16px;
+      height: 16px;
+      line-height: 16px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      background: #e53e3e;
+      border-radius: 8px;
+      margin-left: 4px;
+      vertical-align: middle;
     }
 
     /* 中间大按钮（悬浮效果） */
@@ -574,9 +701,11 @@
 
   <!-- 顶部欢迎区：右侧圆为语言/地球图标，点击打开翻译 -->
   <div class="header-section">
-    <div>
-      <div class="welcome-text">Hi! Welcome</div>
-      <div class="welcome-name" id="userName">Guest</div>
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+      <div>
+        <div class="welcome-text">Hi! Welcome</div>
+        <div class="welcome-name" id="userName">Guest</div>
+      </div>
     </div>
     <div class="header-avatar header-lang-circle" id="headerLangBtn" role="button" title="Language" aria-label="Select language">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
@@ -642,14 +771,14 @@
       </div>
       <div class="action-label">Invite</div>
     </div>
-    <div class="action-item" onclick="showAbout()">
+    <a href="/views/user/about.html" class="action-item" style="text-decoration:none;color:inherit;">
       <div class="action-icon">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
         </svg>
       </div>
       <div class="action-label">About</div>
-    </div>
+    </a>
   </div>
 
   <!-- Banner 轮播（单屏展示 + 底部圆点，风格类似 Click-to-Rank / E-COMMERCE） -->
@@ -667,6 +796,7 @@
       </div>
     </div>
   </div>
+  <div class="mall-tagline">TaskMall — Shop · Earn · Withdraw</div>
 
   <!-- 任务大厅 -->
   <div class="section-title">
@@ -698,7 +828,18 @@
 
   <!-- 商品瀑布流 -->
   <div class="products-section">
-    <div class="section-title-dark">Recommended for You</div>
+    <div class="section-title-dark">Recommended for You <span id="productCountText" style="font-size:12px;font-weight:500;color:#718096;"></span></div>
+    <div class="product-search-wrap">
+      <input type="text" id="productSearchInput" placeholder="Search products..." maxlength="80" autocomplete="off">
+    </div>
+    <div class="category-chips" id="categoryChips">
+      <span class="chip active" data-vip="">All</span>
+      <span class="chip" data-vip="0">General</span>
+      <span class="chip" data-vip="1">VIP 1</span>
+      <span class="chip" data-vip="2">VIP 2</span>
+      <span class="chip" data-vip="3">VIP 3</span>
+      <span class="chip" data-vip="4">VIP 4</span>
+    </div>
     <div id="productsLoading" class="product-loading" style="text-align:center; padding:40px; color:#718096; display:none;">
       <div class="loading" style="width:36px; height:36px; margin:0 auto 12px;"></div>
       Loading...
@@ -708,6 +849,17 @@
       No products available at the moment.
     </div>
   </div>
+
+  <!-- 购物中心页脚 -->
+  <footer class="mall-footer">
+    <div style="margin-bottom:8px;">Open 24/7 <span class="footer-dots">·</span> <a href="/views/user/deposit.html">Deposit</a> <span class="footer-dots">·</span> <a href="/views/user/profile.html">Withdraw</a> <span class="footer-dots">·</span> <a href="/views/user/invite.html">Invite</a> <span class="footer-dots">·</span> <a href="/views/user/faq.html">FAQ</a></div>
+    <div style="margin-bottom:8px;"><a href="/views/user/terms.html">Terms</a> <span class="footer-dots">·</span> <a href="/views/user/privacy.html">Privacy</a> <span class="footer-dots">·</span> <a href="/views/user/risk_disclaimer.html">Risk</a></div>
+    <div>TaskMall — Your Shopping & Earn Plaza</div>
+  </footer>
+
+  <button type="button" class="back-to-top" id="backToTopBtn" aria-label="Back to top" title="Back to top">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+  </button>
 
   <!-- 底部导航栏（5个按钮，中间大按钮悬浮） -->
   <div class="bottom-nav">
@@ -725,7 +877,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="nav-label">History</div>
+      <div class="nav-label">History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
     </div>
     <div class="nav-item center" onclick="goToTasks()">
       <div class="nav-icon-large">
@@ -798,8 +950,28 @@
         stored.id = d.id;
         stored.balance = d.balance;
         localStorage.setItem('user', JSON.stringify(stored));
+        var badge = document.getElementById('navHistoryBadge');
+        if (badge) {
+          var n = (d.pending_orders_count != null ? parseInt(d.pending_orders_count, 10) : 0) || 0;
+          if (n > 0) { badge.textContent = n > 99 ? '99+' : n; badge.style.display = 'inline-block'; } else { badge.style.display = 'none'; }
+        }
+        applyWelcomeQuery();
       } catch (error) {
         console.error('Failed to load user data:', error);
+      }
+    }
+
+    // 登录/注册后首次进入首页的欢迎提示（仅一次，并清除 URL 参数）
+    function applyWelcomeQuery() {
+      var params = new URLSearchParams(window.location.search);
+      var welcome = params.get('welcome');
+      var registered = params.get('registered');
+      if (welcome === '1') {
+        showToast('Welcome back!');
+        if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
+      } else if (registered === '1') {
+        showToast('Account created! Welcome to TaskMall.');
+        if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
       }
     }
 
@@ -875,6 +1047,18 @@
       const note = document.getElementById('withdrawNote').value.trim();
       var pwEl = document.getElementById('withdrawSecurityPassword');
       var password = (pwEl && pwEl.value) ? pwEl.value : '';
+
+      var cfg = { withdraw_fee_type: 'percent', withdraw_fee_value: '0' };
+      try { var r = await fetch('/api/config').then(function(x) { return x.json(); }); if (r.success && r.data) cfg = r.data; } catch (e) {}
+      var fee = 0;
+      if (parseFloat(cfg.withdraw_fee_value || 0) > 0) {
+        fee = (cfg.withdraw_fee_type || 'percent').toLowerCase() === 'fixed' ? parseFloat(cfg.withdraw_fee_value) : amount * parseFloat(cfg.withdraw_fee_value) / 100;
+      }
+      var totalDeduct = amount + fee;
+      var msg = '确定提交提现 ' + amount + ' USDT？';
+      if (fee > 0) msg += ' 手续费 ' + fee.toFixed(2) + ' USDT，合计扣款 ' + totalDeduct.toFixed(2) + ' USDT。';
+      msg += ' 提交后将等待审核。';
+      if (!confirm(msg)) return;
 
       const withdrawBtn = document.getElementById('withdrawBtn');
       const withdrawBtnText = document.getElementById('withdrawBtnText');
@@ -963,11 +1147,6 @@
       window.open('https://t.me/TaskMall_Support', '_blank');
     }
 
-    // 关于功能
-    function showAbout() {
-      showToast('TaskMall v2.0 - Your Shopping Platform');
-    }
-
     // 任务大厅（带等级检查）
     function startTask(hall, minBalance, commission) {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -981,7 +1160,11 @@
       goToTasks();
     }
 
-    // 推荐商品加载
+    // 推荐商品加载（保留原始列表供搜索/分类筛选）
+    window.__mallProducts = [];
+    var _currentVipFilter = '';
+    var _currentKeyword = '';
+
     async function loadRecommendedProducts() {
       var loading = document.getElementById('productsLoading');
       var grid = document.getElementById('productGrid');
@@ -992,32 +1175,69 @@
       empty.style.display = 'none';
       try {
         var token = localStorage.getItem('token');
-        var res = await fetch('/api/user/products/recommended?limit=12', {
+        var res = await fetch('/api/user/products/recommended?limit=24', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         var result = await res.json();
         loading.style.display = 'none';
         if (result.success && result.data && result.data.products && result.data.products.length > 0) {
-          result.data.products.forEach(function(p) {
-            grid.appendChild(createProductCard(p));
-          });
+          window.__mallProducts = result.data.products;
+          renderProductGrid();
         } else {
+          window.__mallProducts = [];
           empty.style.display = 'block';
+          updateProductCount(0);
         }
       } catch (e) {
         loading.style.display = 'none';
+        window.__mallProducts = [];
         empty.style.display = 'block';
         empty.textContent = 'Failed to load products.';
+        updateProductCount(0);
       }
     }
 
-    function createProductCard(product) {
+    function updateProductCount(n) {
+      var el = document.getElementById('productCountText');
+      if (el) el.textContent = n > 0 ? '(' + n + ')' : '';
+    }
+
+    function renderProductGrid() {
+      var grid = document.getElementById('productGrid');
+      var empty = document.getElementById('noProducts');
+      if (!grid || !empty) return;
+      var list = window.__mallProducts || [];
+      var keyword = (_currentKeyword || '').toLowerCase().trim();
+      var vipFilter = _currentVipFilter;
+      var filtered = list.filter(function(p) {
+        if (vipFilter !== '' && String(p.vip_level != null ? p.vip_level : 0) !== vipFilter) return false;
+        if (keyword && !(p.title || '').toLowerCase().includes(keyword)) return false;
+        return true;
+      });
+      grid.innerHTML = '';
+      empty.style.display = 'none';
+      if (filtered.length === 0) {
+        empty.style.display = 'block';
+        empty.textContent = keyword || vipFilter !== '' ? 'No matching products.' : 'No products available at the moment.';
+        updateProductCount(0);
+        return;
+      }
+      filtered.forEach(function(p, i) {
+        grid.appendChild(createProductCard(p, i));
+      });
+      updateProductCount(filtered.length);
+    }
+
+    function createProductCard(product, index) {
       var card = document.createElement('div');
       card.className = 'product-card';
       var imgSrc = (product.image && String(product.image).trim()) ? product.image : 'https://placehold.co/300x300/e2e8f0/718096?text=No+Image';
       var title = product.title || 'Product';
       var price = product.price != null ? Number(product.price).toFixed(2) : '0.00';
-      card.innerHTML = '<img src="' + imgSrc.replace(/"/g, '&quot;') + '" class="product-img" alt="' + title.replace(/"/g, '&quot;') + '" onerror="this.src=\'https://placehold.co/300x300/e2e8f0/718096?text=No+Image\'"><div class="product-info"><div class="product-title">' + title.replace(/</g, '&lt;') + '</div><div class="product-price">$' + price + '</div></div>';
+      var badge = '';
+      if (index === 0) badge = '<span class="badge-hot">HOT</span>';
+      else if (index === 1) badge = '<span class="badge-new">New</span>';
+      card.innerHTML = badge + '<img src="' + imgSrc.replace(/"/g, '&quot;') + '" class="product-img" alt="' + title.replace(/"/g, '&quot;') + '" onerror="this.src=\'https://placehold.co/300x300/e2e8f0/718096?text=No+Image\'"><div class="product-info"><div class="product-title">' + title.replace(/</g, '&lt;') + '</div><div class="product-price">$' + price + '</div></div>';
       card.onclick = function() { showProductDetail(product); };
       return card;
     }
@@ -1176,13 +1396,11 @@
         const result = await response.json();
 
         if (result.success && result.data) {
-          // 1. 更新公告栏
-          if (result.data.announcement) {
-            const announcementBar = document.getElementById('announcementBar');
-            const announcementText = document.getElementById('announcementText');
-            announcementText.textContent = result.data.announcement;
-            announcementBar.classList.add('show');
-          }
+          // 1. 更新公告栏（有内容才展示，无内容清空避免一直显示 Loading）
+          const announcementBar = document.getElementById('announcementBar');
+          const announcementText = document.getElementById('announcementText');
+          if (announcementText) announcementText.textContent = result.data.announcement ? result.data.announcement : '';
+          if (result.data.announcement && announcementBar) announcementBar.classList.add('show');
 
           // 2. 更新客服链接
           if (result.data.service_url) {
@@ -1209,6 +1427,8 @@
         }
       } catch (error) {
         console.error('Failed to load system config:', error);
+        var t = document.getElementById('announcementText');
+        if (t) t.textContent = '';
       }
     }
 
@@ -1250,7 +1470,14 @@
         { code: 'hi', label: 'हिन्दी' },
         { code: 'pt', label: 'Português' },
         { code: 'es', label: 'Español' },
-        { code: 'zh-TW', label: '繁體中文' }
+        { code: 'zh-TW', label: '繁體中文' },
+        { code: 'ru', label: 'Русский' },
+        { code: 'uk', label: 'Українська' },
+        { code: 'be', label: 'Беларуская' },
+        { code: 'it', label: 'Italiano' },
+        { code: 'ar', label: 'العربية' },
+        { code: 'he', label: 'עברית' },
+        { code: 'tr', label: 'Türkçe' }
       ];
       var panel = document.createElement('div');
       panel.id = id;
@@ -1308,7 +1535,7 @@
     }
 
     // 页面加载
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', function() {
       if (checkAuth()) {
         loadUserData();
         loadConfig();
@@ -1325,6 +1552,35 @@
           } else {
             openLanguagePanelFallback();
           }
+        });
+      }
+      // 商品搜索与分类筛选
+      var searchInput = document.getElementById('productSearchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          _currentKeyword = this.value;
+          renderProductGrid();
+        });
+      }
+      var chipsWrap = document.getElementById('categoryChips');
+      if (chipsWrap) {
+        chipsWrap.addEventListener('click', function(e) {
+          var chip = e.target.closest('.chip');
+          if (!chip) return;
+          chipsWrap.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          _currentVipFilter = chip.getAttribute('data-vip') || '';
+          renderProductGrid();
+        });
+      }
+      // 返回顶部
+      var backBtn = document.getElementById('backToTopBtn');
+      if (backBtn) {
+        backBtn.addEventListener('click', function() {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        window.addEventListener('scroll', function() {
+          backBtn.classList.toggle('show', window.scrollY > 300);
         });
       }
     });

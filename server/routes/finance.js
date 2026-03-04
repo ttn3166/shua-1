@@ -7,10 +7,20 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const { authenticate } = require('../middleware/auth');
 const { success, error } = require('../utils/response');
 
 const router = express.Router();
+
+// 提现接口限流：每 IP 每分钟最多 10 次
+const withdrawalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { success: false, error: 'Too many withdrawal attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 // 充值截图上传目录（放在 public 下以便前端直接访问）
 const UPLOAD_DIR = path.join(__dirname, '../../public/uploads/deposits');
@@ -69,7 +79,7 @@ router.post('/deposit', authenticate, (req, res) => {
   const { amount, hash, screenshot_url, note, channel_id } = req.body;
 
   try {
-    const cfg = getSettings(db, ['deposit_maintenance', 'deposit_min_amount', 'deposit_require_hash_or_screenshot', 'deposit_daily_limit']);
+    const cfg = getSettings(db, ['deposit_maintenance', 'deposit_min_amount', 'deposit_max_amount', 'deposit_require_hash_or_screenshot', 'deposit_daily_limit']);
     if (cfg.deposit_maintenance === '1') {
       return error(res, 'Deposit is under maintenance');
     }
@@ -82,6 +92,10 @@ router.post('/deposit', authenticate, (req, res) => {
     const minAmt = parseFloat(cfg.deposit_min_amount);
     if (!isNaN(minAmt) && minAmt > 0 && amt < minAmt) {
       return error(res, `Minimum deposit is ${minAmt} USDT`);
+    }
+    const maxAmt = parseFloat(cfg.deposit_max_amount);
+    if (!isNaN(maxAmt) && maxAmt > 0 && amt > maxAmt) {
+      return error(res, `Single deposit cannot exceed ${maxAmt} USDT`);
     }
 
     const requireHash = cfg.deposit_require_hash_or_screenshot !== '0';
@@ -163,7 +177,7 @@ router.get('/deposits', authenticate, (req, res) => {
  * 提交提现申请（按后台配置：限额、手续费、单日限制）
  * POST /api/finance/withdrawal
  */
-router.post('/withdrawal', authenticate, (req, res) => {
+router.post('/withdrawal', withdrawalLimiter, authenticate, (req, res) => {
   const { amount, wallet_address, password, note, channel_id } = req.body;
   const db = req.db;
 
@@ -245,7 +259,12 @@ router.post('/withdrawal', authenticate, (req, res) => {
     db.prepare(
       'INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by) VALUES (?, ?, ?, ?, ?, ?)'
     ).run(req.user.id, 'withdrawal_pending', -totalDeduct, `WD${result.lastInsertRowid}`, 'Withdrawal submitted', req.user.id);
-    
+    try {
+      req.db.prepare(
+        'INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))'
+      ).run(req.user.id, 'withdraw_apply', -totalDeduct, '提现申请待审');
+    } catch (e) { /* transactions 表可能不存在 */ }
+
     return success(res, {
       withdrawal_id: result.lastInsertRowid,
       amount: amt,
