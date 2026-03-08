@@ -208,6 +208,7 @@ app.get('/api/admin/reports/invite-summary', checkAdmin, (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+if (typeof adminRoutes.getUsersHandler === 'function') app.get('/api/admin/users', checkAdmin, adminRoutes.getUsersHandler);
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/task', taskRoutes);

@@ -392,7 +392,7 @@ router.get('/stats', checkAdmin, (req, res) => {
 // ==========================================
 // 2. 用户管理（支持多条件搜索、分页、N+1 优化）
 // ==========================================
-router.get('/users', checkAdmin, (req, res) => {
+function getUsersHandler(req, res) {
     const db = getDb();
     const {
         search, type,
@@ -536,7 +536,8 @@ router.get('/users', checkAdmin, (req, res) => {
         console.error('Load users error:', err);
         res.status(500).json({ success: false, message: '加载用户失败: ' + err.message });
     }
-});
+}
+router.get('/users', checkAdmin, getUsersHandler);
 
 // 用户详情（单一路由，避免 /users/:id/detail 与 /users/export 等路径冲突；按 ID 查任意用户以支持管理员账户查看）
 router.get('/user-detail/:id', checkAdmin, (req, res) => {
@@ -3136,3 +3137,4 @@ router.get('/reports/balance-check', checkAdmin, (req, res) => {
 });
 
 module.exports = router;
+module.exports.getUsersHandler = getUsersHandler;

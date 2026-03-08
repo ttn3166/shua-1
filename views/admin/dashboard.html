@@ -436,7 +436,7 @@
                 </div>
                 <div class="table-wrap">
                     <table id="usersTable">
-                        <thead><tr><th style="width:36px;"><input type="checkbox" id="userSelectAll" title="全选本页" onchange="toggleUserSelectAll(this)"></th><th class="sortable" data-sort="id" onclick="setUserSort('id')" title="点击排序">ID <span id="sortId"></span></th><th class="sortable" data-sort="username" onclick="setUserSort('username')" title="点击排序">用户名 <span id="sortUsername"></span></th><th>角色</th><th>手机</th><th class="sortable" data-sort="balance" onclick="setUserSort('balance')" title="点击排序">余额 <span id="sortBalance"></span></th><th>冻结</th><th>最近IP</th><th>钱包</th><th>资金密码</th><th>邀请码</th><th>推荐人</th><th>团队</th><th>抢单</th><th>进度</th><th class="sortable" data-sort="status" onclick="setUserSort('status')" title="点击排序">状态 <span id="sortStatus"></span></th><th class="sortable" data-sort="created_at" onclick="setUserSort('created_at')" title="点击排序">注册时间 <span id="sortCreatedAt"></span></th><th>备注</th><th>操作</th></tr></thead>
+                        <thead><tr><th style="width:36px;"><input type="checkbox" id="userSelectAll" title="全选本页" onchange="toggleUserSelectAll(this)"></th><th class="sortable" data-sort="id" onclick="setUserSort('id')" title="点击排序">ID <span id="sortId"></span></th><th class="sortable" data-sort="username" onclick="setUserSort('username')" title="点击排序">用户名 <span id="sortUsername"></span></th><th>角色</th><th>账户类型</th><th>手机</th><th class="sortable" data-sort="balance" onclick="setUserSort('balance')" title="点击排序">余额 <span id="sortBalance"></span></th><th>冻结</th><th>最近IP</th><th>钱包</th><th>资金密码</th><th>邀请码</th><th>推荐人</th><th>团队</th><th>抢单</th><th>进度</th><th class="sortable" data-sort="status" onclick="setUserSort('status')" title="点击排序">状态 <span id="sortStatus"></span></th><th class="sortable" data-sort="created_at" onclick="setUserSort('created_at')" title="点击排序">注册时间 <span id="sortCreatedAt"></span></th><th>备注</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -2252,7 +2252,7 @@
             if (page) currentUserPage = page;
             var tbody = document.querySelector('#usersTable tbody');
             if (!tbody) return;
-            tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#1a202c;padding:24px;">加载中...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#1a202c;padding:24px;">加载中...</td></tr>';
             var sel = document.getElementById('userPageSizeSelect');
             if (sel) sel.value = userPageSize;
             var qs = buildUserQueryParams(currentUserPage);
@@ -2260,7 +2260,7 @@
             var timeoutId = setTimeout(function() {
                 if (loadDone) return;
                 if (tbody && tbody.innerHTML.indexOf('加载中') !== -1) {
-                    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#e53e3e;padding:24px;">请求超时，请检查网络或<a href="javascript:loadUsers()" style="color:#3182ce;">点击重试</a></td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#e53e3e;padding:24px;">请求超时，请检查网络或<a href="javascript:loadUsers()" style="color:#3182ce;">点击重试</a></td></tr>';
                 }
             }, 12000);
             try {
@@ -2269,12 +2269,12 @@
             clearTimeout(timeoutId);
             if (!tbody) return;
             tbody.innerHTML = '';
-            if (!res) { tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#e53e3e;">加载失败，请刷新重试</td></tr>'; return; }
-            if (!res.success) { tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#e53e3e;">' + escapeHtml(res.message || res.error || '加载失败') + '</td></tr>'; return; }
+            if (!res) { tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#e53e3e;">加载失败，请刷新重试</td></tr>'; return; }
+            if (!res.success) { tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#e53e3e;">' + escapeHtml(res.message || res.error || '加载失败') + '</td></tr>'; return; }
             if (res.success && res.data && Array.isArray(res.data.users)) {
                 var list = res.data.users;
                 if (list.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#1a202c;padding:24px;">暂无用户数据，请检查筛选条件或切换「做单账户」标签</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#1a202c;padding:24px;">暂无用户数据，请检查筛选条件或切换「做单账户」标签</td></tr>';
                 } else {
                 list.forEach(u => {
                     tbody.innerHTML += `
@@ -2283,6 +2283,7 @@
                             <td>${u.id}</td>
                             <td>${escapeHtml(u.username)}</td>
                             <td><span class="badge" style="background:${(u.role==='Admin'||u.role==='SuperAdmin')?'#667eea':'#48bb78'};color:white;font-size:11px;">${escapeHtml(u.role||'User')}</span></td>
+                            <td>${(u.role==='User'||!u.role) ? (u.is_worker ? '<span class="badge" style="background:#0d9488;color:white;font-size:11px;">做单</span>' : '<span class="badge" style="background:#64748b;color:white;font-size:11px;">正式</span>') : '-'}</td>
                             <td style="font-size:11px;">${maskPhone(u.phone)}</td>
                             <td>${(u.balance || 0).toFixed(2)}</td>
                             <td>${u.frozen_balance || 0}</td>
@@ -2351,7 +2352,7 @@
                 });
                 }
             } else if (res.success && res.data) {
-                tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#1a202c;padding:24px;">暂无用户数据</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#1a202c;padding:24px;">暂无用户数据</td></tr>';
             }
             var pag = res.data && res.data.pagination;
             var total = pag ? (pag.total || 0) : 0;
@@ -2366,7 +2367,7 @@
                 loadDone = true;
                 clearTimeout(timeoutId);
                 console.error('loadUsers:', e);
-                if (tbody) tbody.innerHTML = '<tr><td colspan="19" style="text-align:center;color:#e53e3e;">加载失败，请<a href="javascript:loadUsers()" style="color:#3182ce;">点击重试</a></td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="20" style="text-align:center;color:#e53e3e;">加载失败，请<a href="javascript:loadUsers()" style="color:#3182ce;">点击重试</a></td></tr>';
             }
         }
         function setUserSort(col) {
@@ -2626,7 +2627,7 @@
             var toLabel = currentIsWorker ? '正式' : '做单';
             if (!confirm('确定将该用户改为' + toLabel + '账户吗？后续入款/提款将按' + toLabel + '账户单独统计。')) return;
             var res = await fetchAPI('/users/' + userId + '/toggle-account-type', { method: 'POST', body: JSON.stringify({}) });
-            if (res && res.success) { showToast(res.message || '已切换'); if (typeof loadUsers === 'function') loadUsers(); }
+            if (res && res.success) { showToast(res.message || '已切换'); if (typeof loadUsers === 'function') loadUsers(currentUserType); }
             else if (res && (res.message || '').indexOf('最高管理员') >= 0) showToast('仅最高管理员可修改账户类型');
             else showToast(res && res.message ? res.message : '操作失败');
         }
