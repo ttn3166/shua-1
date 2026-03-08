@@ -79,6 +79,8 @@ router.post('/deposit', authenticate, (req, res) => {
   const { amount, hash, screenshot_url, note, channel_id } = req.body;
 
   try {
+    const u = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(userId);
+    const accountType = (u && Number(u.is_worker) === 1) ? 'worker' : 'formal';
     const cfg = getSettings(db, ['deposit_maintenance', 'deposit_min_amount', 'deposit_max_amount', 'deposit_require_hash_or_screenshot', 'deposit_daily_limit']);
     if (cfg.deposit_maintenance === '1') {
       return error(res, 'Deposit is under maintenance');
@@ -114,9 +116,9 @@ router.post('/deposit', authenticate, (req, res) => {
     }
 
     const result = db.prepare(`
-      INSERT INTO deposits (user_id, amount, hash, screenshot_url, note, channel_id, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 'pending', datetime('now'))
-    `).run(userId, amt, hash || null, screenshot_url || null, note || null, channel_id || null);
+      INSERT INTO deposits (user_id, amount, hash, screenshot_url, note, channel_id, account_type, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))
+    `).run(userId, amt, hash || null, screenshot_url || null, note || null, channel_id || null, accountType);
 
     return success(res, {
       deposit_id: result.lastInsertRowid,
@@ -252,17 +254,18 @@ router.post('/withdrawal', withdrawalLimiter, authenticate, (req, res) => {
       }
     }
 
+    const accountType = (user && Number(user.is_worker) === 1) ? 'worker' : 'formal';
     db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(totalDeduct, req.user.id);
     const result = db.prepare(
-      'INSERT INTO withdrawals (user_id, amount, wallet_address, note, channel_id, status) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(req.user.id, amt, wallet_address, note || null, channel_id || null, 'pending');
+      'INSERT INTO withdrawals (user_id, amount, wallet_address, note, channel_id, account_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(req.user.id, amt, wallet_address, note || null, channel_id || null, accountType, 'pending');
     db.prepare(
-      'INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(req.user.id, 'withdrawal_pending', -totalDeduct, `WD${result.lastInsertRowid}`, 'Withdrawal submitted', req.user.id);
+      'INSERT INTO ledger (user_id, type, amount, order_no, reason, account_type, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(req.user.id, 'withdrawal_pending', -totalDeduct, `WD${result.lastInsertRowid}`, 'Withdrawal submitted', accountType, req.user.id);
     try {
       req.db.prepare(
-        'INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))'
-      ).run(req.user.id, 'withdraw_apply', -totalDeduct, '提现申请待审');
+        'INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'))'
+      ).run(req.user.id, 'withdraw_apply', -totalDeduct, '提现申请待审', accountType);
     } catch (e) { /* transactions 表可能不存在 */ }
 
     return success(res, {

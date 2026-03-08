@@ -490,6 +490,12 @@
                     <button type="button" id="financeTabWithdraw" class="active" onclick="switchFinanceTab('withdraw')">提现审批</button>
                     <button type="button" id="financeTabDeposit" onclick="switchFinanceTab('deposit')">充值审批</button>
                 </div>
+                <div class="finance-tabs" style="margin-top:8px;">
+                    <span style="font-size:12px;color:#1a202c;margin-right:8px;">账户类型：</span>
+                    <button type="button" id="financeAccountTypeAll" class="active" onclick="setFinanceAccountType('all')">全部</button>
+                    <button type="button" id="financeAccountTypeFormal" onclick="setFinanceAccountType('formal')">正式</button>
+                    <button type="button" id="financeAccountTypeWorker" onclick="setFinanceAccountType('worker')">做单</button>
+                </div>
                 <div id="financeFilterRow" style="margin-bottom:16px;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
                     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
                         <span style="font-size:12px;color:#1a202c;">排序:</span>
@@ -994,12 +1000,13 @@
                                     <th>时间</th>
                                     <th>用户</th>
                                     <th>类型</th>
+                                    <th>账户类型</th>
                                     <th>金额 (U)</th>
                                     <th>备注</th>
                                 </tr>
                             </thead>
                             <tbody id="transactionsTable">
-                                <tr><td colspan="6" style="text-align:center; color:#999;">加载中...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; color:#999;">加载中...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2333,6 +2340,7 @@
                                 <button onclick="openDispatchModal(${u.id}, '${String(u.username||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', ${u.task_progress})" style="background:#d69e2e; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="派单插队">派单</button>
                                 <button onclick="openEditUserModal(${u.id}, '${String(u.username||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', ${u.vip_level || 1}, ${u.credit_score ?? 100}, ${u.allow_withdraw}, '${String(u.referrer_name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.referred_by||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.invite_code||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.phone||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.status||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.created_at||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}', '${String(u.admin_remark||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')}')" style="background:#3182ce; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="编辑资料">编辑</button>
                                 <button onclick="resetUserProgress(${u.id})" style="background:#805ad5; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="重置进度">重置</button>
+                                ${(u.role === 'User') ? '<button onclick="toggleAccountType(' + u.id + ', \'' + String(u.username||'').replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'") + '\', ' + (u.is_worker ? '1' : '0') + ')" style="background:#0d9488; color:white; border:none; padding:4px 8px; border-radius:4px; margin-right:4px; cursor:pointer; font-size:12px;" title="仅最高管理员可操作">' + (u.is_worker ? '改为正式' : '改为做单') + '</button>' : ''}
                                 ${u.status === 'banned' 
                                     ? '<button onclick="toggleUserStatus(' + u.id + ', 0)" style="background:#718096; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">解冻</button>' 
                                     : '<button onclick="toggleUserStatus(' + u.id + ', 1)" style="background:#e53e3e; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">冻结</button>'
@@ -2612,6 +2620,15 @@
                 body: JSON.stringify({ status: newStatus })
             });
             if (res.success) { showToast('操作成功'); loadUsers(); }
+        }
+
+        async function toggleAccountType(userId, username, currentIsWorker) {
+            var toLabel = currentIsWorker ? '正式' : '做单';
+            if (!confirm('确定将该用户改为' + toLabel + '账户吗？后续入款/提款将按' + toLabel + '账户单独统计。')) return;
+            var res = await fetchAPI('/users/' + userId + '/toggle-account-type', { method: 'POST', body: JSON.stringify({}) });
+            if (res && res.success) { showToast(res.message || '已切换'); if (typeof loadUsers === 'function') loadUsers(); }
+            else if (res && (res.message || '').indexOf('最高管理员') >= 0) showToast('仅最高管理员可修改账户类型');
+            else showToast(res && res.message ? res.message : '操作失败');
         }
 
         // --- Password Management ---
@@ -3151,6 +3168,14 @@
         }
         var financeSort = 'created_at';
         var financeOrder = 'desc';
+        var financeAccountType = 'all';
+        function setFinanceAccountType(t) {
+            financeAccountType = t;
+            document.getElementById('financeAccountTypeAll').classList.toggle('active', t === 'all');
+            document.getElementById('financeAccountTypeFormal').classList.toggle('active', t === 'formal');
+            document.getElementById('financeAccountTypeWorker').classList.toggle('active', t === 'worker');
+            financeSearch();
+        }
         function getFinanceFilterParams() {
             var q = []; var e = document.getElementById('financeFilterUserId'); if (e && e.value.trim()) q.push('user_id=' + encodeURIComponent(e.value.trim()));
             e = document.getElementById('financeFilterOrderId'); if (e && e.value.trim()) q.push('id=' + encodeURIComponent(e.value.trim()));
@@ -3159,6 +3184,7 @@
             e = document.getElementById('financeFilterDateFrom'); if (e && e.value) q.push('date_from=' + encodeURIComponent(e.value));
             e = document.getElementById('financeFilterDateTo'); if (e && e.value) q.push('date_to=' + encodeURIComponent(e.value));
             e = document.getElementById('financeFilterHash'); if (e && e.value.trim()) q.push('hash=' + encodeURIComponent(e.value.trim()));
+            if (financeAccountType === 'formal' || financeAccountType === 'worker') q.push('account_type=' + encodeURIComponent(financeAccountType));
             q.push('sort=' + (financeSort || 'created_at'));
             q.push('order=' + (financeOrder || 'desc'));
             return q.length ? '&' + q.join('&') : '';
@@ -3341,7 +3367,8 @@
             const hasPending = list.some(function(i){ return i.status === 'pending'; });
             var batchBar = document.getElementById('financeBatchBar');
             if (batchBar) batchBar.style.display = hasPending ? 'block' : 'none';
-            let html = `<table><thead><tr>${hasPending ? '<th><input type="checkbox" id="financeSelectAll" title="全选待审"></th>' : ''}<th>用户</th><th>金额</th>${hasScreenshotCol ? '<th>截图</th>' : ''}<th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
+            var accountTypeLabel = function(at) { return (at === 'worker') ? '做单' : '正式'; };
+            let html = `<table><thead><tr>${hasPending ? '<th><input type="checkbox" id="financeSelectAll" title="全选待审"></th>' : ''}<th>用户</th><th>金额</th>${hasScreenshotCol ? '<th>截图</th>' : ''}<th>账户类型</th><th>状态</th><th>时间</th><th>操作</th></tr></thead><tbody>`;
             list.forEach(item => {
                 var checkCell = hasPending ? '<td>' + (item.status === 'pending' ? '<input type="checkbox" class="finance-row-cb" data-id="' + item.id + '">' : '') + '</td>' : '';
                 const actionBtns = item.status === 'pending' ? `
@@ -3354,7 +3381,9 @@
                     var safeUrl = (url && (url.indexOf('/') === 0 || url.indexOf('http://') === 0 || url.indexOf('https://') === 0)) ? url : '';
                     screenshotCell = '<td>' + (safeUrl ? '<a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener">查看截图</a>' : '-') + '</td>';
                 }
+                var at = item.account_type || 'formal';
                 html += '<tr>' + checkCell + '<td>' + escapeHtml(item.username || '-') + '</td><td>' + (item.amount != null ? Number(item.amount) : '-') + '</td>' + screenshotCell +
+                    '<td>' + accountTypeLabel(at) + '</td>' +
                     '<td><span class="badge badge-' + (item.status === 'pending' ? 'warning' : (item.status === 'approved' ? 'success' : 'danger')) + '">' + escapeHtml(item.status || '') + '</span></td>' +
                     '<td>' + (item.created_at ? new Date(item.created_at).toLocaleString() : '-') + '</td><td>' + actionBtns + '</td></tr>';
             });
@@ -4519,6 +4548,7 @@
         }
         async function exportTransactionsCsv() {
             var q = [];
+            if (typeof transactionAccountType !== 'undefined' && (transactionAccountType === 'formal' || transactionAccountType === 'worker')) q.push('account_type=' + encodeURIComponent(transactionAccountType));
             var e = document.getElementById('transFilterUserId'); if (e && e.value.trim()) q.push('user_id=' + encodeURIComponent(e.value.trim()));
             e = document.getElementById('transFilterUsername'); if (e && e.value.trim()) q.push('username=' + encodeURIComponent(e.value.trim()));
             e = document.getElementById('transFilterType'); if (e && e.value) q.push('type=' + encodeURIComponent(e.value));
@@ -4707,6 +4737,16 @@
         // === 报表统计系统 ===
         let currentTransactionOffset = 0;
         var transactionPageSize = 20;
+        var transactionAccountType = 'all';
+        function setTransactionAccountType(t) {
+            transactionAccountType = t;
+            var allBtn = document.getElementById('transAccountTypeAll');
+            var formalBtn = document.getElementById('transAccountTypeFormal');
+            var workerBtn = document.getElementById('transAccountTypeWorker');
+            if (allBtn) { allBtn.classList.toggle('active', t === 'all'); allBtn.style.background = t === 'all' ? '#3182ce' : '#fff'; allBtn.style.color = t === 'all' ? '#fff' : '#4a5568'; }
+            if (formalBtn) { formalBtn.classList.toggle('active', t === 'formal'); formalBtn.style.background = t === 'formal' ? '#3182ce' : '#fff'; formalBtn.style.color = t === 'formal' ? '#fff' : '#4a5568'; }
+            if (workerBtn) { workerBtn.classList.toggle('active', t === 'worker'); workerBtn.style.background = t === 'worker' ? '#3182ce' : '#fff'; workerBtn.style.color = t === 'worker' ? '#fff' : '#4a5568'; }
+        }
         
         function switchReportTab(tab) {
             const tabDaily = document.getElementById('tabDailyReport');
@@ -4730,6 +4770,7 @@
                 transDiv.style.display = 'block';
                 dailyDiv.style.display = 'none';
                 currentTransactionOffset = 0;
+                if (typeof setTransactionAccountType === 'function') setTransactionAccountType(transactionAccountType || 'all');
                 var df = document.getElementById('transFilterDateFrom');
                 var dt = document.getElementById('transFilterDateTo');
                 if (df && dt && !df.value && !dt.value) {
@@ -4883,7 +4924,7 @@
                 if (!tbody) { setLoading(false); return; }
                 tbody.innerHTML = '';
                 if (res == null) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#e53e3e;">加载失败，请刷新或重新登录</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e53e3e;">加载失败，请刷新或重新登录</td></tr>';
                     renderPaginationBar('transactionPaginationWrap', { total: 0, pageSize: transactionPageSize, currentPage: 1, pageSizeOptions: [10, 20, 50, 100], onPage: function() {}, onPageSizeChange: function(s) { transactionPageSize = s; currentTransactionOffset = 0; loadAllTransactions(0); } });
                     return;
                 }
@@ -4900,20 +4941,21 @@
                         };
                         const typeLabel = typeMap[t.type] || t.type;
                         const amountColor = t.type.includes('add') || t.type.includes('deposit') || t.type.includes('commission') || t.type.includes('reward') ? '#48bb78' : '#e53e3e';
-                        
+                        const accountTypeLabel = (t.account_type === 'worker') ? '做单' : '正式';
                         tbody.innerHTML += `
                             <tr>
                                 <td>${t.id}</td>
                                 <td style="font-size:12px;">${new Date(t.created_at).toLocaleString()}</td>
                                 <td>${t.user_id ? '<a href="javascript:void(0)" onclick="openUserDetailModal(' + t.user_id + ')" style="color:#3182ce;cursor:pointer;">' + (t.username || 'N/A') + '</a>' : (t.username || 'N/A')}</td>
                                 <td><span style="font-size:12px; color:#1a202c;">${typeLabel}</span></td>
+                                <td>${accountTypeLabel}</td>
                                 <td><strong style="color:${amountColor};">${t.amount.toFixed(2)}</strong></td>
                                 <td style="color:#1a202c; font-size:12px;">${t.description || '-'}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">' + (res.success ? '暂无流水记录' : (res.message || '加载失败')) + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#999;">' + (res.success ? '暂无流水记录' : (res.message || '加载失败')) + '</td></tr>';
                 }
                 var pag = res && res.data && res.data.pagination;
                 var total = pag && pag.total != null ? pag.total : 0;
@@ -4923,7 +4965,7 @@
             } catch (e) {
                 console.error('加载流水记录失败:', e);
                 var tbody = document.getElementById('transactionsTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#e53e3e;">加载失败</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e53e3e;">加载失败</td></tr>';
                 renderPaginationBar('transactionPaginationWrap', { total: 0, pageSize: transactionPageSize, currentPage: 1, pageSizeOptions: [10, 20, 50, 100], onPage: function() {}, onPageSizeChange: function(s) { transactionPageSize = s; currentTransactionOffset = 0; loadAllTransactions(0); } });
             } finally { setLoading(false); }
         }

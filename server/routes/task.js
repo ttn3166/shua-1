@@ -41,18 +41,19 @@ function distributeTeamCommission(db, refereeUserId, orderCommission, orderNo) {
   const rates = [rate1, rate2, rate3];
   let currentInviteCode = referee.referred_by;
   for (let level = 0; level < 3; level++) {
-    const referrer = db.prepare('SELECT id, username, referred_by FROM users WHERE invite_code = ?').get(currentInviteCode);
+    const referrer = db.prepare('SELECT id, username, referred_by, is_worker FROM users WHERE invite_code = ?').get(currentInviteCode);
     if (!referrer) break;
     const rate = rates[level];
     const amount = parseFloat((orderCommission * rate).toFixed(4));
     if (amount > 0) {
       db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(amount, referrer.id);
+      const accountType = (referrer && Number(referrer.is_worker) === 1) ? 'worker' : 'formal';
       const desc = '来自下级 ' + refereeName + ' 的订单返利';
       try {
-        db.prepare("INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, 'team_commission', ?, ?, datetime('now'))").run(referrer.id, amount, desc);
+        db.prepare("INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, 'team_commission', ?, ?, ?, datetime('now'))").run(referrer.id, amount, desc, accountType);
       } catch (e) {}
       try {
-        db.prepare("INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by, created_at) VALUES (?, 'team_commission', ?, ?, ?, ?, datetime('now'))").run(referrer.id, amount, orderNo || '', desc, referrer.id);
+        db.prepare("INSERT INTO ledger (user_id, type, amount, order_no, reason, account_type, created_by, created_at) VALUES (?, 'team_commission', ?, ?, ?, ?, ?, datetime('now'))").run(referrer.id, amount, orderNo || '', desc, accountType, referrer.id);
       } catch (e2) {}
     }
     currentInviteCode = referrer.referred_by;
@@ -205,20 +206,22 @@ router.post('/match', authenticate, (req, res) => {
         const matchToken = 'mt_' + require('crypto').randomBytes(16).toString('hex');
 
         // match 成功时立即创建 pending 订单，便于 History > Pending 显示
+        const accountType = (user && Number(user.is_worker) === 1) ? 'worker' : 'formal';
         const insertResult = db.prepare(`
             INSERT INTO orders (
                 order_no, user_id, amount, commission, status, type, source, dispatch_order_id,
                 product_title, product_image, unit_price, quantity, product_name,
-                created_at
+                account_type, created_at
             )
             VALUES (
                 ?, ?, ?, ?, 'pending', ?, 'match', ?,
                 ?, ?, ?, ?, ?,
-                datetime('now')
+                ?, datetime('now')
             )
         `).run(
             orderNo, userId, orderAmount, commission, orderType, dispatchOrderId || null,
-            productTitle, productImage, unitPrice, quantity, productName
+            productTitle, productImage, unitPrice, quantity, productName,
+            accountType
         );
 
         matchCache.set(matchToken, {
@@ -279,9 +282,10 @@ router.post('/confirm', confirmLimiter, authenticate, (req, res) => {
     const { orderId, orderNo, amount, commission, totalReturn, orderType = 'normal', dispatchOrderId, productName, unitPrice, quantity } = cached;
 
     try {
-        const user = db.prepare('SELECT balance, task_progress, vip_level FROM users WHERE id = ?').get(userId);
+        const user = db.prepare('SELECT balance, task_progress, vip_level, is_worker FROM users WHERE id = ?').get(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
         if (user.balance < amount) return res.json({ success: false, message: 'Insufficient balance.' });
+        const accountType = (user && Number(user.is_worker) === 1) ? 'worker' : 'formal';
 
         let vipConfig = db.prepare('SELECT task_limit FROM vip_levels WHERE level = ?').get(user.vip_level != null ? user.vip_level : 1);
         if (!vipConfig) vipConfig = { task_limit: 40 };
@@ -306,15 +310,15 @@ router.post('/confirm', confirmLimiter, authenticate, (req, res) => {
             }
 
             db.prepare(`
-                INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-            `).run(userId, 'task_reward', commission, orderNo, 'Task commission', userId);
+                INSERT INTO ledger (user_id, type, amount, order_no, reason, account_type, created_by, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            `).run(userId, 'task_reward', commission, orderNo, 'Task commission', accountType, userId);
 
             try {
                 db.prepare(`
-                    INSERT INTO transactions (user_id, type, amount, description, created_at)
-                    VALUES (?, ?, ?, ?, datetime('now'))
-                `).run(userId, 'task_commission', commission, `Task commission: ${orderNo}`);
+                    INSERT INTO transactions (user_id, type, amount, description, account_type, created_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `).run(userId, 'task_commission', commission, `Task commission: ${orderNo}`, accountType);
             } catch (e) {}
             distributeTeamCommission(db, userId, commission, orderNo);
         })();
@@ -381,9 +385,10 @@ router.post('/submit', authenticate, (req, res) => {
         const isMatchFlow = order.source === 'match';
 
         if (isMatchFlow) {
-            const user = db.prepare('SELECT balance, task_progress, vip_level FROM users WHERE id = ?').get(userId);
+            const user = db.prepare('SELECT balance, task_progress, vip_level, is_worker FROM users WHERE id = ?').get(userId);
             if (!user) return error(res, 'User not found', 404);
             if (user.balance < orderAmount) return error(res, 'Insufficient balance');
+            const accountType = (user && Number(user.is_worker) === 1) ? 'worker' : 'formal';
             const commission = order.commission != null ? order.commission : parseFloat((orderAmount * 0.005).toFixed(4));
             const totalReturn = orderAmount + commission;
 
@@ -405,14 +410,14 @@ router.post('/submit', authenticate, (req, res) => {
                         .run('used', order.dispatch_order_id);
                 }
                 db.prepare(`
-                    INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-                `).run(userId, 'task_reward', commission, order.order_no, 'Task commission', userId);
+                    INSERT INTO ledger (user_id, type, amount, order_no, reason, account_type, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                `).run(userId, 'task_reward', commission, order.order_no, 'Task commission', accountType, userId);
                 try {
                     db.prepare(`
-                        INSERT INTO transactions (user_id, type, amount, description, created_at)
-                        VALUES (?, ?, ?, ?, datetime('now'))
-                    `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`);
+                        INSERT INTO transactions (user_id, type, amount, description, account_type, created_at)
+                        VALUES (?, ?, ?, ?, ?, datetime('now'))
+                    `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`, accountType);
                 } catch (e) {}
                 distributeTeamCommission(db, userId, commission, order.order_no);
             })();
@@ -430,6 +435,8 @@ router.post('/submit', authenticate, (req, res) => {
 
         // start 流程：已扣至冻结的订单，解冻并发放（含三级返佣，同一事务）
         const user = db.prepare('SELECT vip_level FROM users WHERE id = ?').get(userId);
+        const userTypeRow = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(userId);
+        const accountType = (userTypeRow && Number(userTypeRow.is_worker) === 1) ? 'worker' : 'formal';
         let vipConfig = db.prepare('SELECT * FROM vip_levels WHERE level = ?').get(user.vip_level != null ? user.vip_level : 1);
         if (!vipConfig) vipConfig = { commission_rate: 0.005 };
         const commission = parseFloat((orderAmount * vipConfig.commission_rate).toFixed(4));
@@ -455,15 +462,15 @@ router.post('/submit', authenticate, (req, res) => {
           } catch (e) {}
 
           db.prepare(`
-              INSERT INTO ledger (user_id, type, amount, order_no, reason, created_by)
-              VALUES (?, ?, ?, ?, ?, ?)
-          `).run(userId, 'order_reward', totalReturn, order.order_no, 'Order completed', userId);
+              INSERT INTO ledger (user_id, type, amount, order_no, reason, account_type, created_by)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(userId, 'order_reward', totalReturn, order.order_no, 'Order completed', accountType, userId);
 
           try {
             db.prepare(`
-                INSERT INTO transactions (user_id, type, amount, description, created_at)
-                VALUES (?, ?, ?, ?, datetime('now'))
-            `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`);
+                INSERT INTO transactions (user_id, type, amount, description, account_type, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            `).run(userId, 'task_commission', commission, `Task commission: ${order.order_no}`, accountType);
           } catch (e) {}
           distributeTeamCommission(db, userId, commission, order.order_no);
         })();

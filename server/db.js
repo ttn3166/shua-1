@@ -133,6 +133,7 @@ function initTables() {
       amount REAL NOT NULL,
       hash TEXT,
       screenshot_url TEXT,
+      account_type TEXT DEFAULT NULL,
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
       note TEXT,
       reviewed_by INTEGER,
@@ -147,6 +148,7 @@ function initTables() {
       user_id INTEGER NOT NULL,
       amount REAL NOT NULL,
       wallet_address TEXT,
+      account_type TEXT DEFAULT NULL,
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'paid', 'rejected')),
       note TEXT,
       payout_ref TEXT,
@@ -164,7 +166,20 @@ function initTables() {
       amount REAL NOT NULL,
       order_no TEXT,
       reason TEXT,
+      account_type TEXT DEFAULT NULL,
       created_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+
+    -- 交易记录表（用于财务对账/统计）
+    CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT,
+      account_type TEXT DEFAULT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
@@ -214,6 +229,10 @@ function initTables() {
   // 迁移：为 match 流程支持 pending 订单添加 source、dispatch_order_id 列
   try {
     const cols = db.prepare("PRAGMA table_info(orders)").all().map(r => r.name);
+    if (!cols.includes('account_type')) {
+      db.exec("ALTER TABLE orders ADD COLUMN account_type TEXT DEFAULT NULL");
+      console.log('✅ orders.account_type 列已添加');
+    }
     if (!cols.includes('source')) {
       db.exec("ALTER TABLE orders ADD COLUMN source TEXT DEFAULT 'start'");
       console.log('✅ orders.source 列已添加');
@@ -272,6 +291,10 @@ function initTables() {
   // 迁移：deposits 增加 channel_id（充值方式）
   try {
     const depCols = db.prepare("PRAGMA table_info(deposits)").all().map(r => r.name);
+    if (!depCols.includes('account_type')) {
+      db.exec("ALTER TABLE deposits ADD COLUMN account_type TEXT DEFAULT NULL");
+      console.log('✅ deposits.account_type 列已添加');
+    }
     if (!depCols.includes('channel_id')) {
       db.exec("ALTER TABLE deposits ADD COLUMN channel_id TEXT");
       console.log('✅ deposits.channel_id 列已添加');
@@ -283,12 +306,49 @@ function initTables() {
   // 迁移：withdrawals 增加 channel_id（提现方式）
   try {
     const wdCols = db.prepare("PRAGMA table_info(withdrawals)").all().map(r => r.name);
+    if (!wdCols.includes('account_type')) {
+      db.exec("ALTER TABLE withdrawals ADD COLUMN account_type TEXT DEFAULT NULL");
+      console.log('✅ withdrawals.account_type 列已添加');
+    }
     if (!wdCols.includes('channel_id')) {
       db.exec("ALTER TABLE withdrawals ADD COLUMN channel_id TEXT");
       console.log('✅ withdrawals.channel_id 列已添加');
     }
   } catch (e) {
     console.warn('withdrawals 表迁移跳过:', e.message);
+  }
+
+  // 迁移：ledger / transactions 增加 account_type（口径B：记录发生当时账户类型）
+  try {
+    const ledCols = db.prepare("PRAGMA table_info(ledger)").all().map(r => r.name);
+    if (!ledCols.includes('account_type')) {
+      db.exec("ALTER TABLE ledger ADD COLUMN account_type TEXT DEFAULT NULL");
+      console.log('✅ ledger.account_type 列已添加');
+    }
+  } catch (e) {
+    console.warn('ledger 表迁移跳过:', e.message);
+  }
+  try {
+    const txCols = db.prepare("PRAGMA table_info(transactions)").all().map(r => r.name);
+    if (!txCols.includes('account_type')) {
+      db.exec("ALTER TABLE transactions ADD COLUMN account_type TEXT DEFAULT NULL");
+      console.log('✅ transactions.account_type 列已添加');
+    }
+  } catch (e) {
+    console.warn('transactions 表迁移跳过:', e.message);
+  }
+
+  // 索引：按 account_type + created_at 提升后台 Tab/报表性能
+  try {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_deposits_account_type_created_at ON deposits(account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_withdrawals_account_type_created_at ON withdrawals(account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_transactions_account_type_created_at ON transactions(account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_ledger_account_type_created_at ON ledger(account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_orders_account_type_created_at ON orders(account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_deposits_status_account_type_created_at ON deposits(status, account_type, created_at)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_withdrawals_status_account_type_created_at ON withdrawals(status, account_type, created_at)");
+  } catch (e) {
+    console.warn('索引创建跳过:', e.message);
   }
 
   // 迁移：users 增加 agent_permissions（代理权限 JSON 数组）

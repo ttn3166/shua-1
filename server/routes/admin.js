@@ -805,7 +805,7 @@ router.post('/adjust-balance', checkAdmin, (req, res) => {
         }
 
         const db = req.db || getDb();
-        const user = db.prepare('SELECT id, balance FROM users WHERE id = ?').get(user_id);
+        const user = db.prepare('SELECT id, balance, is_worker FROM users WHERE id = ?').get(user_id);
         if (!user) {
             return res.json({ success: false, message: '用户不存在' });
         }
@@ -823,18 +823,19 @@ router.post('/adjust-balance', checkAdmin, (req, res) => {
         const transAmount = type === 'add' ? val : -val;
         const transType = type === 'add' ? 'system_add' : 'system_deduct';
         const reason = (remark || 'Admin Adjustment').toString();
+        const accountType = (user && Number(user.is_worker) === 1) ? 'worker' : 'formal';
 
         db.transaction(() => {
             db.prepare('UPDATE users SET balance = ? WHERE id = ?').run(newBalance, user_id);
             db.prepare(`
-                INSERT INTO transactions (user_id, type, amount, description, created_at)
-                VALUES (?, ?, ?, ?, datetime('now'))
-            `).run(user_id, transType, transAmount, reason);
+                INSERT INTO transactions (user_id, type, amount, description, account_type, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            `).run(user_id, transType, transAmount, reason, accountType);
             try {
                 db.prepare(`
-                    INSERT INTO ledger (user_id, type, amount, reason, created_by, created_at)
-                    VALUES (?, ?, ?, ?, ?, datetime('now'))
-                `).run(user_id, 'admin_adjust', transAmount, reason, 1);
+                    INSERT INTO ledger (user_id, type, amount, reason, account_type, created_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                `).run(user_id, 'admin_adjust', transAmount, reason, accountType, req.user.id);
             } catch (ledgerErr) {
                 console.warn('Ledger insert skip:', ledgerErr.message);
             }
@@ -948,11 +949,40 @@ router.post('/users/:id/toggle-grab', checkAdmin, (req, res) => {
         writeAuditLog(db, req.user.id, 'user_toggle_grab', 'user', userId, null, { allow_grab: newStatus });
         res.json({
             success: true,
+
             message: `已${newStatus === 1 ? '开启' : '关闭'} ${user.username} 的抢单功能`,
             data: { allow_grab: newStatus }
         });
     } catch (err) {
         console.error('切换抢单状态失败:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// 切换账户类型：正式 ⇄ 做单（仅 SuperAdmin，且仅对 role=User 的会员生效；改类型须记 audit_log）
+router.post('/users/:id/toggle-account-type', checkAdmin, (req, res) => {
+    if (req.user.role !== 'SuperAdmin') {
+        return res.status(403).json({ success: false, message: '仅最高管理员可修改账户类型' });
+    }
+    const db = getDb();
+    const userId = req.params.id;
+    try {
+        const user = db.prepare('SELECT id, username, role, is_worker FROM users WHERE id = ?').get(userId);
+        if (!user) return res.status(404).json({ success: false, message: '用户不存在' });
+        if (user.role !== 'User') return res.status(400).json({ success: false, message: '仅可对会员切换正式/做单类型' });
+        const fromWorker = Number(user.is_worker) === 1;
+        const toWorker = !fromWorker;
+        const fromType = fromWorker ? 'worker' : 'formal';
+        const toType = toWorker ? 'worker' : 'formal';
+        db.prepare('UPDATE users SET is_worker = ? WHERE id = ?').run(toWorker ? 1 : 0, userId);
+        writeAuditLog(db, req.user.id, 'toggle_account_type', 'user', userId, null, { from: fromType, to: toType });
+        res.json({
+            success: true,
+            message: `已将 ${user.username} 设为${toWorker ? '做单' : '正式'}账户`,
+            data: { is_worker: toWorker ? 1 : 0, account_type: toType }
+        });
+    } catch (err) {
+        console.error('切换账户类型失败:', err);
         res.status(500).json({ success: false, message: err.message });
     }
 });
@@ -1175,13 +1205,17 @@ router.get('/withdrawals', checkAdmin, (req, res) => {
     const db = getDb();
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-    const { user_id, id, username, status, date_from, date_to, amount_min, amount_max, sort = 'created_at', order = 'desc' } = req.query;
+    const { user_id, id, username, status, date_from, date_to, amount_min, amount_max, account_type: accountTypeFilter, sort = 'created_at', order = 'desc' } = req.query;
     const allowedSort = { created_at: 'w.created_at', amount: 'w.amount', id: 'w.id' };
     const sortCol = allowedSort[String(sort).toLowerCase()] || 'w.created_at';
     const orderDir = (String(order).toLowerCase() === 'asc') ? 'ASC' : 'DESC';
     try {
         const conditions = [];
         const params = [];
+        if (accountTypeFilter === 'formal' || accountTypeFilter === 'worker') {
+            conditions.push('(COALESCE(w.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
+            params.push(accountTypeFilter);
+        }
         if (user_id != null && String(user_id).trim() !== '') {
             conditions.push('w.user_id = ?');
             params.push(parseInt(user_id, 10));
@@ -1222,7 +1256,7 @@ router.get('/withdrawals', checkAdmin, (req, res) => {
             'SELECT COUNT(*) as count_approved, IFNULL(SUM(amount), 0) as amount_approved FROM withdrawals w JOIN users u ON w.user_id = u.id' + whereClause + " AND w.status IN ('approved', 'paid')"
         ).get(...params);
         const withdrawals = db.prepare(`
-            SELECT w.id, w.user_id, w.amount, w.wallet_address, w.status, w.created_at, u.username
+            SELECT w.id, w.user_id, w.amount, w.wallet_address, w.status, w.account_type, w.created_at, u.username
             ${baseSql}
             ORDER BY ${sortCol} ${orderDir} LIMIT ? OFFSET ?
         `).all(...params, limit, offset);
@@ -1251,13 +1285,18 @@ router.post('/withdrawals/:id/review', checkAdmin, (req, res) => {
             const withdrawal = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(withdrawalId);
             if (!withdrawal) throw new Error('提现记录不存在');
             if (withdrawal.status !== 'pending') throw new Error('该提现申请已处理');
+            let accountType = withdrawal.account_type;
+            if (!accountType) {
+                const u = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(withdrawal.user_id);
+                accountType = (u && Number(u.is_worker) === 1) ? 'worker' : 'formal';
+            }
             
             if (action === 'approve') {
                 // 提交提现时已扣款，此处仅更新状态并记流水，不再检查余额
                 db.prepare("UPDATE withdrawals SET status = 'approved', reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(withdrawalId);
-                db.prepare('INSERT INTO ledger (user_id, type, amount, reason, created_by) VALUES (?, ?, ?, ?, ?)').run(withdrawal.user_id, 'withdrawal', -withdrawal.amount, '提现审批通过', 1);
+                db.prepare('INSERT INTO ledger (user_id, type, amount, reason, account_type, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(withdrawal.user_id, 'withdrawal', -withdrawal.amount, '提现审批通过', accountType, req.user.id);
                 try {
-                    db.prepare('INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))').run(withdrawal.user_id, 'withdraw', -withdrawal.amount, '提现审批通过');
+                    db.prepare('INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'))').run(withdrawal.user_id, 'withdraw', -withdrawal.amount, '提现审批通过', accountType);
                 } catch (txErr) { /* transactions 表可能不存在，忽略 */ }
             } else {
                 db.prepare("UPDATE withdrawals SET status = 'rejected', note = ?, reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(reason || '管理员驳回', withdrawalId);
@@ -1286,10 +1325,15 @@ router.post('/withdrawals/batch-review', checkAdmin, (req, res) => {
             try {
                 const withdrawal = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(id);
                 if (!withdrawal || withdrawal.status !== 'pending') { failed++; continue; }
+                let accountType = withdrawal.account_type;
+                if (!accountType) {
+                    const u = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(withdrawal.user_id);
+                    accountType = (u && Number(u.is_worker) === 1) ? 'worker' : 'formal';
+                }
                 if (action === 'approve') {
                     db.prepare("UPDATE withdrawals SET status = 'approved', reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
-                    db.prepare('INSERT INTO ledger (user_id, type, amount, reason, created_by) VALUES (?, ?, ?, ?, ?)').run(withdrawal.user_id, 'withdrawal', -withdrawal.amount, '提现审批通过', req.user.id);
-                    try { db.prepare('INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime(\'now\'))').run(withdrawal.user_id, 'withdraw', -withdrawal.amount, '提现审批通过'); } catch (e) {}
+                    db.prepare('INSERT INTO ledger (user_id, type, amount, reason, account_type, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(withdrawal.user_id, 'withdrawal', -withdrawal.amount, '提现审批通过', accountType, req.user.id);
+                    try { db.prepare('INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'))').run(withdrawal.user_id, 'withdraw', -withdrawal.amount, '提现审批通过', accountType); } catch (e) {}
                 } else {
                     db.prepare("UPDATE withdrawals SET status = 'rejected', note = ?, reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(reason || '管理员驳回', id);
                     db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(withdrawal.amount, withdrawal.user_id);
@@ -1310,13 +1354,17 @@ router.get('/deposits', checkAdmin, (req, res) => {
     const db = getDb();
     const limit = Math.min(parseInt(req.query.limit, 10) || 20, 500);
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
-    const { user_id, id, username, status, date_from, date_to, amount_min, amount_max, hash, sort = 'created_at', order = 'desc' } = req.query;
+    const { user_id, id, username, status, date_from, date_to, amount_min, amount_max, hash, account_type: accountTypeFilter, sort = 'created_at', order = 'desc' } = req.query;
     const allowedSort = { created_at: 'd.created_at', amount: 'd.amount', id: 'd.id' };
     const sortCol = allowedSort[String(sort).toLowerCase()] || 'd.created_at';
     const orderDir = (String(order).toLowerCase() === 'asc') ? 'ASC' : 'DESC';
     try {
         const conditions = [];
         const params = [];
+        if (accountTypeFilter === 'formal' || accountTypeFilter === 'worker') {
+            conditions.push('(COALESCE(d.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
+            params.push(accountTypeFilter);
+        }
         if (user_id != null && String(user_id).trim() !== '') {
             conditions.push('d.user_id = ?');
             params.push(parseInt(user_id, 10));
@@ -1362,7 +1410,7 @@ router.get('/deposits', checkAdmin, (req, res) => {
             'SELECT COUNT(*) as count_approved, IFNULL(SUM(amount), 0) as amount_approved FROM deposits d JOIN users u ON d.user_id = u.id' + whereClause + " AND d.status = 'approved'"
         ).get(...params);
         const deposits = db.prepare(`
-            SELECT d.id, d.user_id, d.amount, d.hash, d.screenshot_url, d.status, d.created_at, u.username
+            SELECT d.id, d.user_id, d.amount, d.hash, d.screenshot_url, d.status, d.account_type, d.created_at, u.username
             ${baseSql}
             ORDER BY ${sortCol} ${orderDir} LIMIT ? OFFSET ?
         `).all(...params, limit, offset);
@@ -1391,13 +1439,17 @@ router.post('/deposits/:id/review', checkAdmin, (req, res) => {
             const deposit = db.prepare('SELECT * FROM deposits WHERE id = ?').get(depositId);
             if (!deposit) throw new Error('充值记录不存在');
             if (deposit.status !== 'pending') throw new Error('该充值申请已处理');
-            
+            let accountType = deposit.account_type;
+            if (!accountType) {
+                const u = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(deposit.user_id);
+                accountType = (u && Number(u.is_worker) === 1) ? 'worker' : 'formal';
+            }
             if (action === 'approve') {
                 db.prepare("UPDATE deposits SET status = 'approved', reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(depositId);
                 db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(deposit.amount, deposit.user_id);
-                db.prepare('INSERT INTO ledger (user_id, type, amount, reason, created_by) VALUES (?, ?, ?, ?, ?)').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', 1);
+                db.prepare('INSERT INTO ledger (user_id, type, amount, reason, account_type, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', accountType, req.user.id);
                 try {
-                    db.prepare('INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime("now"))').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过');
+                    db.prepare('INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', accountType);
                 } catch (txErr) { /* transactions 表可能不存在，忽略 */ }
             } else {
                 db.prepare("UPDATE deposits SET status = 'rejected', note = ?, reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(reason || '管理员驳回', depositId);
@@ -1425,11 +1477,16 @@ router.post('/deposits/batch-review', checkAdmin, (req, res) => {
             try {
                 const deposit = db.prepare('SELECT * FROM deposits WHERE id = ?').get(id);
                 if (!deposit || deposit.status !== 'pending') { failed++; continue; }
+                let accountType = deposit.account_type;
+                if (!accountType) {
+                    const u = db.prepare('SELECT is_worker FROM users WHERE id = ?').get(deposit.user_id);
+                    accountType = (u && Number(u.is_worker) === 1) ? 'worker' : 'formal';
+                }
                 if (action === 'approve') {
                     db.prepare("UPDATE deposits SET status = 'approved', reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
                     db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(deposit.amount, deposit.user_id);
-                    db.prepare('INSERT INTO ledger (user_id, type, amount, reason, created_by) VALUES (?, ?, ?, ?, ?)').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', req.user.id);
-                    try { db.prepare('INSERT INTO transactions (user_id, type, amount, description, created_at) VALUES (?, ?, ?, ?, datetime("now"))').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过'); } catch (e) {}
+                    db.prepare('INSERT INTO ledger (user_id, type, amount, reason, account_type, created_by) VALUES (?, ?, ?, ?, ?, ?)').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', accountType, req.user.id);
+                    try { db.prepare('INSERT INTO transactions (user_id, type, amount, description, account_type, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))').run(deposit.user_id, 'deposit', deposit.amount, '充值审批通过', accountType); } catch (e) {}
                 } else {
                     db.prepare("UPDATE deposits SET status = 'rejected', note = ?, reviewed_by = 1, reviewed_at = CURRENT_TIMESTAMP WHERE id = ?").run(reason || '管理员驳回', id);
                 }
@@ -2893,11 +2950,15 @@ function makeSalespersonSummary(nullVal) {
     };
 }
 
-// 全局账变流水记录
+// 全局账变流水记录（支持 account_type: all|formal|worker）
 router.get('/transactions/all', checkAdmin, (req, res) => {
     const db = getDb();
     const q = req.query;
     const where = []; const params = [];
+    if (q.account_type === 'formal' || q.account_type === 'worker') {
+        where.push('(COALESCE(t.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
+        params.push(q.account_type);
+    }
     if (q.user_id && String(q.user_id).trim()) { where.push('t.user_id = ?'); params.push(parseInt(q.user_id, 10)); }
     if (q.username && String(q.username).trim()) { where.push('u.username LIKE ?'); params.push('%' + String(q.username).trim() + '%'); }
     if (q.type && String(q.type).trim()) { where.push('t.type = ?'); params.push(String(q.type).trim()); }
@@ -2909,7 +2970,7 @@ router.get('/transactions/all', checkAdmin, (req, res) => {
         const limitNum = Math.min(parseInt(q.limit, 10) || 100, 500);
         const offsetNum = Math.max(0, parseInt(q.offset, 10) || 0);
         const total = db.prepare('SELECT COUNT(*) as count ' + baseSql).get(...params).count;
-        const transactions = db.prepare('SELECT t.id, t.user_id, t.type, t.amount, t.description, t.created_at, u.username ' + baseSql + ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?').all(...params, limitNum, offsetNum);
+        const transactions = db.prepare('SELECT t.id, t.user_id, t.type, t.amount, t.description, t.account_type, t.created_at, u.username ' + baseSql + ' ORDER BY t.created_at DESC LIMIT ? OFFSET ?').all(...params, limitNum, offsetNum);
         res.json({ success: true, data: { transactions, pagination: { limit: limitNum, offset: offsetNum, total } } });
     } catch (err) {
         console.error('获取账变记录失败:', err);
@@ -2922,6 +2983,10 @@ router.get('/transactions/export', checkAdmin, (req, res) => {
     const db = getDb();
     const q = req.query;
     const where = []; const params = [];
+    if (q.account_type === 'formal' || q.account_type === 'worker') {
+        where.push('(COALESCE(t.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
+        params.push(q.account_type);
+    }
     if (q.user_id && String(q.user_id).trim()) { where.push('t.user_id = ?'); params.push(parseInt(q.user_id, 10)); }
     if (q.username && String(q.username).trim()) { where.push('u.username LIKE ?'); params.push('%' + String(q.username).trim() + '%'); }
     if (q.type && String(q.type).trim()) { where.push('t.type = ?'); params.push(String(q.type).trim()); }
@@ -2932,11 +2997,11 @@ router.get('/transactions/export', checkAdmin, (req, res) => {
     const limitNum = Math.min(parseInt(q.limit, 10) || 10000, 10000);
     try {
         const transactions = db.prepare(
-            'SELECT t.id, t.user_id, t.type, t.amount, t.description, t.created_at, u.username ' + baseSql + ' ORDER BY t.created_at DESC LIMIT ?'
+            'SELECT t.id, t.user_id, t.type, t.amount, t.description, t.account_type, t.created_at, u.username ' + baseSql + ' ORDER BY t.created_at DESC LIMIT ?'
         ).all(...params, limitNum);
         const escapeCsv = (v) => (v == null ? '' : String(v).replace(/"/g, '""'));
-        const header = 'ID,用户ID,用户名,类型,金额,说明,创建时间';
-        const rows = transactions.map(t => [t.id, t.user_id, escapeCsv(t.username), escapeCsv(t.type), t.amount, escapeCsv(t.description), escapeCsv(t.created_at)].join(','));
+        const header = 'ID,用户ID,用户名,类型,账户类型,金额,说明,创建时间';
+        const rows = transactions.map(t => [t.id, t.user_id, escapeCsv(t.username), escapeCsv(t.type), (t.account_type === 'worker' ? '做单' : '正式'), t.amount, escapeCsv(t.description), escapeCsv(t.created_at)].join(','));
         const csv = '\uFEFF' + header + '\n' + rows.join('\n');
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', 'attachment; filename=transactions.csv');
