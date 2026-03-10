@@ -243,7 +243,7 @@
               submitBtn.style.display = 'none';
               document.querySelector('.deposit-card section:last-of-type').style.display = 'none';
               var tipsEl = document.getElementById('depositTipsText');
-              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, 'Under maintenance.');
+              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, '维护中。');
               return;
             }
             try { channels = JSON.parse(config.deposit_channels || '[]'); } catch (e) { channels = []; }
@@ -264,9 +264,9 @@
             }
             var minAmt = parseFloat(config.deposit_min_amount);
             if (!isNaN(minAmt)) { var inp = document.getElementById('depositAmount'); if (inp) { inp.min = minAmt; inp.placeholder = 'Min ' + minAmt + ' USDT'; } }
-            var reqHash = config.deposit_require_hash_or_screenshot !== '0';
-            document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash ' + (reqHash ? '*' : '(Optional)');
-            document.querySelector('label[for="depositScreenshotFile"]').innerHTML = 'Upload Screenshot ' + (reqHash ? '*' : '(Optional)');
+            // Always require either hash or screenshot on frontend, regardless of backend toggle
+            document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash *';
+            document.querySelector('label[for="depositScreenshotFile"]').innerHTML = 'Upload Screenshot *';
             var tipsEl = document.getElementById('depositTipsText');
             if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, DEPOSIT_TIPS_EN);
           })
@@ -386,8 +386,8 @@
           showToast('Please enter a valid amount (minimum ' + minAmt + ' USDT)');
           return;
         }
-        var reqHash = config.deposit_require_hash_or_screenshot !== '0';
-        if (reqHash && !hash && !screenshot_url) {
+        // Frontend hard validation: hash or screenshot must be provided (at least one)
+        if (!hash && !screenshot_url) {
           showToast('Please provide transaction hash or upload screenshot');
           return;
         }

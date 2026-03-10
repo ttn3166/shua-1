@@ -171,12 +171,12 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="invite-code">Invitation Code (Optional)</label>
+          <label class="form-label" for="invite-code">邀请码（选填）</label>
           <input 
             type="text" 
             id="invite-code" 
             class="form-input" 
-            placeholder="Enter Invitation Code"
+            placeholder="请输入邀请码"
             autocomplete="off"
           >
         </div>
@@ -187,7 +187,7 @@
         </button>
       </form>
 
-      <!-- Bottom link -->
+      <!-- 底部链接 -->
       <div class="form-footer">
         Have account? <a href="/views/user/index.html">Login</a>
       </div>
@@ -309,7 +309,13 @@
           })
         });
 
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (_) {
+          showError(response.ok ? 'Invalid response from server' : 'Server error. Please try again later.');
+          return;
+        }
 
         if (!response.ok || !result.success) {
           throw new Error(result.error || 'Registration failed');

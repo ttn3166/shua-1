@@ -159,7 +159,7 @@
 
       <div class="divider">or</div>
 
-      <a href="/download.html" class="btn btn-outline btn-full">
+      <a href="/views/user/download.html" class="btn btn-outline btn-full">
         Download App
       </a>
     </div>
@@ -224,7 +224,13 @@
           body: JSON.stringify({ username, password })
         });
 
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (_) {
+          showError(response.ok ? 'Invalid response from server' : 'Server error. Please try again later.');
+          return;
+        }
 
         if (!response.ok || !result.success) {
           throw new Error(result.error || 'Login failed');

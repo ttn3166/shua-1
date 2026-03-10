@@ -32,6 +32,22 @@
   --danger-color: #ff5858;
   --success-color: #00c853;
 
+  /* --- 兼容旧版“金色主题”变量（登录/注册/代理等页面仍在使用）--- */
+  --gold-primary: var(--accent-color);
+  --gold-strong: #00f2fe;
+  --gold-soft: rgba(79, 172, 254, 0.10);
+  --border-gold: rgba(79, 172, 254, 0.35);
+  --shadow-gold: 0 10px 30px -10px rgba(79, 172, 254, 0.35);
+
+  /* --- 兼容旧版圆角命名 --- */
+  --radius-lg: var(--border-radius-lg);
+  --radius-md: var(--border-radius-md);
+
+  /* --- 兼容旧版文本色命名 --- */
+  --text-dark: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-subtle: rgba(231, 235, 240, 0.8);
+
   /* --- 视觉效果 --- */
   --border-radius-lg: 24px; /* 更大的圆角 */
   --border-radius-md: 16px;

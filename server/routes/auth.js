@@ -68,13 +68,14 @@ function validatePassword(p) {
   return { ok: true };
 }
 
-router.post('/register', (req, res) => {
+router.post('/register', authLimiter, (req, res) => {
   const { username, password, ref, code } = req.body;
+  const usernameTrimmed = typeof username === 'string' ? username.trim() : '';
   
   if (!username || !password) {
     return error(res, '请填写用户名和密码');
   }
-  if (!validateUsername(username)) {
+  if (!validateUsername(usernameTrimmed)) {
     return error(res, `用户名长度需为 ${USERNAME_MIN_LEN}～${USERNAME_MAX_LEN} 个字符`);
   }
   const pwdCheck = validatePassword(password);
@@ -83,7 +84,7 @@ router.post('/register', (req, res) => {
   }
   
   // 检查用户是否已存在
-  const existing = req.db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim());
+  const existing = req.db.prepare('SELECT id FROM users WHERE username = ?').get(usernameTrimmed);
   if (existing) {
     return error(res, '该用户名已被注册', 409);
   }
@@ -138,10 +139,10 @@ router.post('/register', (req, res) => {
   
   const result = req.db.prepare(
     'INSERT INTO users (username, password_hash, role, agent_id, referred_by, invite_code) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(name, passwordHash, 'User', agentId, referredBy, inviteCode);
+  ).run(usernameTrimmed, passwordHash, 'User', agentId, referredBy, inviteCode);
   
   const userId = result.lastInsertRowid;
-  console.log(`✅ 新用户 ${name} 注册成功，邀请码: ${inviteCode}`);
+  console.log(`✅ 新用户 ${usernameTrimmed} 注册成功，邀请码: ${inviteCode}`);
   
   // 更新代理路径
   if (agentId) {
@@ -166,9 +167,9 @@ router.post('/register', (req, res) => {
         req.db.prepare(`
           INSERT INTO referral_rewards (referrer_id, referrer_username, referee_id, referee_username, amount, status)
           VALUES (?, ?, ?, ?, ?, 'completed')
-        `).run(referrer.id, referrer.username, userId, username, rewardAmount);
+        `).run(referrer.id, referrer.username, userId, usernameTrimmed, rewardAmount);
         
-        console.log(`💰 推荐奖励: ${referrer.username}(ID:${referrer.id}) 推荐 ${username}(ID:${userId})，获得 ${rewardAmount} 元`);
+        console.log(`💰 推荐奖励: ${referrer.username}(ID:${referrer.id}) 推荐 ${usernameTrimmed}(ID:${userId})，获得 ${rewardAmount} 元`);
       }
     } catch (err) {
       console.error('发放推荐奖励失败:', err);
@@ -179,7 +180,7 @@ router.post('/register', (req, res) => {
   // 签发 Token
   const token = signToken({
     id: userId,
-    username,
+    username: usernameTrimmed,
     role: 'User'
   });
 
@@ -188,7 +189,7 @@ router.post('/register', (req, res) => {
   
   return success(res, {
     token,
-    user: { id: userId, username, role: 'User' }
+    user: { id: userId, username: usernameTrimmed, role: 'User' }
   }, 'Registration successful');
 });
 
@@ -203,10 +204,11 @@ router.post('/login', authLimiter, (req, res) => {
     return error(res, 'Username and password are required');
   }
   
-  // 查找用户
+  // 查找用户（统一 trim，避免前后端空格不一致）
+  const usernameTrimmed = typeof username === 'string' ? username.trim() : '';
   const user = req.db.prepare(
     'SELECT * FROM users WHERE username = ? AND role = ?'
-  ).get(username, 'User');
+  ).get(usernameTrimmed, 'User');
   
   if (!user) {
     return error(res, 'Invalid credentials', 401);

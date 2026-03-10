@@ -13,7 +13,7 @@
 | 页面 | common.js | 语言入口（选语言按钮/链接） |
 |------|-----------|----------------------------|
 | index.html（登录） | ✅ | ✅ 右上角「🌐 Language」 |
-| register.html（注册） | ✅ | 无（从登录页选语言后进入即可） |
+| register.html（注册） | ✅ | ✅ 右上角「🌐 Language」 |
 | dashboard.html（首页） | ✅ | ✅ 顶部右侧地球图标 |
 | profile.html（个人中心） | ✅ | ✅ 侧边菜单「Language」 |
 | deposit.html（充值） | ✅ | ✅ 头部右侧地球图标 |
@@ -38,8 +38,28 @@
 
 ## 说明
 
-- **有语言入口的页面**：index、dashboard、profile、deposit、deposit_record、withdrawal_record、terms、privacy、risk_disclaimer，用户可在该页直接点击切换语言。
+- **有语言入口的页面**：index、register、dashboard、profile、deposit、deposit_record、withdrawal_record、terms、privacy、risk_disclaimer，用户可在该页直接点击切换语言。
 - **无单独语言按钮的页面**：从首页/个人中心/登录页选好语言后，再进入这些页面会保持已选语言并整页翻译。
 - **提款**：在 dashboard / profile 内为弹窗，弹窗 HTML 已预置在页面中，会随整页一起被翻译。
 
-结论：**所有用户端页面都已应用谷歌翻译逻辑，无需再改。**
+---
+
+## 新增页面检查清单（翻译相关）
+
+新增用户端页面时，按下面做即可与现有页面一致（自动参与整站翻译、隐藏谷歌栏、返回不丢语言）：
+
+1. **引入 common.js**（放在 `<head>` 或 `</body>` 前均可）  
+   ```html
+   <script src="/public/js/common.js"></script>
+   ```
+2. **若有顶部栏（返回 + 标题）**，建议加语言入口，二选一即可：  
+   - 头部右侧地球图标（与 deposit / deposit_record 一致）：  
+     - HTML：在 header 里标题后加一个 `id="headerLangBtn"` 的 div，内放地球 SVG，样式用 `margin-left:auto` 靠右。  
+     - JS：在页面脚本末尾加：  
+       `var lb = document.getElementById('headerLangBtn'); if (lb && typeof window.showLanguage === 'function') lb.addEventListener('click', function () { window.showLanguage(); });`  
+   - 或文字链接（与 index / register 一致）：  
+     `<a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;">🌐 Language</a>`
+
+做完以上，新页面会自动：跟随 `googtrans` cookie 翻译、隐藏谷歌顶部栏、返回时通过 pageshow 刷新保持语言。
+
+结论：**当前所有用户端页面均已接入翻译；新增页面按清单接入即可。**

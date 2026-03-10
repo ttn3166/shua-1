@@ -51,6 +51,8 @@ function initTables() {
       vip_level INTEGER DEFAULT 0,
       agent_id INTEGER,
       agent_path TEXT,
+      referred_by TEXT,
+      invite_code TEXT,
       account_lock_status TEXT DEFAULT 'normal',
       account_lock_reason TEXT,
       force_chain_next INTEGER DEFAULT 0,
@@ -62,6 +64,8 @@ function initTables() {
     CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
     CREATE INDEX IF NOT EXISTS idx_users_agent_path ON users(agent_path);
+    CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_users_invite_code ON users(invite_code);
 
     -- 任务模板表
     CREATE TABLE IF NOT EXISTS task_templates (
@@ -225,6 +229,24 @@ function initTables() {
       description TEXT
     );
   `);
+
+  // 迁移：users 表补齐邀请字段（旧库可能缺列）
+  try {
+    const userCols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
+    if (!userCols.includes('referred_by')) {
+      db.exec("ALTER TABLE users ADD COLUMN referred_by TEXT");
+      console.log('✅ users.referred_by 列已添加');
+    }
+    if (!userCols.includes('invite_code')) {
+      db.exec("ALTER TABLE users ADD COLUMN invite_code TEXT");
+      console.log('✅ users.invite_code 列已添加');
+    }
+    // 索引兜底（SQLite 允许重复执行 IF NOT EXISTS）
+    db.exec("CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by)");
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS uq_users_invite_code ON users(invite_code)");
+  } catch (e) {
+    console.error('users migrate error:', e);
+  }
 
   // 迁移：为 match 流程支持 pending 订单添加 source、dispatch_order_id 列
   try {
