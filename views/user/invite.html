@@ -38,7 +38,7 @@
             100% { background-position: 200% 0; }
         }
     </style>
-    <script src="/public/js/common.js"></script>
+    <script src="/public/js/common.js?v=3"></script>
 </head>
 <body class="flex flex-col">
     <!-- 顶部导航栏 -->
@@ -163,7 +163,7 @@
                     showToast('❌ Failed to load invite info');
                 }
             } catch (error) {
-                console.error('加载邀请信息失败:', error);
+                console.error('Failed to load invite info:', error);
                 showToast('❌ Network error, please try again');
             }
         }

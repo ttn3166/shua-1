@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
   <title>Deposit - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
-  <script src="/public/js/common.js"></script>
+  <script src="/public/js/common.js?v=3"></script>
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -215,15 +215,7 @@
         setTimeout(function() { el.classList.remove('show'); }, 2500);
       }
 
-      function getTipsForCurrentLanguage(backendTips, defaultEn) {
-        var raw = (document.cookie || '').split(';').filter(function(s) { return s.indexOf('googtrans=') !== -1; })[0];
-        var val = raw ? raw.split('=')[1] : '';
-        var target = (val && val.split('/').length >= 3) ? val.split('/')[2].trim() : '';
-        if (!target || target === 'zh-CN') return backendTips || defaultEn;
-        return defaultEn;
-      }
-
-      var DEPOSIT_TIPS_EN = 'TRC20 only; Minimum 10 USDT; Arrival in about 1–30 minutes; Wait for review after submission.';
+      var DEPOSIT_TIPS_DEFAULT = 'TRC20 only; Minimum 10 USDT; Arrival in about 1–30 minutes; Wait for review after submission.';
 
       function escHtml(s) {
         if (s == null) return '';
@@ -243,7 +235,7 @@
               submitBtn.style.display = 'none';
               document.querySelector('.deposit-card section:last-of-type').style.display = 'none';
               var tipsEl = document.getElementById('depositTipsText');
-              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, '维护中。');
+              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, 'Under maintenance.');
               return;
             }
             try { channels = JSON.parse(config.deposit_channels || '[]'); } catch (e) { channels = []; }
@@ -268,7 +260,7 @@
             document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash *';
             document.querySelector('label[for="depositScreenshotFile"]').innerHTML = 'Upload Screenshot *';
             var tipsEl = document.getElementById('depositTipsText');
-            if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, DEPOSIT_TIPS_EN);
+            if (tipsEl) tipsEl.textContent = config.deposit_tips || DEPOSIT_TIPS_DEFAULT;
           })
           .catch(function() {
             addressBox.textContent = 'Failed to load. Please try again.';

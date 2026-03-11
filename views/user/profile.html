@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -641,11 +641,33 @@
       to { opacity: 0; }
     }
   </style>
-  <script src="/public/js/common.js"></script>
+  <script src="/public/js/common.js?v=3"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
   <div id="toast" class="toast"></div>
+
+  <!-- Logout confirmation (custom buttons in English) -->
+  <div id="logoutConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card-elevated" style="max-width: 320px; width: 100%; padding: 24px; text-align: center;">
+      <p style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 24px;">Are you sure you want to log out?</p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-outline" onclick="closeLogoutConfirmModal()" style="flex: 1;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmLogout()" style="flex: 1;">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdrawal confirmation (custom buttons in English) -->
+  <div id="withdrawConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10001; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card-elevated" style="max-width: 340px; width: 100%; padding: 24px; text-align: center;">
+      <p id="withdrawConfirmMsg" style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin: 0 0 24px; line-height: 1.5;"></p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 提款弹窗：预先放在 DOM 中以便谷歌翻译能翻译 -->
   <div id="withdrawModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(102, 126, 234, 0.95); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 9999; padding: 20px; overflow-y: auto;">
@@ -731,7 +753,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
       </div>
-      <div class="stat-label">冻结</div>
+      <div class="stat-label">Frozen</div>
       <div class="stat-value">
         <span id="frozenBalance">0.00</span>
         <span class="stat-unit">USDT</span>
@@ -809,7 +831,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
             </svg>
           </div>
-          <div class="menu-label">绑定钱包</div>
+          <div class="menu-label">Bind Wallet</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -845,7 +867,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           </div>
-          <div class="menu-label">登录密码</div>
+          <div class="menu-label">Login Password</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -895,7 +917,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
             </svg>
           </div>
-          <div class="menu-label">退出登录</div>
+          <div class="menu-label">Log Out</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -926,7 +948,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       </div>
-      <div class="nav-label" style="color: #1a202c; font-weight: 700;">开始</div>
+      <div class="nav-label" style="color: #1a202c; font-weight: 700;">Start</div>
     </div>
     <div class="nav-item" onclick="window.open('https://t.me/TaskMall_Support', '_blank')">
       <div class="nav-icon">
@@ -942,7 +964,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
       </div>
-      <div class="nav-label">我的</div>
+      <div class="nav-label">Profile</div>
     </div>
   </div>
 
@@ -1062,7 +1084,24 @@
       var msg = 'Confirm withdrawal of ' + amount + ' USDT?';
       if (fee > 0) msg += ' Fee: ' + fee.toFixed(2) + ' USDT, total deduction: ' + totalDeduct.toFixed(2) + ' USDT.';
       msg += ' Submission will be pending review.';
-      if (!confirm(msg)) return;
+      window._pendingWithdraw = { amount, wallet_address, note, password };
+      var msgEl = document.getElementById('withdrawConfirmMsg');
+      if (msgEl) msgEl.textContent = msg;
+      var modal = document.getElementById('withdrawConfirmModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeWithdrawConfirmModal() {
+      window._pendingWithdraw = null;
+      var modal = document.getElementById('withdrawConfirmModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function confirmWithdrawalSubmit() {
+      var p = window._pendingWithdraw;
+      closeWithdrawConfirmModal();
+      if (!p) return;
+      window._pendingWithdraw = null;
       const withdrawBtn = document.getElementById('withdrawBtn');
       const withdrawBtnText = document.getElementById('withdrawBtnText');
       const withdrawBtnLoading = document.getElementById('withdrawBtnLoading');
@@ -1074,10 +1113,10 @@
         const response = await fetch('/api/finance/withdrawal', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, wallet_address, note, password: password, channel_id: null })
+          body: JSON.stringify({ amount: p.amount, wallet_address: p.wallet_address, note: p.note, password: p.password, channel_id: null })
         });
         const result = await response.json();
-        if (!response.ok || !result.success)         throw new Error(result.error || 'Withdrawal failed');
+        if (!response.ok || !result.success) throw new Error(result.error || 'Withdrawal failed');
         closeWithdrawModal();
         showToast('Withdrawal submitted, pending review');
         setTimeout(loadUserData, 500);
@@ -1109,7 +1148,7 @@
         document.execCommand('copy');
         showToast('Address copied!');
       } catch (err) {
-        showToast('复制失败');
+        showToast('Copy failed');
       }
       document.body.removeChild(textarea);
     }
@@ -1141,9 +1180,19 @@
       window.location.href = '/views/user/about.html';
     }
 
-    // 退出登录（调用后端清 Cookie 并记录退出日志，再清本地并跳转）
-    async function logout() {
-      if (!confirm('Are you sure you want to log out?')) return;
+    // 退出登录：先显示自定义确认弹窗（按钮固定英文，避免系统 confirm 显示「取消」「好」）
+    function logout() {
+      var modal = document.getElementById('logoutConfirmModal');
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+    }
+    function closeLogoutConfirmModal() {
+      var modal = document.getElementById('logoutConfirmModal');
+      if (modal) modal.style.display = 'none';
+    }
+    async function confirmLogout() {
+      closeLogoutConfirmModal();
       var token = localStorage.getItem('token');
       try {
         await fetch('/api/auth/logout', {
@@ -1175,7 +1224,7 @@
           }
         }
       } catch (error) {
-        console.error('加载系统配置失败:', error);
+        console.error('Failed to load config:', error);
       }
     }
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -579,7 +579,7 @@
       }
     }
   </style>
-  <script src="/public/js/common.js"></script>
+  <script src="/public/js/common.js?v=3"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
@@ -728,7 +728,7 @@
         renderOrders();
 
       } catch (error) {
-        console.error('加载订单失败:', error);
+        console.error('Failed to load orders:', error);
         // 首次失败时自动重试一次，解决首屏偶发无数据问题
         if (!isRetry) {
           setTimeout(function() { loadOrders(true); }, 1200);
@@ -909,7 +909,7 @@
           }
         }
       } catch (error) {
-        console.error('加载系统配置失败:', error);
+        console.error('Failed to load config:', error);
       }
     }
 

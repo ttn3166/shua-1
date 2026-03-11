@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -244,7 +244,7 @@
       to { transform: rotate(360deg); }
     }
   </style>
-  <script src="/public/js/common.js"></script>
+  <script src="/public/js/common.js?v=3"></script>
 </head>
 <body>
   <!-- 顶部导航栏 -->
@@ -350,7 +350,7 @@
           document.getElementById('walletAddress').value = result.data.wallet_address;
         }
       } catch (error) {
-        console.error('加载钱包信息失败:', error);
+        console.error('Failed to load wallet info:', error);
       }
     }
 
@@ -404,7 +404,7 @@
           submitBtn.innerHTML = 'Confirm Binding';
         }
       } catch (error) {
-        console.error('绑定钱包失败:', error);
+        console.error('Bind wallet failed:', error);
         showToast('❌ Network error, please try again');
         submitBtn.disabled = false;
         submitBtn.innerHTML = 'Confirm Binding';

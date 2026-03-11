@@ -658,11 +658,22 @@
       50% { transform: translateY(-10px); }
     }
   </style>
-  <script src="/public/js/common.js"></script>
+  <script src="/public/js/common.js?v=3"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
   <div id="toast" class="toast"></div>
+
+  <!-- Withdrawal confirmation (custom buttons in English) -->
+  <div id="withdrawConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10001; align-items: center; justify-content: center; padding: 20px;">
+    <div class="card-elevated" style="max-width: 340px; width: 100%; padding: 24px; text-align: center;">
+      <p id="withdrawConfirmMsg" style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin: 0 0 24px; line-height: 1.5;"></p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 提款弹窗：预先放在 DOM 中以便谷歌翻译能翻译，打开时只显示并更新动态数据 -->
   <div id="withdrawModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(102, 126, 234, 0.95); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 9999; padding: 20px; overflow-y: auto;">
@@ -1058,7 +1069,24 @@
       var msg = 'Confirm withdrawal of ' + amount + ' USDT?';
       if (fee > 0) msg += ' Fee: ' + fee.toFixed(2) + ' USDT, total deduction: ' + totalDeduct.toFixed(2) + ' USDT.';
       msg += ' Submission will be pending review.';
-      if (!confirm(msg)) return;
+      window._pendingWithdraw = { amount, wallet_address, note, password };
+      var msgEl = document.getElementById('withdrawConfirmMsg');
+      if (msgEl) msgEl.textContent = msg;
+      var modal = document.getElementById('withdrawConfirmModal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeWithdrawConfirmModal() {
+      window._pendingWithdraw = null;
+      var modal = document.getElementById('withdrawConfirmModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function confirmWithdrawalSubmit() {
+      var p = window._pendingWithdraw;
+      closeWithdrawConfirmModal();
+      if (!p) return;
+      window._pendingWithdraw = null;
 
       const withdrawBtn = document.getElementById('withdrawBtn');
       const withdrawBtnText = document.getElementById('withdrawBtnText');
@@ -1076,7 +1104,7 @@
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ amount, wallet_address, note, password: password, channel_id: null })
+          body: JSON.stringify({ amount: p.amount, wallet_address: p.wallet_address, note: p.note, password: p.password, channel_id: null })
         });
 
         const result = await response.json();
@@ -1232,7 +1260,7 @@
       var card = document.createElement('div');
       card.className = 'product-card';
       var imgSrc = (product.image && String(product.image).trim()) ? product.image : 'https://placehold.co/300x300/e2e8f0/718096?text=No+Image';
-      var title = product.title || '商品';
+      var title = product.title || 'Product';
       var price = product.price != null ? Number(product.price).toFixed(2) : '0.00';
       var badge = '';
       if (index === 0) badge = '<span class="badge-hot">HOT</span>';
@@ -1385,7 +1413,7 @@
         }, 500);
 
       } catch (error) {
-        showToast('错误：' + error.message);
+        showToast('Error: ' + error.message);
       }
     }
 
@@ -1451,88 +1479,8 @@
       slidesEl.addEventListener('touchstart', function() { clearInterval(t); }, { once: false });
     }
 
-    // 语言选择：优先用 common.js 的 showLanguage，否则用本页备用面板（保证一定有可选项）
-    function openLanguagePanelFallback() {
-      var body = document.body;
-      if (!body) return;
-      var id = 'dashboard_lang_panel';
-      var existing = document.getElementById(id);
-      if (existing) {
-        existing.style.display = existing.style.display === 'none' ? 'block' : 'none';
-        return;
-      }
-      var langs = [
-        { code: 'en', label: 'English' },
-        { code: '', label: 'Chinese (Original)' },
-        { code: 'vi', label: 'Tiếng Việt' },
-        { code: 'th', label: 'ไทย' },
-        { code: 'id', label: 'Bahasa Indonesia' },
-        { code: 'hi', label: 'हिन्दी' },
-        { code: 'pt', label: 'Português' },
-        { code: 'es', label: 'Español' },
-        { code: 'zh-TW', label: '繁體中文' },
-        { code: 'ru', label: 'Русский' },
-        { code: 'uk', label: 'Українська' },
-        { code: 'be', label: 'Беларуская' },
-        { code: 'it', label: 'Italiano' },
-        { code: 'ar', label: 'العربية' },
-        { code: 'he', label: 'עברית' },
-        { code: 'tr', label: 'Türkçe' }
-      ];
-      var panel = document.createElement('div');
-      panel.id = id;
-      panel.className = 'notranslate';
-      panel.setAttribute('translate', 'no');
-      panel.setAttribute('lang', 'en');
-      panel.style.cssText = 'position:fixed;bottom:max(80px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:10001;min-width:200px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:0;max-height:70vh;overflow-y:auto;';
-      var title = document.createElement('div');
-      title.className = 'notranslate';
-      title.setAttribute('translate', 'no');
-      title.setAttribute('lang', 'en');
-      title.style.cssText = 'padding:12px 14px;font-size:14px;font-weight:600;color:#4a5568;border-bottom:1px solid #e2e8f0;';
-      title.textContent = 'Select Language';
-      panel.appendChild(title);
-      function applyLang(code) {
-        var v = code ? '/zh-CN/' + code : '';
-        document.cookie = 'googtrans=' + v + '; path=/; max-age=31536000; SameSite=Lax';
-        if (typeof showToast === 'function') showToast('Applying language…');
-        if (panel.parentNode) panel.parentNode.removeChild(panel);
-        setTimeout(function() { window.location.reload(); }, 300);
-      }
-      langs.forEach(function(item) {
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'notranslate';
-        btn.setAttribute('translate', 'no');
-        btn.setAttribute('lang', 'en');
-        btn.style.cssText = 'display:block;width:100%;padding:14px 14px;font-size:14px;color:#2d3748;text-align:left;border:none;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;';
-        btn.textContent = item.label;
-        btn.onclick = function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          applyLang(item.code);
-        };
-        btn.ontouchend = function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          applyLang(item.code);
-        };
-        panel.appendChild(btn);
-      });
-      panel.addEventListener('click', function(e) { e.stopPropagation(); });
-      panel.addEventListener('touchend', function(e) { e.stopPropagation(); });
-      body.appendChild(panel);
-      setTimeout(function() {
-        document.addEventListener('click', function close(e) {
-          if (!panel.parentNode) return;
-          if (panel.contains(e.target)) return;
-          var lb = document.getElementById('headerLangBtn');
-          if (lb && lb.contains(e.target)) return;
-          panel.parentNode.removeChild(panel);
-          document.removeEventListener('click', close);
-        }, false);
-      }, 200);
-    }
+    // 语言选择（占位，后续可接入 i18next / Vue-i18n）
+    function openLanguagePanelFallback() {}
 
     // 页面加载
     window.addEventListener('DOMContentLoaded', function() {
