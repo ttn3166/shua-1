@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
+  <meta name="i18n-title" content="dashboard.pageTitle">
   <title>Home - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -658,7 +659,7 @@
       50% { transform: translateY(-10px); }
     }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
@@ -669,8 +670,8 @@
     <div class="card-elevated" style="max-width: 340px; width: 100%; padding: 24px; text-align: center;">
       <p id="withdrawConfirmMsg" style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin: 0 0 24px; line-height: 1.5;"></p>
       <div style="display: flex; gap: 12px; justify-content: center;">
-        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;">Confirm</button>
+        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;" data-i18n="common.confirm">Confirm</button>
       </div>
     </div>
   </div>
@@ -679,33 +680,33 @@
   <div id="withdrawModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(102, 126, 234, 0.95); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 9999; padding: 20px; overflow-y: auto;">
     <div class="card-elevated" style="max-width: 460px; width: 100%; margin: 20px 0;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">USDT Withdrawal</h2>
-        <p style="color: var(--text-secondary); font-size: 13px;" id="withdrawSubtext">Min 10 USDT</p>
+        <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;" data-i18n="withdraw.title">USDT Withdrawal</h2>
+        <p style="color: var(--text-secondary); font-size: 13px;" id="withdrawSubtext" data-i18n="withdraw.min">Min 10 USDT</p>
       </div>
       <form id="withdrawForm" onsubmit="submitWithdrawal(event)">
         <div class="form-group">
-          <label class="form-label">Withdraw Amount (USDT)</label>
+          <label class="form-label" data-i18n="withdraw.amount">Withdraw Amount (USDT)</label>
           <input type="number" id="withdrawAmount" class="form-input" placeholder="Min 10" min="10" step="0.01" required>
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Available: <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT</div>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;"><span data-i18n="withdraw.available">Available:</span> <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Wallet Address (TRC20)</label>
+          <label class="form-label" data-i18n="withdraw.wallet">Wallet Address (TRC20)</label>
           <input type="text" id="walletAddress" class="form-input" placeholder="Enter your TRC20 address" required>
         </div>
         <div class="form-group" id="withdrawSecurityPasswordRow" style="display: none;">
-          <label class="form-label">Security Password</label>
+          <label class="form-label" data-i18n="withdraw.securityPassword">Security Password</label>
           <input type="password" id="withdrawSecurityPassword" class="form-input" placeholder="Enter security password">
         </div>
         <div class="form-group">
-          <label class="form-label">Remark (Optional)</label>
+          <label class="form-label" data-i18n="withdraw.remark">Remark (Optional)</label>
           <input type="text" id="withdrawNote" class="form-input" placeholder="Enter remark...">
         </div>
         <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; color: #fde68a; text-align: left;">
-          <div style="font-weight: 600; margin-bottom: 4px;">Withdrawal Notice:</div>
+          <div style="font-weight: 600; margin-bottom: 4px;" data-i18n="withdraw.noticeTitle">Withdrawal Notice:</div>
           <div style="line-height: 1.6;">• Request will be queued for audit<br>• Arrives within 24h after approval<br>• Ensure wallet address is correct</div>
         </div>
-        <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn"><span id="withdrawBtnText">Confirm</span><span id="withdrawBtnLoading" class="loading" style="display: none;"></span></button>
-        <button type="button" class="btn btn-outline btn-full" onclick="closeWithdrawModal()" style="margin-top: 12px;">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn"><span id="withdrawBtnText" data-i18n="common.confirm">Confirm</span><span id="withdrawBtnLoading" class="loading" style="display: none;"></span></button>
+        <button type="button" class="btn btn-outline btn-full" onclick="closeWithdrawModal()" style="margin-top: 12px;" data-i18n="common.cancel">Cancel</button>
       </form>
     </div>
   </div>
@@ -714,7 +715,7 @@
   <div class="header-section">
     <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
       <div>
-        <div class="welcome-text">Hi! Welcome</div>
+        <div class="welcome-text" data-i18n="dashboard.welcome">Hi! Welcome</div>
         <div class="welcome-name" id="userName">Guest</div>
       </div>
     </div>
@@ -733,24 +734,24 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
     </svg>
     <div class="announcement-content">
-      <div class="announcement-text" id="announcementText">Loading announcement...</div>
+      <div class="announcement-text" id="announcementText" data-i18n="dashboard.loadingAnnouncement">Loading announcement...</div>
     </div>
   </div>
 
   <!-- 资产概览（紧凑版） -->
   <div class="asset-compact">
-    <div class="asset-label">Total Balance (USDT)</div>
+    <div class="asset-label" data-i18n="dashboard.totalBalance">Total Balance (USDT)</div>
     <div>
       <span class="asset-amount" id="totalBalance">0.00</span>
       <span class="asset-unit">USDT</span>
     </div>
     <div class="asset-stats">
       <div class="asset-stat">
-        <div class="asset-stat-label">Today</div>
+        <div class="asset-stat-label" data-i18n="dashboard.today">Today</div>
         <div class="asset-stat-value" id="todayProfit">+0.00</div>
       </div>
       <div class="asset-stat">
-        <div class="asset-stat-label">Total Earned</div>
+        <div class="asset-stat-label" data-i18n="dashboard.totalEarned">Total Earned</div>
         <div class="asset-stat-value" id="totalProfit">0.00</div>
       </div>
     </div>
@@ -764,7 +765,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
         </svg>
       </div>
-      <div class="action-label">Deposit</div>
+      <div class="action-label" data-i18n="dashboard.deposit">Deposit</div>
     </div>
     <div class="action-item" onclick="goToWithdraw()">
       <div class="action-icon">
@@ -772,7 +773,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
         </svg>
       </div>
-      <div class="action-label">Withdraw</div>
+      <div class="action-label" data-i18n="dashboard.withdraw">Withdraw</div>
     </div>
     <div class="action-item" onclick="window.location.href='/views/user/invite.html'">
       <div class="action-icon">
@@ -780,7 +781,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
         </svg>
       </div>
-      <div class="action-label">Invite</div>
+      <div class="action-label" data-i18n="dashboard.invite">Invite</div>
     </div>
     <a href="/views/user/about.html" class="action-item" style="text-decoration:none;color:inherit;">
       <div class="action-icon">
@@ -788,7 +789,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
         </svg>
       </div>
-      <div class="action-label">About</div>
+      <div class="action-label" data-i18n="dashboard.about">About</div>
     </a>
   </div>
 
@@ -807,12 +808,12 @@
       </div>
     </div>
   </div>
-  <div class="mall-tagline">TaskMall — Shop · Earn · Withdraw</div>
+  <div class="mall-tagline" data-i18n="dashboard.tagline">TaskMall — Shop · Earn · Withdraw</div>
 
   <!-- 任务大厅 -->
   <div class="section-title">
-    Task Halls
-    <span style="font-size: 12px; font-weight: 500;">Swipe →</span>
+    <span data-i18n="dashboard.taskHalls">Task Halls</span>
+    <span style="font-size: 12px; font-weight: 500;" data-i18n="dashboard.swipe">Swipe →</span>
   </div>
   <div class="task-halls">
     <div class="hall-card" onclick="startTask('amazon', 0, 2)">
@@ -839,13 +840,13 @@
 
   <!-- 商品瀑布流 -->
   <div class="products-section">
-    <div class="section-title-dark">Recommended for You <span id="productCountText" style="font-size:12px;font-weight:500;color:#718096;"></span></div>
+    <div class="section-title-dark"><span data-i18n="dashboard.recommended">Recommended for You</span> <span id="productCountText" style="font-size:12px;font-weight:500;color:#718096;"></span></div>
     <div class="product-search-wrap">
-      <input type="text" id="productSearchInput" placeholder="Search products..." maxlength="80" autocomplete="off">
+      <input type="text" id="productSearchInput" placeholder="Search products..." data-i18n-placeholder="dashboard.searchProducts" maxlength="80" autocomplete="off">
     </div>
     <div class="category-chips" id="categoryChips">
-      <span class="chip active" data-vip="">All</span>
-      <span class="chip" data-vip="0">General</span>
+      <span class="chip active" data-vip="" data-i18n="dashboard.all">All</span>
+      <span class="chip" data-vip="0" data-i18n="dashboard.general">General</span>
       <span class="chip" data-vip="1">VIP 1</span>
       <span class="chip" data-vip="2">VIP 2</span>
       <span class="chip" data-vip="3">VIP 3</span>
@@ -853,19 +854,19 @@
     </div>
     <div id="productsLoading" class="product-loading" style="text-align:center; padding:40px; color:#718096; display:none;">
       <div class="loading" style="width:36px; height:36px; margin:0 auto 12px;"></div>
-      Loading...
+      <span data-i18n="common.loading">Loading...</span>
     </div>
     <div id="productGrid" class="product-grid"></div>
     <div id="noProducts" style="display:none; text-align:center; padding:40px; color:#718096; font-size:14px;">
-      No products available at the moment.
+      <span data-i18n="dashboard.noProducts">No products available at the moment.</span>
     </div>
   </div>
 
   <!-- 购物中心页脚 -->
   <footer class="mall-footer">
-    <div style="margin-bottom:8px;">Open 24/7 <span class="footer-dots">·</span> <a href="/views/user/deposit.html">Deposit</a> <span class="footer-dots">·</span> <a href="/views/user/profile.html">Withdraw</a> <span class="footer-dots">·</span> <a href="/views/user/invite.html">Invite</a> <span class="footer-dots">·</span> <a href="/views/user/faq.html">FAQ</a></div>
-    <div style="margin-bottom:8px;"><a href="/views/user/terms.html">Terms</a> <span class="footer-dots">·</span> <a href="/views/user/privacy.html">Privacy</a> <span class="footer-dots">·</span> <a href="/views/user/risk_disclaimer.html">Risk</a></div>
-    <div>TaskMall — Your Shopping & Earn Plaza</div>
+    <div style="margin-bottom:8px;"><span data-i18n="dashboard.open247">Open 24/7</span> <span class="footer-dots">·</span> <a href="/views/user/deposit.html" data-i18n="dashboard.deposit">Deposit</a> <span class="footer-dots">·</span> <a href="/views/user/profile.html" data-i18n="dashboard.withdraw">Withdraw</a> <span class="footer-dots">·</span> <a href="/views/user/invite.html" data-i18n="dashboard.invite">Invite</a> <span class="footer-dots">·</span> <a href="/views/user/faq.html" data-i18n="dashboard.faq">FAQ</a></div>
+    <div style="margin-bottom:8px;"><a href="/views/user/terms.html" data-i18n="common.terms">Terms</a> <span class="footer-dots">·</span> <a href="/views/user/privacy.html" data-i18n="common.privacy">Privacy</a> <span class="footer-dots">·</span> <a href="/views/user/risk_disclaimer.html" data-i18n="dashboard.risk">Risk</a></div>
+    <div data-i18n="dashboard.footerSlogan">TaskMall — Your Shopping & Earn Plaza</div>
   </footer>
 
   <button type="button" class="back-to-top" id="backToTopBtn" aria-label="Back to top" title="Back to top">
@@ -880,7 +881,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
         </svg>
       </div>
-      <div class="nav-label">Home</div>
+      <div class="nav-label" data-i18n="nav.home">Home</div>
     </div>
     <div class="nav-item" onclick="window.location.href='/views/user/history.html'">
       <div class="nav-icon">
@@ -888,7 +889,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="nav-label">History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
+      <div class="nav-label"><span data-i18n="nav.history">History</span><span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
     </div>
     <div class="nav-item center" onclick="goToTasks()">
       <div class="nav-icon-large">
@@ -896,7 +897,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       </div>
-      <div class="nav-label" style="color: #1a202c; font-weight: 700;">Start</div>
+      <div class="nav-label" style="color: #1a202c; font-weight: 700;" data-i18n="nav.start">Start</div>
     </div>
     <div class="nav-item" onclick="contactSupport()">
       <div class="nav-icon">
@@ -904,7 +905,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
         </svg>
       </div>
-      <div class="nav-label">Service</div>
+      <div class="nav-label" data-i18n="nav.service">Service</div>
     </div>
     <div class="nav-item" onclick="window.location.href='/views/user/profile.html'">
       <div class="nav-icon">
@@ -912,7 +913,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
       </div>
-      <div class="nav-label">Profile</div>
+      <div class="nav-label" data-i18n="nav.profile">Profile</div>
     </div>
   </div>
 
@@ -978,10 +979,10 @@
       var welcome = params.get('welcome');
       var registered = params.get('registered');
       if (welcome === '1') {
-        showToast('Welcome back!');
+        showToast(typeof t === 'function' ? (t('toast.welcomeBack') || 'Welcome back!') : 'Welcome back!');
         if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
       } else if (registered === '1') {
-        showToast('Account created! Welcome to TaskMall.');
+        showToast(typeof t === 'function' ? (t('toast.accountCreated') || 'Account created! Welcome to TaskMall.') : 'Account created! Welcome to TaskMall.');
         if (window.history && window.history.replaceState) window.history.replaceState({}, '', window.location.pathname);
       }
     }
@@ -1004,7 +1005,9 @@
         if (r.success && r.data) cfg = r.data;
       } catch (e) {}
       if (cfg.withdraw_open === '0' || cfg.withdraw_maintenance === '1') {
-        showToast(cfg.withdraw_maintenance === '1' ? 'Withdrawal under maintenance' : 'Withdrawal is disabled');
+        showToast(cfg.withdraw_maintenance === '1'
+          ? (typeof t === 'function' ? (t('withdraw.maintenance') || 'Withdrawal under maintenance') : 'Withdrawal under maintenance')
+          : (typeof t === 'function' ? (t('withdraw.disabled') || 'Withdrawal is disabled') : 'Withdrawal is disabled'));
         return;
       }
       var minW = parseFloat(cfg.withdraw_min) || 10;
@@ -1012,9 +1015,11 @@
       var feeType = (cfg.withdraw_fee_type || 'percent').toLowerCase();
       var feeVal = parseFloat(cfg.withdraw_fee_value) || 0;
       var feeText = feeVal > 0 ? (feeType === 'fixed' ? feeVal + ' USDT' : feeVal + '%') : '0';
-      var subText = 'Min ' + minW + ' USDT';
-      if (maxW > 0) subText += ' · Max ' + maxW + ' USDT';
-      subText += ' · Fee: ' + feeText;
+      var minWord = (typeof t === 'function' ? (t('common.min') || 'Min') : 'Min');
+      var maxWord = (typeof t === 'function' ? (t('common.max') || 'Max') : 'Max');
+      var subText = minWord + ' ' + minW + ' USDT';
+      if (maxW > 0) subText += ' · ' + maxWord + ' ' + maxW + ' USDT';
+      subText += ' · ' + (typeof t === 'function' ? (t('withdraw.feeLabel') || 'Fee') : 'Fee') + ': ' + feeText;
 
       var modal = document.getElementById('withdrawModal');
       if (!modal) return;
@@ -1023,7 +1028,7 @@
       var amountInp = document.getElementById('withdrawAmount');
       if (amountInp) {
         amountInp.min = minW;
-        amountInp.placeholder = 'Min ' + minW + (maxW > 0 ? ', max ' + maxW : '');
+        amountInp.placeholder = minWord + ' ' + minW + (maxW > 0 ? ', ' + maxWord.toLowerCase() + ' ' + maxW : '');
       }
       modal.style.display = 'flex';
       modal.style.animation = 'fadeIn 0.3s ease-out';
@@ -1066,9 +1071,10 @@
         fee = (cfg.withdraw_fee_type || 'percent').toLowerCase() === 'fixed' ? parseFloat(cfg.withdraw_fee_value) : amount * parseFloat(cfg.withdraw_fee_value) / 100;
       }
       var totalDeduct = amount + fee;
-      var msg = 'Confirm withdrawal of ' + amount + ' USDT?';
-      if (fee > 0) msg += ' Fee: ' + fee.toFixed(2) + ' USDT, total deduction: ' + totalDeduct.toFixed(2) + ' USDT.';
-      msg += ' Submission will be pending review.';
+      var confirmTpl = (typeof t === 'function' ? (t('withdraw.confirmTpl') || 'Confirm withdrawal of {amount} USDT?') : 'Confirm withdrawal of {amount} USDT?');
+      var msg = confirmTpl.replace('{amount}', String(amount));
+      if (fee > 0) msg += ' ' + (typeof t === 'function' ? (t('withdraw.feeLabel') || 'Fee') : 'Fee') + ': ' + fee.toFixed(2) + ' USDT, ' + (typeof t === 'function' ? (t('withdraw.totalDeduction') || 'total deduction') : 'total deduction') + ': ' + totalDeduct.toFixed(2) + ' USDT.';
+      msg += (typeof t === 'function' ? (t('withdraw.pendingReview') || ' Submission will be pending review.') : ' Submission will be pending review.');
       window._pendingWithdraw = { amount, wallet_address, note, password };
       var msgEl = document.getElementById('withdrawConfirmMsg');
       if (msgEl) msgEl.textContent = msg;
@@ -1114,14 +1120,14 @@
         }
 
         closeWithdrawModal();
-        showToast('Withdrawal submitted, pending review');
+        showToast(typeof t === 'function' ? (t('withdraw.submittedPending') || 'Withdrawal submitted, pending review') : 'Withdrawal submitted, pending review');
 
         setTimeout(() => {
           loadUserData();
         }, 500);
 
       } catch (error) {
-        showToast('Error: ' + error.message);
+        showToast((typeof t === 'function' ? (t('common.errorPrefix') || 'Error: ') : 'Error: ') + (error && error.message ? error.message : ''));
       } finally {
         withdrawBtn.disabled = false;
         withdrawBtnText.style.display = 'inline';
@@ -1145,7 +1151,7 @@
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(inviteLink).then(() => {
-          showToast('Invite link copied!');
+          showToast(typeof t === 'function' ? (t('invite.copied') || 'Invite link copied!') : 'Invite link copied!');
         }).catch(() => {
           fallbackCopy(inviteLink);
         });
@@ -1163,9 +1169,9 @@
       textarea.select();
       try {
         document.execCommand('copy');
-        showToast('Invite link copied!');
+        showToast(typeof t === 'function' ? (t('invite.copied') || 'Invite link copied!') : 'Invite link copied!');
       } catch (err) {
-        showToast('Copy failed');
+        showToast(typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed');
       }
       document.body.removeChild(textarea);
     }
@@ -1181,7 +1187,8 @@
       const currentBalance = parseFloat(document.getElementById('totalBalance').textContent) || 0;
 
       if (currentBalance < minBalance) {
-        showToast(`❌ Insufficient balance! ${hall} hall requires at least $${minBalance}`);
+        var tpl = (typeof t === 'function' ? t('toast.insufficientBalanceHall') : '') || 'Insufficient balance! {hall} hall requires at least ${min}';
+        showToast(tpl.replace('{hall}', String(hall)).replace('{min}', String(minBalance)));
         return;
       }
 
@@ -1220,7 +1227,7 @@
         loading.style.display = 'none';
         window.__mallProducts = [];
         empty.style.display = 'block';
-        empty.textContent = 'Failed to load products.';
+        empty.textContent = (typeof t === 'function' ? (t('dashboard.productsLoadFailed') || 'Failed to load products.') : 'Failed to load products.');
         updateProductCount(0);
       }
     }
@@ -1246,7 +1253,7 @@
       empty.style.display = 'none';
       if (filtered.length === 0) {
         empty.style.display = 'block';
-        empty.textContent = keyword || vipFilter !== '' ? 'No matching products.' : 'No products available at the moment.';
+        empty.textContent = keyword || vipFilter !== '' ? (typeof t === 'function' ? (t('dashboard.noMatchingProducts') || 'No matching products.') : 'No matching products.') : (typeof t === 'function' ? (t('dashboard.noProducts') || 'No products available at the moment.') : 'No products available at the moment.');
         updateProductCount(0);
         return;
       }
@@ -1271,7 +1278,7 @@
     }
 
     function showProductDetail(product) {
-      showToast('Complete task first to unlock shopping');
+      showToast(typeof t === 'function' ? (t('toast.completeTaskFirst') || 'Complete task first to unlock shopping') : 'Complete task first to unlock shopping');
     }
 
     // 开始抢单：跳转到任务大厅
@@ -1298,13 +1305,13 @@
         animation: fadeIn 0.3s ease-out;
       `;
 
-      modal.innerHTML = `
-        <div style="text-align: center;">
-          <div class="loading" style="width: 60px; height: 60px; border-width: 4px; margin: 0 auto 24px;"></div>
-          <div style="font-size: 20px; color: white; font-weight: 700; margin-bottom: 8px;">Matching order...</div>
-          <div style="font-size: 14px; color: rgba(255,255,255,0.8);">System is finding the best order for you</div>
-        </div>
-      `;
+      var matchingTitle = (typeof t === 'function' ? (t('dashboard.matchingOrder') || 'Matching order...') : 'Matching order...');
+      var matchingHint = (typeof t === 'function' ? (t('dashboard.matchingHint') || 'System is finding the best order for you') : 'System is finding the best order for you');
+      modal.innerHTML = '<div style="text-align: center;">' +
+        '<div class="loading" style="width: 60px; height: 60px; border-width: 4px; margin: 0 auto 24px;"></div>' +
+        '<div style="font-size: 20px; color: white; font-weight: 700; margin-bottom: 8px;">' + matchingTitle + '</div>' +
+        '<div style="font-size: 14px; color: rgba(255,255,255,0.8);">' + matchingHint + '</div>' +
+        '</div>';
 
       document.body.appendChild(modal);
     }
@@ -1336,45 +1343,30 @@
         animation: fadeIn 0.3s ease-out;
       `;
 
-      modal.innerHTML = `
-        <div class="card-elevated" style="max-width: 420px; width: 100%;">
-          <div style="text-align: center;">
-            <h2 style="font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">Order Matched!</h2>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 28px;">Congratulations! Order matched successfully</p>
-
-            <div style="background: rgba(79, 172, 254, 0.08); border: 1px solid rgba(79, 172, 254, 0.3); border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 24px; text-align: left;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span style="color: var(--text-secondary); font-size: 13px;">Order No.</span>
-                <span style="color: var(--text-primary); font-family: monospace; font-size: 12px;">${orderData.order_no}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span style="color: var(--text-secondary); font-size: 14px;">Order Amount</span>
-                <span style="color: var(--text-primary); font-weight: 700; font-size: 18px;">${orderData.amount} <span style="font-size: 14px; font-weight: 500;">USDT</span></span>
-              </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span style="color: var(--text-secondary); font-size: 14px;">Commission</span>
-                <span style="color: var(--success-color); font-weight: 700; font-size: 18px;">+${orderData.commission} <span style="font-size: 14px; font-weight: 500;">USDT</span></span>
-              </div>
-              <div style="height: 1px; background: rgba(79, 172, 254, 0.3); margin: 16px 0;"></div>
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: var(--accent-color); font-size: 15px; font-weight: 600;">Total Return</span>
-                <span style="color: var(--accent-color); font-weight: 800; font-size: 22px;">${orderData.total_return} <span style="font-size: 16px;">USDT</span></span>
-              </div>
-            </div>
-
-            <div style="background: rgba(77, 208, 225, 0.1); border: 1px solid rgba(77, 208, 225, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 13px; color: #7dd3f0;">
-              Complete within 30 minutes or order will be auto-cancelled
-            </div>
-
-            <button class="btn btn-primary btn-full btn-lg" onclick="completeOrder(${orderData.order_id})" style="margin-bottom: 12px;">
-              Complete Now
-            </button>
-            <button class="btn btn-outline btn-full" onclick="closeOrderModal()">
-              Complete Later
-            </button>
-          </div>
-        </div>
-      `;
+      var oMatched = (typeof t === 'function' ? (t('dashboard.orderMatched') || 'Order Matched!') : 'Order Matched!');
+      var oMatchedDesc = (typeof t === 'function' ? (t('dashboard.orderMatchedDesc') || 'Congratulations! Order matched successfully') : 'Congratulations! Order matched successfully');
+      var oNoLbl = (typeof t === 'function' ? (t('dashboard.orderNoLabel') || 'Order No.') : 'Order No.');
+      var oAmtLbl = (typeof t === 'function' ? (t('dashboard.orderAmountLabel') || 'Order Amount') : 'Order Amount');
+      var commLbl = (typeof t === 'function' ? (t('dashboard.commissionLabel') || 'Commission') : 'Commission');
+      var totalRetLbl = (typeof t === 'function' ? (t('dashboard.totalReturnLabel') || 'Total Return') : 'Total Return');
+      var complete30 = (typeof t === 'function' ? (t('dashboard.completeWithin30') || 'Complete within 30 minutes or order will be auto-cancelled') : 'Complete within 30 minutes or order will be auto-cancelled');
+      var completeNow = (typeof t === 'function' ? (t('dashboard.completeNow') || 'Complete Now') : 'Complete Now');
+      var completeLater = (typeof t === 'function' ? (t('dashboard.completeLater') || 'Complete Later') : 'Complete Later');
+      modal.innerHTML = '<div class="card-elevated" style="max-width: 420px; width: 100%;">' +
+        '<div style="text-align: center;">' +
+        '<h2 style="font-size: 24px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">' + oMatched + '</h2>' +
+        '<p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 28px;">' + oMatchedDesc + '</p>' +
+        '<div style="background: rgba(79, 172, 254, 0.08); border: 1px solid rgba(79, 172, 254, 0.3); border-radius: var(--border-radius-lg); padding: 20px; margin-bottom: 24px; text-align: left;">' +
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;"><span style="color: var(--text-secondary); font-size: 13px;">' + oNoLbl + '</span><span style="color: var(--text-primary); font-family: monospace; font-size: 12px;">' + (orderData.order_no || '') + '</span></div>' +
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;"><span style="color: var(--text-secondary); font-size: 14px;">' + oAmtLbl + '</span><span style="color: var(--text-primary); font-weight: 700; font-size: 18px;">' + (orderData.amount || '') + ' <span style="font-size: 14px; font-weight: 500;">USDT</span></span></div>' +
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;"><span style="color: var(--text-secondary); font-size: 14px;">' + commLbl + '</span><span style="color: var(--success-color); font-weight: 700; font-size: 18px;">+' + (orderData.commission || '') + ' <span style="font-size: 14px; font-weight: 500;">USDT</span></span></div>' +
+        '<div style="height: 1px; background: rgba(79, 172, 254, 0.3); margin: 16px 0;"></div>' +
+        '<div style="display: flex; justify-content: space-between; align-items: center;"><span style="color: var(--accent-color); font-size: 15px; font-weight: 600;">' + totalRetLbl + '</span><span style="color: var(--accent-color); font-weight: 800; font-size: 22px;">' + (orderData.total_return || '') + ' <span style="font-size: 16px;">USDT</span></span></div>' +
+        '</div>' +
+        '<div style="background: rgba(77, 208, 225, 0.1); border: 1px solid rgba(77, 208, 225, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 13px; color: #7dd3f0;">' + complete30 + '</div>' +
+        '<button class="btn btn-primary btn-full btn-lg" onclick="completeOrder(' + (orderData.order_id || 0) + ')" style="margin-bottom: 12px;">' + completeNow + '</button>' +
+        '<button class="btn btn-outline btn-full" onclick="closeOrderModal()">' + completeLater + '</button>' +
+        '</div></div>';
 
       document.body.appendChild(modal);
     }
@@ -1402,18 +1394,19 @@
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Submission failed');
+          throw new Error(result.error || (typeof t === 'function' ? (t('common.submissionFailed') || 'Submission failed') : 'Submission failed'));
         }
 
         closeOrderModal();
-        showToast(`Order completed! Commission +${result.data.commission} USDT received`);
+        var tpl = (typeof t === 'function' ? t('toast.orderCompletedCommission') : '') || 'Order completed! Commission +{commission} USDT received';
+        showToast(tpl.replace('{commission}', String(result.data.commission)));
 
         setTimeout(() => {
           loadUserData();
         }, 500);
 
       } catch (error) {
-        showToast('Error: ' + error.message);
+        showToast((typeof t === 'function' ? (t('common.errorPrefix') || 'Error: ') : 'Error: ') + (error && error.message ? error.message : ''));
       }
     }
 

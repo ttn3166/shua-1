@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
+  <meta name="i18n-title" content="deposit.pageTitle">
   <title>Deposit - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
   <style>
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -131,7 +132,7 @@
     <a href="javascript:history.back()" class="back-btn" aria-label="Back">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     </a>
-    <h1 class="header-title">USDT Deposit</h1>
+    <h1 class="header-title" data-i18n="deposit.headerTitle">USDT Deposit</h1>
     <div class="header-lang-circle" id="headerLangBtn" role="button" title="Language" aria-label="Select language" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;background:rgba(102,126,234,0.12);margin-left:auto;">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" width="20" height="20"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     </div>
@@ -139,52 +140,52 @@
 
   <main class="content-container">
     <div class="deposit-card">
-      <h2 class="page-title">USDT Deposit (TRC20)</h2>
-      <p class="page-subtitle">Transfer USDT to the address below, then submit your deposit record.</p>
+      <h2 class="page-title" data-i18n="deposit.title">USDT Deposit (TRC20)</h2>
+      <p class="page-subtitle" data-i18n="deposit.subtitle">Transfer USDT to the address below, then submit your deposit record.</p>
 
       <section style="margin-bottom: 24px;" id="step1Section">
-        <span class="step-label">STEP 1: Choose method and send</span>
+        <span class="step-label" data-i18n="deposit.step1">STEP 1: Choose method and send</span>
         <div id="depositChannelSelect" style="margin-bottom:12px;display:none;"></div>
-        <div id="depositAddressBox" class="address-box">Loading...</div>
-        <button type="button" id="btnCopyAddress" class="btn-copy" style="display: none;">Copy Address</button>
+        <div id="depositAddressBox" class="address-box" data-i18n="common.loading">Loading...</div>
+        <button type="button" id="btnCopyAddress" class="btn-copy" style="display: none;" data-i18n="deposit.copyAddress">Copy Address</button>
       </section>
 
       <section>
-        <span class="step-label">STEP 2: Submit deposit record after transfer</span>
+        <span class="step-label" data-i18n="deposit.step2">STEP 2: Submit deposit record after transfer</span>
         <div class="form-block">
-          <label for="depositAmount">Amount (USDT) *</label>
-          <input type="number" id="depositAmount" placeholder="Enter amount" step="0.01" min="10" required>
+          <label for="depositAmount" data-i18n="deposit.amountLabel">Amount (USDT) *</label>
+          <input type="number" id="depositAmount" placeholder="Enter amount" data-i18n-placeholder="deposit.amountPlaceholder" step="0.01" min="10" required>
         </div>
         <div class="form-block">
-          <label for="depositHash">Transaction Hash (Optional)</label>
-          <input type="text" id="depositHash" placeholder="Paste transaction hash">
-          <small>Providing hash will speed up approval</small>
+          <label for="depositHash" data-i18n="deposit.hashLabel">Transaction Hash (Optional)</label>
+          <input type="text" id="depositHash" placeholder="Paste transaction hash" data-i18n-placeholder="deposit.hashPlaceholder">
+          <small data-i18n="deposit.hashHelp">Providing hash will speed up approval</small>
         </div>
         <div class="form-block">
-          <label for="depositScreenshotFile">Upload Screenshot (Optional)</label>
+          <label for="depositScreenshotFile" data-i18n="deposit.screenshotLabel">Upload Screenshot (Optional)</label>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <button type="button" id="depositScreenshotBtn" style="padding:10px 16px;border-radius:8px;border:1px solid #4299e1;color:#4299e1;background:#fff;cursor:pointer;font-size:14px;">Select File</button>
-            <span id="depositScreenshotStatus" style="font-size:13px;color:#718096;">No file selected</span>
+            <button type="button" id="depositScreenshotBtn" style="padding:10px 16px;border-radius:8px;border:1px solid #4299e1;color:#4299e1;background:#fff;cursor:pointer;font-size:14px;" data-i18n="deposit.selectFile">Select File</button>
+            <span id="depositScreenshotStatus" style="font-size:13px;color:#718096;" data-i18n="deposit.noFileSelected">No file selected</span>
           </div>
           <input type="file" id="depositScreenshotFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
-          <small>Providing hash or uploading screenshot can speed up approval</small>
+          <small data-i18n="deposit.screenshotHelp">Providing hash or uploading screenshot can speed up approval</small>
           <div id="depositScreenshotPreview" style="margin-top:8px;display:none;">
             <img id="depositScreenshotImg" src="" alt="Preview" style="max-width:120px;max-height:120px;border-radius:8px;border:1px solid #e2e8f0;">
             <span id="depositScreenshotName" style="font-size:12px;color:#718096;margin-left:8px;"></span>
-            <button type="button" id="depositScreenshotRemove" style="margin-left:8px;padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #e53e3e;color:#e53e3e;background:#fff;cursor:pointer;">Remove</button>
+            <button type="button" id="depositScreenshotRemove" style="margin-left:8px;padding:4px 10px;font-size:12px;border-radius:6px;border:1px solid #e53e3e;color:#e53e3e;background:#fff;cursor:pointer;" data-i18n="common.remove">Remove</button>
           </div>
         </div>
         <div class="form-block">
-          <label for="depositNote">Note (Optional)</label>
-          <textarea id="depositNote" placeholder="Any special instructions"></textarea>
+          <label for="depositNote" data-i18n="deposit.noteLabel">Note (Optional)</label>
+          <textarea id="depositNote" placeholder="Any special instructions" data-i18n-placeholder="deposit.notePlaceholder"></textarea>
         </div>
-        <button type="button" id="submitDepositBtn" class="btn-submit">Submit Deposit Record</button>
+        <button type="button" id="submitDepositBtn" class="btn-submit" data-i18n="deposit.submit">Submit Deposit Record</button>
       </section>
     </div>
 
     <div class="tips-box" id="depositTipsBox">
-      <strong>Tips:</strong><br>
-      <span id="depositTipsText">Loading...</span>
+      <strong data-i18n="common.tips">Tips:</strong><br>
+      <span id="depositTipsText" data-i18n="common.loading">Loading...</span>
     </div>
   </main>
 
@@ -227,15 +228,15 @@
         fetch('/api/config')
           .then(function(r) { return r.json(); })
           .then(function(cfg) {
-            if (!cfg.success || !cfg.data) { addressBox.textContent = 'Failed to load config.'; return; }
+            if (!cfg.success || !cfg.data) { addressBox.textContent = (typeof t === 'function' ? (t('common.loadFailed') || 'Failed to load config.') : 'Failed to load config.'); return; }
             config = cfg.data;
             if (config.deposit_maintenance === '1') {
-              addressBox.textContent = 'Deposit is under maintenance. Please try again later.';
+              addressBox.textContent = (typeof t === 'function' ? (t('deposit.underMaintenance') || 'Deposit is under maintenance. Please try again later.') : 'Deposit is under maintenance. Please try again later.');
               document.getElementById('step1Section').style.display = 'none';
               submitBtn.style.display = 'none';
               document.querySelector('.deposit-card section:last-of-type').style.display = 'none';
               var tipsEl = document.getElementById('depositTipsText');
-              if (tipsEl) tipsEl.textContent = getTipsForCurrentLanguage(config.deposit_tips, 'Under maintenance.');
+              if (tipsEl) tipsEl.textContent = (typeof t === 'function' ? (t('deposit.tipsUnderMaintenance') || 'Under maintenance.') : 'Under maintenance.');
               return;
             }
             try { channels = JSON.parse(config.deposit_channels || '[]'); } catch (e) { channels = []; }
@@ -246,24 +247,34 @@
               selectedChannelId = def.id;
               var sel = document.getElementById('depositChannelSelect');
               sel.style.display = 'block';
-              sel.innerHTML = '<label style="display:block;margin-bottom:6px;font-weight:600;">Payment method</label><select id="depositChannelSelectInput" style="width:100%;padding:10px;border-radius:8px;">' + enabled.map(function(c) { return '<option value="' + escHtml(c.id) + '"' + (c.id === selectedChannelId ? ' selected' : '') + '>' + escHtml(c.name || c.id) + '</option>'; }).join('') + '</select>';
+              var pm = (typeof t === 'function' ? (t('deposit.paymentMethod') || 'Payment method') : 'Payment method');
+              sel.innerHTML = '<label style="display:block;margin-bottom:6px;font-weight:600;">' + escHtml(pm) + '</label><select id="depositChannelSelectInput" style="width:100%;padding:10px;border-radius:8px;">' + enabled.map(function(c) { return '<option value="' + escHtml(c.id) + '"' + (c.id === selectedChannelId ? ' selected' : '') + '>' + escHtml(c.name || c.id) + '</option>'; }).join('') + '</select>';
               sel.querySelector('select').addEventListener('change', function() { selectedChannelId = this.value; showChannel(); });
               showChannel();
             } else {
               depositAddress = config.deposit_address || '';
-              addressBox.textContent = depositAddress || 'No deposit address. Please contact support.';
+              addressBox.textContent = depositAddress || (typeof t === 'function' ? (t('deposit.noAddressContactSupport') || 'No deposit address. Please contact support.') : 'No deposit address. Please contact support.');
               btnCopy.style.display = depositAddress ? 'block' : 'none';
             }
             var minAmt = parseFloat(config.deposit_min_amount);
-            if (!isNaN(minAmt)) { var inp = document.getElementById('depositAmount'); if (inp) { inp.min = minAmt; inp.placeholder = 'Min ' + minAmt + ' USDT'; } }
+            if (!isNaN(minAmt)) {
+              var inp = document.getElementById('depositAmount');
+              if (inp) {
+                inp.min = minAmt;
+                var minWord = (typeof t === 'function' ? (t('common.min') || 'Min') : 'Min');
+                inp.placeholder = minWord + ' ' + minAmt + ' USDT';
+              }
+            }
             // Always require either hash or screenshot on frontend, regardless of backend toggle
-            document.querySelector('label[for="depositHash"]').innerHTML = 'Transaction Hash *';
-            document.querySelector('label[for="depositScreenshotFile"]').innerHTML = 'Upload Screenshot *';
+            var hashLabel = document.querySelector('label[for="depositHash"]');
+            if (hashLabel) hashLabel.textContent = (typeof t === 'function' ? (t('deposit.hashRequired') || 'Transaction Hash *') : 'Transaction Hash *');
+            var shotLabel = document.querySelector('label[for="depositScreenshotFile"]');
+            if (shotLabel) shotLabel.textContent = (typeof t === 'function' ? (t('deposit.screenshotRequired') || 'Upload Screenshot *') : 'Upload Screenshot *');
             var tipsEl = document.getElementById('depositTipsText');
             if (tipsEl) tipsEl.textContent = config.deposit_tips || DEPOSIT_TIPS_DEFAULT;
           })
           .catch(function() {
-            addressBox.textContent = 'Failed to load. Please try again.';
+            addressBox.textContent = (typeof t === 'function' ? (t('deposit.loadFailedRetry') || 'Failed to load. Please try again.') : 'Failed to load. Please try again.');
           });
       }
 
@@ -276,7 +287,8 @@
           btnCopy.style.display = 'block';
         } else {
           depositAddress = '';
-          addressBox.textContent = ch.value || ch.instruction || (ch.name || '') + ' – see instructions above.';
+          var suffix = (typeof t === 'function' ? (t('deposit.seeInstructionsAbove') || ' – see instructions above.') : ' – see instructions above.');
+          addressBox.textContent = ch.value || ch.instruction || ((ch.name || '') + suffix);
           btnCopy.style.display = 'none';
         }
       }
@@ -285,7 +297,7 @@
         if (!depositAddress) return;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(depositAddress).then(function() {
-            showToast('Address copied!');
+            showToast(typeof t === 'function' ? (t('common.copied') || 'Copied!') : 'Copied!');
           }).catch(function() { fallbackCopy(); });
         } else {
           fallbackCopy();
@@ -299,7 +311,7 @@
         input.select();
         document.execCommand('copy');
         document.body.removeChild(input);
-        showToast('Address copied!');
+        showToast(typeof t === 'function' ? (t('common.copied') || 'Copied!') : 'Copied!');
       }
 
       var fileInput = document.getElementById('depositScreenshotFile');
@@ -318,7 +330,7 @@
         if (previewDiv) previewDiv.style.display = 'none';
         if (previewImg) previewImg.src = '';
         if (previewName) previewName.textContent = '';
-        if (statusEl) statusEl.textContent = 'No file selected';
+        if (statusEl) statusEl.textContent = (typeof t === 'function' ? (t('deposit.noFileSelected') || 'No file selected') : 'No file selected');
       }
 
       if (fileInput) {
@@ -326,12 +338,12 @@
           var file = this.files && this.files[0];
           if (!file) { clearScreenshot(); return; }
           if (!/^image\/(jpeg|png|gif|webp)$/i.test(file.type)) {
-            showToast('Please select an image file (JPG/PNG/GIF/WebP)');
+            showToast(typeof t === 'function' ? (t('deposit.selectImageFile') || 'Please select an image file (JPG/PNG/GIF/WebP)') : 'Please select an image file (JPG/PNG/GIF/WebP)');
             clearScreenshot();
             return;
           }
           if (file.size > 5 * 1024 * 1024) {
-            showToast('Image size must not exceed 5MB');
+            showToast(typeof t === 'function' ? (t('deposit.imageTooLarge') || 'Image size must not exceed 5MB') : 'Image size must not exceed 5MB');
             clearScreenshot();
             return;
           }
@@ -351,12 +363,12 @@
                 if (statusEl) statusEl.textContent = file.name;
                 if (previewDiv) previewDiv.style.display = 'block';
               } else {
-                showToast(data.error || data.message || 'Upload failed');
+                showToast(data.error || data.message || (typeof t === 'function' ? (t('deposit.uploadFailed') || 'Upload failed') : 'Upload failed'));
                 clearScreenshot();
               }
             })
             .catch(function() {
-              showToast('Upload failed, please try again');
+              showToast(typeof t === 'function' ? (t('deposit.uploadFailedRetry') || 'Upload failed, please try again') : 'Upload failed, please try again');
               clearScreenshot();
             });
         });
@@ -375,17 +387,17 @@
         var minAmt = parseFloat(config.deposit_min_amount);
         if (isNaN(minAmt)) minAmt = 10;
         if (!amount || amount < minAmt) {
-          showToast('Please enter a valid amount (minimum ' + minAmt + ' USDT)');
+          showToast(typeof t === 'function' ? ((t('deposit.invalidAmountMin') || 'Please enter a valid amount (minimum {min} USDT)').replace('{min}', String(minAmt))) : ('Please enter a valid amount (minimum ' + minAmt + ' USDT)'));
           return;
         }
         // Frontend hard validation: hash or screenshot must be provided (at least one)
         if (!hash && !screenshot_url) {
-          showToast('Please provide transaction hash or upload screenshot');
+          showToast(typeof t === 'function' ? (t('deposit.needHashOrScreenshot') || 'Please provide transaction hash or upload screenshot') : 'Please provide transaction hash or upload screenshot');
           return;
         }
 
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        submitBtn.textContent = (typeof t === 'function' ? (t('common.submitting') || 'Submitting...') : 'Submitting...');
         fetch('/api/finance/deposit', {
           method: 'POST',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -394,21 +406,21 @@
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.success) {
-              showToast('Deposit record submitted, please wait for approval');
+              showToast(typeof t === 'function' ? (t('deposit.submittedWaitApproval') || 'Deposit record submitted, please wait for approval') : 'Deposit record submitted, please wait for approval');
               amountEl.value = '';
               if (hashEl) hashEl.value = '';
               clearScreenshot();
               if (noteEl) noteEl.value = '';
             } else {
-              showToast(data.error || data.message || 'Submission failed');
+              showToast(data.error || data.message || (typeof t === 'function' ? (t('deposit.submissionFailed') || 'Submission failed') : 'Submission failed'));
             }
           })
           .catch(function() {
-            showToast('Network error, please try again');
+            showToast(typeof t === 'function' ? (t('common.networkErrorRetry') || 'Network error, please try again') : 'Network error, please try again');
           })
           .finally(function() {
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit Deposit Record';
+            submitBtn.textContent = (typeof t === 'function' ? (t('deposit.submit') || 'Submit Deposit Record') : 'Submit Deposit Record');
           });
       });
 

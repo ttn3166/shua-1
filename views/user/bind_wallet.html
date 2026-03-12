@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
+  <meta name="i18n-title" content="bindWallet.pageTitle">
   <title>Bind Wallet - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -244,7 +245,7 @@
       to { transform: rotate(360deg); }
     }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
   <!-- 顶部导航栏 -->
@@ -254,7 +255,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
     </div>
-    <div class="header-title">Bind Wallet</div>
+    <div class="header-title" data-i18n="bindWallet.headerTitle">Bind Wallet</div>
   </div>
 
   <!-- 主内容区 -->
@@ -267,8 +268,8 @@
         </svg>
       </div>
 
-      <h2 class="card-title">Bind Withdrawal Address</h2>
-      <p class="card-subtitle">Please enter your TRC20 (USDT) address carefully. This address will be used for withdrawals.</p>
+      <h2 class="card-title" data-i18n="bindWallet.title">Bind Withdrawal Address</h2>
+      <p class="card-subtitle" data-i18n="bindWallet.subtitle">Please enter your TRC20 (USDT) address carefully. This address will be used for withdrawals.</p>
 
       <!-- 提示信息 -->
       <div class="info-box">
@@ -276,36 +277,37 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 16px; height: 16px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Important Notice
+          <span data-i18n="bindWallet.noticeTitle">Important Notice</span>
         </div>
         <div class="info-box-content">
-          • Only TRC20-USDT addresses are supported<br>
-          • Address starts with "T" and is 34 characters long<br>
-          • Double check before submitting
+          <span data-i18n="bindWallet.noticeLine1">• Only TRC20-USDT addresses are supported</span><br>
+          <span data-i18n="bindWallet.noticeLine2">• Address starts with "T" and is 34 characters long</span><br>
+          <span data-i18n="bindWallet.noticeLine3">• Double check before submitting</span>
         </div>
       </div>
 
       <!-- 表单 -->
       <div class="form-group">
-        <label class="form-label">USDT Wallet Address (TRC20)</label>
+        <label class="form-label" data-i18n="bindWallet.addressLabel">USDT Wallet Address (TRC20)</label>
         <input 
           type="text" 
           id="walletAddress" 
           class="form-input"
           placeholder="Enter your TRC20 address"
+          data-i18n-placeholder="bindWallet.addressPlaceholder"
           maxlength="34"
         >
         <div class="address-example">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width: 12px; height: 12px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Example: TYkKMVn71s3ELzQmKQFuAKbxRmK5VqHbXF
+          <span data-i18n="bindWallet.examplePrefix">Example:</span> TYkKMVn71s3ELzQmKQFuAKbxRmK5VqHbXF
         </div>
       </div>
 
       <!-- 提交按钮 -->
       <button id="submitBtn" class="btn-submit" onclick="saveWallet()">
-        Confirm Binding
+        <span data-i18n="bindWallet.confirm">Confirm Binding</span>
       </button>
     </div>
   </div>
@@ -361,24 +363,24 @@
 
       // 验证输入
       if (!address) {
-        showToast('⚠️ Please enter wallet address');
+        showToast(typeof t === 'function' ? (t('bindWallet.errorEnterAddress') || 'Please enter wallet address') : 'Please enter wallet address');
         return;
       }
 
       // 验证 TRC20 格式
       if (!address.startsWith('T')) {
-        showToast('⚠️ Address must start with T');
+        showToast(typeof t === 'function' ? (t('bindWallet.errorMustStartT') || 'Address must start with T') : 'Address must start with T');
         return;
       }
 
       if (address.length !== 34) {
-        showToast('⚠️ Invalid address length (must be 34 characters)');
+        showToast(typeof t === 'function' ? (t('bindWallet.errorInvalidLength') || 'Invalid address length (must be 34 characters)') : 'Invalid address length (must be 34 characters)');
         return;
       }
 
       // 禁用按钮，显示加载状态
       submitBtn.disabled = true;
-      submitBtn.innerHTML = 'Submitting<span class="loading"></span>';
+      submitBtn.innerHTML = (typeof t === 'function' ? (t('common.submitting') || 'Submitting') : 'Submitting') + '<span class="loading"></span>';
 
       try {
         const token = localStorage.getItem('token');
@@ -394,20 +396,20 @@
         const result = await response.json();
 
         if (result.success) {
-          showToast('✅ Wallet bound successfully!');
+          showToast(typeof t === 'function' ? (t('bindWallet.success') || 'Wallet bound successfully!') : 'Wallet bound successfully!');
           setTimeout(() => {
             history.back();
           }, 1500);
         } else {
-          showToast('❌ ' + (result.message || result.error || 'Binding failed'));
+          showToast('❌ ' + (result.message || result.error || (typeof t === 'function' ? (t('bindWallet.bindingFailed') || 'Binding failed') : 'Binding failed')));
           submitBtn.disabled = false;
-          submitBtn.innerHTML = 'Confirm Binding';
+          submitBtn.innerHTML = typeof t === 'function' ? (t('bindWallet.confirm') || 'Confirm Binding') : 'Confirm Binding';
         }
       } catch (error) {
         console.error('Bind wallet failed:', error);
-        showToast('❌ Network error, please try again');
+        showToast('❌ ' + (typeof t === 'function' ? (t('common.networkErrorRetry') || 'Network error, please try again') : 'Network error, please try again'));
         submitBtn.disabled = false;
-        submitBtn.innerHTML = 'Confirm Binding';
+        submitBtn.innerHTML = typeof t === 'function' ? (t('bindWallet.confirm') || 'Confirm Binding') : 'Confirm Binding';
       }
     }
 

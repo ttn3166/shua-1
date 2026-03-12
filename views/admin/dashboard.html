@@ -288,6 +288,7 @@
                 <div class="menu-item" onclick="switchView('systemFinanceConfig', event)">充值提现配置</div>
                 <div class="menu-item" onclick="switchView('orderParams', event)">做单参数</div>
                 <div class="menu-item" onclick="switchView('adminList', event)">管理员列表</div>
+                <div class="menu-item" onclick="switchView('i18n', event)">多语言</div>
             </div>
         </div>
         <div class="menu-item" onclick="logout()" style="margin-top: auto; color: #ffaaaa;">
@@ -1293,6 +1294,33 @@
             </div>
         </div>
 
+        <div id="i18nView" class="view-container">
+            <h1 class="view-page-title">多语言 · 添加语言</h1>
+            <p class="view-page-desc">填写语言代码并提交后，系统会<strong>自动将英文全文翻译</strong>成该语言并写入前台，无需后续改 JSON，一次性生效。如需微调可编辑 <code>public/locales/语言代码.json</code>。</p>
+            <div class="content-card" style="max-width: 560px;">
+                <div class="settings-section-title">添加新语言</div>
+                <div class="form-row">
+                    <label>语言代码 <span style="color:#e53e3e;">*</span></label>
+                    <input type="text" id="i18nCode" placeholder="例如：ko、zh-CN、hi" maxlength="10" style="font-family: monospace;">
+                    <div class="hint">仅允许字母、数字、横线，如 ko、zh-CN。用于文件名与下拉选项。</div>
+                </div>
+                <div class="form-row">
+                    <label>显示名称</label>
+                    <input type="text" id="i18nLabel" placeholder="例如：한국어、简体中文" maxlength="50">
+                    <div class="hint">在语言切换器中显示的名称，可留空则使用语言代码。</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+                    <button type="button" class="btn-primary" id="i18nAddBtn" onclick="addLanguage()">添加语言并自动配置</button>
+                    <button type="button" onclick="loadI18nList()" style="background:#e2e8f0;color:#4a5568;">刷新列表</button>
+                </div>
+                <div id="i18nMessage" style="margin-top:12px;font-size:13px;color:#2d3748;min-height:20px;"></div>
+            </div>
+            <div class="content-card" style="margin-top:24px;">
+                <div class="settings-section-title">当前已支持的语言（public/locales/*.json）</div>
+                <div id="i18nList" style="font-size:13px;color:#4a5568;">加载中...</div>
+            </div>
+        </div>
+
     </div>
 
     <div id="balanceModal" class="modal">
@@ -1921,7 +1949,7 @@
             } catch (e) { showToast('导出失败'); }
         }
 
-        var viewTabLabels = { dashboard: '首页', users: '会员列表', finance: '财务审批', tasks: '商品管理', vip: 'VIP 管理', orderParams: '做单参数', agents: '代理管理', reports: '报表统计', orders: '订单记录', auditLogs: '操作日志', loginLogs: '登录日志', dataScreen: '业务员报表', adminList: '管理员列表', systemBase: '基础与展示', systemFinance: '财务与提现', systemContent: '规则与内容', systemDeposit: '充值收款', systemFinanceConfig: '充值提现配置', multiReport: '多维度报表', userAnalysis: '用户分析', financeReconcile: '资金对账', inviteAnalysis: '邀请分析' };
+        var viewTabLabels = { dashboard: '首页', users: '会员列表', finance: '财务审批', tasks: '商品管理', vip: 'VIP 管理', orderParams: '做单参数', agents: '代理管理', reports: '报表统计', orders: '订单记录', auditLogs: '操作日志', loginLogs: '登录日志', dataScreen: '业务员报表', adminList: '管理员列表', i18n: '多语言', systemBase: '基础与展示', systemFinance: '财务与提现', systemContent: '规则与内容', systemDeposit: '充值收款', systemFinanceConfig: '充值提现配置', multiReport: '多维度报表', userAnalysis: '用户分析', financeReconcile: '资金对账', inviteAnalysis: '邀请分析' };
         function ensureTab(viewName) {
             var bar = document.getElementById('adminTabBar');
             if (!bar) return;
@@ -2025,12 +2053,13 @@
             if (viewName === 'financeReconcile') { loadFinanceSummary(); loadBalanceCheck(); }
             if (viewName === 'inviteAnalysis') loadInviteAnalysis();
             if (viewName === 'adminList') loadAdminList();
-            if (['systemBase', 'systemFinance', 'systemContent', 'systemDeposit', 'systemFinanceConfig'].includes(viewName)) {
+            if (viewName === 'i18n') loadI18nList();
+            if (['systemBase', 'systemFinance', 'systemContent', 'systemDeposit', 'systemFinanceConfig', 'i18n'].includes(viewName)) {
                 var sub = document.getElementById('systemSubMenu');
                 var arrow = document.getElementById('systemMenuArrow');
                 if (sub && !sub.classList.contains('open')) sub.classList.add('open');
                 if (arrow) arrow.textContent = '▾';
-                loadSettings();
+                if (viewName !== 'i18n') loadSettings();
                 if (viewName === 'systemBase') setupBannerUpload();
             }
         }
@@ -3756,6 +3785,46 @@
                 tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#e53e3e;">加载失败</td></tr>';
             }
         }
+
+        async function loadI18nList() {
+            var el = document.getElementById('i18nList');
+            if (!el) return;
+            try {
+                var res = await fetchAPI('/i18n/list');
+                if (res && res.success && Array.isArray(res.data)) {
+                    el.innerHTML = res.data.length ? res.data.map(function(item) { return '<span style="display:inline-block;margin:4px 8px 4px 0;padding:4px 10px;background:#edf2f7;border-radius:6px;font-family:monospace;">' + escapeHtml(item.code) + '</span>'; }).join('') : '暂无语言包';
+                } else {
+                    el.innerHTML = '<span style="color:#e53e3e;">加载失败</span>';
+                }
+            } catch (e) {
+                el.innerHTML = '<span style="color:#e53e3e;">' + (e.message || '请求失败') + '</span>';
+            }
+        }
+        async function addLanguage() {
+            var codeEl = document.getElementById('i18nCode');
+            var labelEl = document.getElementById('i18nLabel');
+            var msgEl = document.getElementById('i18nMessage');
+            var btn = document.getElementById('i18nAddBtn');
+            if (!codeEl || !msgEl) return;
+            var code = (codeEl.value || '').trim();
+            if (!code) { msgEl.textContent = '请填写语言代码'; msgEl.style.color = '#e53e3e'; return; }
+            msgEl.textContent = '';
+            if (btn) { btn.disabled = true; btn.textContent = '提交中...'; }
+            try {
+                var res = await fetchAPI('/i18n/add-language', { method: 'POST', body: JSON.stringify({ code: code, label: (labelEl && labelEl.value) ? labelEl.value.trim() : '' }) });
+                if (res && res.success) {
+                    msgEl.style.color = '#2f855a'; msgEl.textContent = res.message || '添加成功';
+                    codeEl.value = ''; if (labelEl) labelEl.value = '';
+                    loadI18nList();
+                } else {
+                    msgEl.style.color = '#e53e3e'; msgEl.textContent = res.message || '添加失败';
+                }
+            } catch (e) {
+                msgEl.style.color = '#e53e3e'; msgEl.textContent = e.message || '请求失败';
+            }
+            if (btn) { btn.disabled = false; btn.textContent = '添加语言并自动配置'; }
+        }
+
         let loginLogsOffset = 0;
         var loginLogsPageSize = 20;
         async function loadLoginLogs(offset) {

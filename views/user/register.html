@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050712">
   <meta name="google" content="notranslate">
+  <meta name="i18n-title" content="register.pageTitle">
   <title>Register - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -106,24 +107,24 @@
       color: var(--gold-primary);
     }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
-  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="register-page-lang" title="Language">🌐 Language</a>
+  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="register-page-lang" title="Language" data-i18n="common.language">🌐 Language</a>
   <div class="register-container">
     <!-- 注册表单卡片 -->
     <div class="card-elevated">
       <div class="register-header">
         <div class="logo">T</div>
-        <h1 class="register-title">Create Account</h1>
-        <p class="register-subtitle">Join TaskMall, Start Earning Today</p>
-        <p class="privacy-note">Username & password only. No personal info required.</p>
+        <h1 class="register-title" data-i18n="register.title">Create Account</h1>
+        <p class="register-subtitle" data-i18n="register.subtitle">Join TaskMall, Start Earning Today</p>
+        <p class="privacy-note" data-i18n="register.privacyNote">Username & password only. No personal info required.</p>
       </div>
 
       <!-- Invite code notice (displayed when obtained from URL) -->
       <div id="invite-notice" class="invite-notice">
-        <p>✨ Registering with invite code <span class="invite-code-display" id="invite-code-display"></span></p>
-        <p style="margin-top: 4px; font-size: 12px; opacity: 0.9;">Referral will be auto-linked after registration</p>
+        <p><span data-i18n="register.inviteNoticePrefix">✨ Registering with invite code</span> <span class="invite-code-display" id="invite-code-display"></span></p>
+        <p style="margin-top: 4px; font-size: 12px; opacity: 0.9;" data-i18n="register.inviteNoticeSub">Referral will be auto-linked after registration</p>
       </div>
 
       <!-- 错误/成功提示 -->
@@ -133,67 +134,74 @@
       <!-- 表单 -->
       <form id="registerForm">
         <div class="form-group">
-          <label class="form-label" for="username">Username</label>
+          <label class="form-label" for="username" data-i18n="register.username">Username</label>
           <input 
             type="text" 
             id="username" 
             class="form-input" 
             placeholder="Choose a username"
+            data-i18n-placeholder="register.usernamePlaceholder"
             required
             autocomplete="username"
           >
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password" data-i18n="register.password">Password</label>
           <input 
             type="password" 
             id="password" 
             class="form-input" 
             placeholder="Enter Password (8-12 chars, letters + numbers)"
+            data-i18n-placeholder="register.passwordPlaceholder"
             required
             minlength="8"
             maxlength="12"
             autocomplete="new-password"
           >
-          <p class="form-hint" style="margin-top:6px;font-size:12px;color:var(--text-muted, #64748b);">8-12 characters, must include both letters and numbers</p>
+          <p class="form-hint" style="margin-top:6px;font-size:12px;color:var(--text-muted, #64748b);" data-i18n="register.passwordHint">8-12 characters, must include both letters and numbers</p>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password-confirm">Confirm Password</label>
+          <label class="form-label" for="password-confirm" data-i18n="register.confirmPassword">Confirm Password</label>
           <input 
             type="password" 
             id="password-confirm" 
             class="form-input" 
             placeholder="Confirm Password"
+            data-i18n-placeholder="register.confirmPasswordPlaceholder"
             required
             autocomplete="new-password"
           >
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="invite-code">Invite Code (optional)</label>
+          <label class="form-label" for="invite-code" data-i18n="register.inviteCode">Invite Code (optional)</label>
           <input 
             type="text" 
             id="invite-code" 
             class="form-input" 
             placeholder="Enter invite code"
+            data-i18n-placeholder="register.inviteCodePlaceholder"
             autocomplete="off"
           >
         </div>
 
         <button type="submit" class="btn btn-primary btn-full btn-lg" id="registerBtn">
-          <span id="btnText">Register</span>
+          <span id="btnText" data-i18n="register.registerButton">Register</span>
           <span id="btnLoading" class="loading" style="display: none;"></span>
         </button>
       </form>
 
       <!-- 底部链接 -->
       <div class="form-footer">
-        Have account? <a href="/views/user/index.html">Login</a>
+        <span data-i18n="register.haveAccount">Have account?</span> <a href="/views/user/index.html" data-i18n="register.login">Login</a>
       </div>
       <div class="form-footer" style="margin-top:12px; font-size:12px;">
-        By registering you agree to our <a href="/views/user/terms.html">Terms of Service</a> and <a href="/views/user/privacy.html">Privacy Policy</a>.
+        <span data-i18n="register.agreePrefix">By registering you agree to our</span>
+        <a href="/views/user/terms.html" data-i18n="register.termsOfService">Terms of Service</a>
+        <span data-i18n="register.and">and</span>
+        <a href="/views/user/privacy.html" data-i18n="register.privacyPolicy">Privacy Policy</a>.
       </div>
     </div>
   </div>
@@ -272,25 +280,25 @@
 
       // Validation
       if (!username || !password) {
-        showError('Please enter username and password');
+        showError(typeof t === 'function' ? (t('register.errorUsernamePassword') || 'Please enter username and password') : 'Please enter username and password');
         return;
       }
 
       if (password.length < 8) {
-        showError('Password must be 8-12 characters');
+        showError(typeof t === 'function' ? (t('register.errorPasswordLength') || 'Password must be 8-12 characters') : 'Password must be 8-12 characters');
         return;
       }
       if (password.length > 12) {
-        showError('Password must be 8-12 characters');
+        showError(typeof t === 'function' ? (t('register.errorPasswordLength') || 'Password must be 8-12 characters') : 'Password must be 8-12 characters');
         return;
       }
       if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
-        showError('Password must include both letters and numbers');
+        showError(typeof t === 'function' ? (t('register.errorPasswordLettersNumbers') || 'Password must include both letters and numbers') : 'Password must include both letters and numbers');
         return;
       }
 
       if (password !== passwordConfirm) {
-        showError('Passwords do not match');
+        showError(typeof t === 'function' ? (t('register.errorPasswordMismatch') || 'Passwords do not match') : 'Passwords do not match');
         return;
       }
 
@@ -314,16 +322,18 @@
         try {
           result = await response.json();
         } catch (_) {
-          showError(response.ok ? 'Invalid response from server' : 'Server error. Please try again later.');
+          showError(response.ok
+            ? (typeof t === 'function' ? (t('register.invalidResponse') || 'Invalid response from server') : 'Invalid response from server')
+            : (typeof t === 'function' ? (t('register.serverError') || 'Server error. Please try again later.') : 'Server error. Please try again later.'));
           return;
         }
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Registration failed');
+          throw new Error(result.error || (typeof t === 'function' ? (t('register.registrationFailed') || 'Registration failed') : 'Registration failed'));
         }
 
         // Show success
-        showSuccess('Registration successful! Redirecting...');
+        showSuccess(typeof t === 'function' ? (t('register.registrationSuccess') || 'Registration successful! Redirecting...') : 'Registration successful! Redirecting...');
 
         // 保存 Token
         localStorage.setItem('token', result.data.token);
@@ -335,7 +345,7 @@
         }, 1000);
 
       } catch (error) {
-        showError(error.message);
+        showError((error && error.message) || (typeof t === 'function' ? (t('register.registrationFailed') || 'Registration failed') : 'Registration failed'));
       } finally {
         setLoading(false);
       }

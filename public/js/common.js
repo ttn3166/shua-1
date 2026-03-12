@@ -152,7 +152,8 @@ async function apiCall(endpoint, options = {}) {
         return result;
     } catch (error) {
         console.error('API call error:', error);
-        showToast('Network error', 'error');
+        var msg = (typeof window.t === 'function' ? (window.t('common.networkError') || 'Network error') : 'Network error');
+        showToast(msg, 'error');
         return null;
     }
 }
@@ -187,25 +188,34 @@ if (!document.getElementById('common-animations')) {
 }
 
 // ============================================
-// 多语言：第一语言为德语，后续可接入 i18next / Vue-i18n
+// 多语言：语言包 + 第一语言为德语，后续可接入 i18next / Vue-i18n
 // ============================================
 (function () {
     var STORAGE_KEY = 'app_lang';
+    var localeData = {};
+
     var LANGUAGES = [
+        { code: 'ar', label: 'العربية' },
         { code: 'de', label: 'Deutsch' },
         { code: 'en', label: 'English' },
-        { code: 'zh-CN', label: '中文' },
+        { code: 'zh-TW', label: '繁體中文' },
         { code: 'vi', label: 'Tiếng Việt' },
         { code: 'th', label: 'ไทย' },
         { code: 'id', label: 'Bahasa Indonesia' },
         { code: 'fr', label: 'Français' },
         { code: 'es', label: 'Español' },
+        { code: 'pt', label: 'Português' },
+        { code: 'it', label: 'Italiano' },
+        { code: 'tr', label: 'Türkçe' },
+        { code: 'nl', label: 'Nederlands' },
+        { code: 'pl', label: 'Polski' },
         { code: 'ru', label: 'Русский' },
         { code: 'ja', label: '日本語' }
     ];
 
     window.getAppLanguage = function () {
-        return localStorage.getItem(STORAGE_KEY) || 'de';
+        // 默认进入页面为英文；用户手动选择后再按选择的语言显示
+        return localStorage.getItem(STORAGE_KEY) || 'en';
     };
 
     window.setAppLanguage = function (code) {
@@ -215,6 +225,60 @@ if (!document.getElementById('common-animations')) {
             try { window.dispatchEvent(new CustomEvent('appLanguageChange', { detail: { lang: code } })); } catch (e) {}
         }
     };
+
+    /** 取当前语言的翻译文案，key 如 "common.language"、"login.title" */
+    window.t = function (key) {
+        if (!key) return '';
+        return localeData[key] != null ? String(localeData[key]) : '';
+    };
+
+    /** 加载语言包（仅当存在对应 locale 文件时替换文案） */
+    function loadLocale(lang, callback) {
+        var supported = ['ar', 'de', 'en', 'ru', 'vi', 'zh-TW', 'id', 'th', 'ja', 'fr', 'es', 'pt', 'it', 'tr', 'nl', 'pl'];
+        if (supported.indexOf(lang) === -1) {
+            localeData = {};
+            if (typeof callback === 'function') callback();
+            return;
+        }
+        var url = '/public/locales/' + lang + '.json';
+        fetch(url).then(function (r) { return r.ok ? r.json() : {}; }).then(function (data) {
+            localeData = data || {};
+            if (typeof callback === 'function') callback();
+        }).catch(function () {
+            localeData = {};
+            if (typeof callback === 'function') callback();
+        });
+    }
+
+    /** 根据 data-i18n / data-i18n-placeholder 应用当前语言文案 */
+    function applyI18n() {
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n');
+            var text = window.t(key);
+            if (text) el.textContent = text;
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n-placeholder');
+            var text = window.t(key);
+            if (text) el.placeholder = text;
+        });
+        var titleMeta = document.querySelector('meta[name="i18n-title"]');
+        if (titleMeta) {
+            var titleKey = titleMeta.getAttribute('content');
+            if (titleKey) {
+                var titleText = window.t(titleKey);
+                if (titleText) document.title = titleText;
+            }
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            loadLocale(window.getAppLanguage(), applyI18n);
+        });
+    } else {
+        loadLocale(window.getAppLanguage(), applyI18n);
+    }
 
     window.showLanguage = function () {
         var body = document.body;
@@ -229,7 +293,7 @@ if (!document.getElementById('common-animations')) {
         panel.setAttribute('style', 'position:fixed;bottom:max(80px,env(safe-area-inset-bottom));right:max(20px,env(safe-area-inset-right));z-index:10001;min-width:200px;max-width:280px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.18);padding:0;max-height:70vh;overflow-y:auto;');
         var title = document.createElement('div');
         title.setAttribute('style', 'padding:12px 14px;font-size:14px;font-weight:600;color:#4a5568;border-bottom:1px solid #e2e8f0;');
-        title.textContent = 'Sprache wählen';
+        title.textContent = window.t('common.selectLanguage') || 'Select language';
         panel.appendChild(title);
         var current = window.getAppLanguage();
         LANGUAGES.forEach(function (item) {
@@ -242,7 +306,8 @@ if (!document.getElementById('common-animations')) {
                 e.stopPropagation();
                 window.setAppLanguage(item.code);
                 if (panel.parentNode) panel.parentNode.removeChild(panel);
-                if (typeof showToast === 'function') showToast('Sprache geändert. Seite wird neu geladen.');
+                var msg = window.t('common.languageChanged') || 'Language changed. Reloading...';
+                if (typeof showToast === 'function') showToast(msg);
                 setTimeout(function () { window.location.reload(); }, 300);
             };
             panel.appendChild(btn);

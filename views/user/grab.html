@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
+    <meta name="i18n-title" content="grab.pageTitle">
     <title>Task Hall - TaskMall</title>
     <link rel="stylesheet" href="/public/css/theme.css">
     <style>
@@ -68,44 +69,44 @@
         .modal-btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
-    <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body class="auth-pending">
     <div id="toast" class="toast"></div>
-    <div style="text-align:center; padding:10px 15px 0; font-size:12px; color:rgba(255,255,255,0.85);">TaskMall Task Hall — Grab & Earn</div>
+    <div style="text-align:center; padding:10px 15px 0; font-size:12px; color:rgba(255,255,255,0.85);" data-i18n="grab.topTitle">TaskMall Task Hall — Grab & Earn</div>
     <div class="vip-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>VIP <span id="vipLevel">1</span></h2>
-            <span class="badge">Current Level</span>
+            <h2><span data-i18n="grab.vip">VIP</span> <span id="vipLevel">1</span></h2>
+            <span class="badge" data-i18n="grab.currentLevel">Current Level</span>
         </div>
-        <p class="commission">Commission Rate: <span id="commissionRate">0.5</span>%</p>
+        <p class="commission"><span data-i18n="grab.commissionRate">Commission Rate:</span> <span id="commissionRate">0.5</span>%</p>
     </div>
     <div class="stats-grid">
         <div class="stat-box">
-            <div class="label">Balance</div>
+            <div class="label" data-i18n="profile.balanceLabel">Balance</div>
             <div class="value"><span id="balance">0.00</span> USDT</div>
         </div>
         <div class="stat-box">
-            <div class="label">Completed Today</div>
+            <div class="label" data-i18n="grab.completedToday">Completed Today</div>
             <div class="value"><span id="progress">0</span> / <span id="dailyOrders">40</span></div>
         </div>
     </div>
     <div class="grab-btn-container">
-        <button class="grab-btn" id="grabBtn" onclick="startGrab()">START<br>GRABBING</button>
+        <button class="grab-btn" id="grabBtn" onclick="startGrab()" data-i18n="grab.startGrabbing">START<br>GRABBING</button>
         <p class="hint" id="grabHint" style="display:none; margin-top:10px; font-size:13px;"></p>
-        <p class="hint">System Automatic Dispatch</p>
-        <p class="hint grab-trust-hint">Real orders · Principal + commission returned after completion</p>
+        <p class="hint" data-i18n="grab.autoDispatch">System Automatic Dispatch</p>
+        <p class="hint grab-trust-hint" data-i18n="grab.trustHint">Real orders · Principal + commission returned after completion</p>
     </div>
     <div class="notice-box">
-        <div class="title">Important Notice</div>
-        <p style="margin:0;">If you have any questions, please contact online customer service.</p>
+        <div class="title" data-i18n="grab.importantNotice">Important Notice</div>
+        <p style="margin:0;" data-i18n="grab.noticeText">If you have any questions, please contact online customer service.</p>
     </div>
     <nav class="nav-bar">
-        <a href="/views/user/dashboard.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></span>Home</a>
-        <a href="/views/user/history.html" id="navHistoryLink"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></a>
-        <a href="/grab" class="active"><span class="nav-icon center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></span>Start</a>
-        <a href="#" id="navService"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg></span>Service</a>
-        <a href="/views/user/profile.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></span>Profile</a>
+        <a href="/views/user/dashboard.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></span><span data-i18n="nav.home">Home</span></a>
+        <a href="/views/user/history.html" id="navHistoryLink"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span><span data-i18n="nav.history">History</span><span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></a>
+        <a href="/grab" class="active"><span class="nav-icon center"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg></span><span data-i18n="nav.start">Start</span></a>
+        <a href="#" id="navService"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg></span><span data-i18n="nav.service">Service</span></a>
+        <a href="/views/user/profile.html"><span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg></span><span data-i18n="nav.profile">Profile</span></a>
     </nav>
     <script>
         function checkAuth() {
@@ -117,7 +118,8 @@
             var el = document.getElementById('toast');
             if (linkOption && linkOption.url) {
                 var escaped = String(msg).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-                el.innerHTML = escaped + ' <a class="toast-link" href="' + linkOption.url.replace(/"/g, '&quot;') + '">' + (linkOption.text || 'Go') + '</a>';
+                var goText = (typeof t === 'function' ? (t('common.go') || 'Go') : 'Go');
+                el.innerHTML = escaped + ' <a class="toast-link" href="' + linkOption.url.replace(/"/g, '&quot;') + '">' + (linkOption.text || goText) + '</a>';
             } else {
                 el.textContent = msg;
             }
@@ -137,7 +139,7 @@
                     window.location.href = '/views/user/index.html';
                     return;
                 }
-                if (!res.ok || !result.success) throw new Error(result.message || 'Load failed');
+                if (!res.ok || !result.success) throw new Error(result.message || ((typeof t === 'function' ? (t('common.loadFailed') || 'Load failed') : 'Load failed')));
                 var d = result.data;
                 document.getElementById('vipLevel').textContent = d.vip_level != null ? d.vip_level : 1;
                 document.getElementById('commissionRate').textContent = (parseFloat(d.vip_commission_rate || 0.005) * 100).toFixed(1);
@@ -153,7 +155,7 @@
                 }
                 if (grabHint) {
                     if (d.allow_grab === 0) {
-                        grabHint.textContent = 'Grab is closed. Please contact admin to enable it.';
+                        grabHint.textContent = (typeof t === 'function' ? (t('grab.closedContactAdmin') || 'Grab is closed. Please contact admin to enable it.') : 'Grab is closed. Please contact admin to enable it.');
                         grabHint.style.display = 'block';
                         grabHint.style.color = '#e53e3e';
                         if (grabBtn) grabBtn.disabled = true;
@@ -165,7 +167,7 @@
                 }
             } catch (e) {
                 console.error(e);
-                showToast('Failed to load data');
+                showToast(typeof t === 'function' ? (t('common.loadFailed') || 'Failed to load data') : 'Failed to load data');
             }
         }
         var currentMatchToken = null;
@@ -177,22 +179,23 @@
             grabInProgress = true;
             var btn = document.getElementById('grabBtn');
             btn.disabled = true;
-            btn.innerHTML = 'Matching...';
+            btn.innerHTML = (typeof t === 'function' ? (t('grab.matching') || 'Matching...') : 'Matching...');
             var token = localStorage.getItem('token');
             try {
                 var response = await fetch('/api/task/match', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
                 var res = await response.json();
                 btn.disabled = false;
-                btn.innerHTML = 'START<br>GRABBING';
+                btn.innerHTML = (typeof t === 'function' ? (t('grab.startGrabbing') || 'START<br>GRABBING') : 'START<br>GRABBING');
                 if (res.success && res.data) {
                     currentMatchToken = res.data.match_token;
                     showTaskModal(res.data);
                 } else {
-                    var msg = res.message || 'Match failed';
+                    var msg = res.message || (typeof t === 'function' ? (t('grab.matchFailed') || 'Match failed') : 'Match failed');
                     if (res.code === 'PENDING_ORDER' || res.order_id) {
-                        showToast(msg || 'You have an uncompleted order. Please complete it first.', { text: 'Go to History', url: '/views/user/history.html?tab=pending' });
+                        var fb = (typeof t === 'function' ? (t('grab.uncompletedOrder') || 'You have an uncompleted order. Please complete it first.') : 'You have an uncompleted order. Please complete it first.');
+                        showToast(msg || fb, { text: (typeof t === 'function' ? (t('grab.goToHistory') || 'Go to History') : 'Go to History'), url: '/views/user/history.html?tab=pending' });
                     } else if (msg.indexOf('disabled') !== -1 || msg === 'Account grabbing is disabled.') {
-                        msg = 'Grab is closed. Please contact admin to enable it.';
+                        msg = (typeof t === 'function' ? (t('grab.closedContactAdmin') || 'Grab is closed. Please contact admin to enable it.') : 'Grab is closed. Please contact admin to enable it.');
                         var gh = document.getElementById('grabHint');
                         if (gh) { gh.textContent = msg; gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
                         showToast(msg);
@@ -202,9 +205,9 @@
                 }
             } catch (e) {
                 console.error(e);
-                showToast('Network error');
+                showToast(typeof t === 'function' ? (t('common.networkError') || 'Network error') : 'Network error');
                 btn.disabled = false;
-                btn.innerHTML = 'START<br>GRABBING';
+                btn.innerHTML = (typeof t === 'function' ? (t('grab.startGrabbing') || 'START<br>GRABBING') : 'START<br>GRABBING');
             } finally {
                 grabInProgress = false;
             }
@@ -223,49 +226,54 @@
             var insufficient = currentBalance < amount;
             var productImgHtml = '';
             if (data && data.product_image) {
-                productImgHtml = '<div class="modal-product-img-wrap"><img class="modal-product-img" src="' + String(data.product_image).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" alt="Product" onerror="this.style.display=\'none\'"></div>';
+                var altProduct = (typeof t === 'function' ? (t('grab.product') || 'Product') : 'Product');
+                productImgHtml = '<div class="modal-product-img-wrap"><img class="modal-product-img" src="' + String(data.product_image).replace(/"/g, '&quot;').replace(/'/g, '&#39;') + '" alt="' + altProduct.replace(/"/g,'&quot;') + '" onerror="this.style.display=\'none\'"></div>';
             } else {
-                productImgHtml = '<div class="modal-product-img-wrap"><div class="modal-product-img" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:#718096;">No image</div></div>';
+                productImgHtml = '<div class="modal-product-img-wrap"><div class="modal-product-img" style="display:flex;align-items:center;justify-content:center;font-size:12px;color:#718096;">' + (typeof t === 'function' ? (t('grab.noImage') || 'No image') : 'No image') + '</div></div>';
             }
             var productHtml = '';
             var titleDisplay = (data && (data.product_title || data.product_name)) ? String(data.product_title || data.product_name).replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
             if (titleDisplay) {
-                productHtml += '<div class="modal-row product-row"><span class="label">Product</span><span class="value">' + titleDisplay + '</span></div>';
+                productHtml += '<div class="modal-row product-row"><span class="label">' + (typeof t === 'function' ? (t('grab.product') || 'Product') : 'Product') + '</span><span class="value">' + titleDisplay + '</span></div>';
             }
             if (data && data.unit_price != null) {
-                productHtml += '<div class="modal-row"><span class="label">Unit Price</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
+                productHtml += '<div class="modal-row"><span class="label">' + (typeof t === 'function' ? (t('grab.unitPrice') || 'Unit Price') : 'Unit Price') + '</span><span class="value">' + Number(data.unit_price).toFixed(2) + ' USDT</span></div>';
             }
             if (data && data.quantity != null) {
-                productHtml += '<div class="modal-row"><span class="label">Quantity</span><span class="value">' + Number(data.quantity) + '</span></div>';
+                productHtml += '<div class="modal-row"><span class="label">' + (typeof t === 'function' ? (t('grab.quantity') || 'Quantity') : 'Quantity') + '</span><span class="value">' + Number(data.quantity) + '</span></div>';
             }
             var orderNo = data.order_no || '';
             var balanceRowClass = insufficient ? ' modal-balance-row insufficient' : ' modal-balance-row';
-            var balanceTip = insufficient ? '<div class="modal-tip" style="margin-top:8px;">Insufficient balance. Please deposit first, then complete this order under History → Pending.</div>' : '';
+            var balanceTip = insufficient
+                ? '<div class="modal-tip" style="margin-top:8px;">' + (typeof t === 'function' ? (t('grab.insufficientBalanceTip') || 'Insufficient balance. Please deposit first, then complete this order under History → Pending.') : 'Insufficient balance. Please deposit first, then complete this order under History → Pending.') + '</div>'
+                : '';
             var confirmDisabled = insufficient ? ' disabled' : '';
             var now = new Date();
             var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-            var orderMeta = '<div class="modal-order-meta"><span>🕐 Matched at ' + timeStr + '</span><span>⏱ Valid for 5 min</span></div>';
+            var matchedAt = (typeof t === 'function' ? (t('grab.matchedAt') || 'Matched at') : 'Matched at');
+            var validFor = (typeof t === 'function' ? (t('grab.validFor5m') || 'Valid for 5 min') : 'Valid for 5 min');
+            var orderMeta = '<div class="modal-order-meta"><span>🕐 ' + matchedAt + ' ' + timeStr + '</span><span>⏱ ' + validFor + '</span></div>';
             modal.innerHTML = '<div class="modal-card">' +
-                '<div class="modal-title">📦 Task Details</div>' +
-                '<div class="modal-subtitle">Confirm task info before starting</div>' +
+                '<div class="modal-title">📦 ' + (typeof t === 'function' ? (t('grab.taskDetails') || 'Task Details') : 'Task Details') + '</div>' +
+                '<div class="modal-subtitle">' + (typeof t === 'function' ? (t('grab.confirmBeforeStart') || 'Confirm task info before starting') : 'Confirm task info before starting') + '</div>' +
                 orderMeta +
                 productImgHtml +
                 '<div class="modal-amount">' + amount.toFixed(2) + ' USDT</div>' +
-                '<div style="font-size:12px;color:#718096;text-align:center;margin-bottom:12px;">Task Amount (to deduct)</div>' +
+                '<div style="font-size:12px;color:#718096;text-align:center;margin-bottom:12px;">' + (typeof t === 'function' ? (t('grab.taskAmountToDeduct') || 'Task Amount (to deduct)') : 'Task Amount (to deduct)') + '</div>' +
                 '<div class="' + balanceRowClass + '">' +
-                '<div class="modal-row" style="border:none;padding:0;"><span class="label">Current Balance</span><span class="value">' + currentBalance.toFixed(2) + ' USDT</span></div>' +
-                '<div class="modal-row" style="border:none;padding:0;"><span class="label">This order deducts</span><span class="value">' + amount.toFixed(2) + ' USDT</span></div></div>' +
+                '<div class="modal-row" style="border:none;padding:0;"><span class="label">' + (typeof t === 'function' ? (t('grab.currentBalance') || 'Current Balance') : 'Current Balance') + '</span><span class="value">' + currentBalance.toFixed(2) + ' USDT</span></div>' +
+                '<div class="modal-row" style="border:none;padding:0;"><span class="label">' + (typeof t === 'function' ? (t('grab.orderDeducts') || 'This order deducts') : 'This order deducts') + '</span><span class="value">' + amount.toFixed(2) + ' USDT</span></div></div>' +
                 balanceTip +
-                '<div class="modal-order-no-row"><span class="label">Order No.</span><span class="value" id="modalOrderNo">' + orderNo.replace(/</g,'&lt;') + '</span><button type="button" class="btn-copy" onclick="copyOrderNo(\'' + orderNo.replace(/'/g, '\\\'') + '\', this)">Copy</button></div>' +
+                '<div class="modal-order-no-row"><span class="label">' + (typeof t === 'function' ? (t('grab.orderNo') || 'Order No.') : 'Order No.') + '</span><span class="value" id="modalOrderNo">' + orderNo.replace(/</g,'&lt;') + '</span><button type="button" class="btn-copy" onclick="copyOrderNo(\'' + orderNo.replace(/'/g, '\\\'') + '\', this)">' + (typeof t === 'function' ? (t('common.copy') || 'Copy') : 'Copy') + '</button></div>' +
                 productHtml +
-                '<div class="modal-row"><span class="label">Commission Rate</span><span class="value">' + ((data.commission_rate || 0) * 100).toFixed(1) + '%</span></div>' +
-                '<div class="modal-row"><span class="label">Estimated Commission</span><span class="value" style="color:#38a169;">+' + Number(data.commission).toFixed(2) + ' USDT</span></div>' +
-                '<div class="modal-total"><div class="label">Total Return</div><div class="value">' + Number(data.total_return).toFixed(2) + ' USDT</div><div class="modal-trust-line">✓ Principal + commission returned automatically after completion</div></div>' +
+                '<div class="modal-row"><span class="label">' + (typeof t === 'function' ? (t('grab.commissionRate') || 'Commission Rate') : 'Commission Rate') + '</span><span class="value">' + ((data.commission_rate || 0) * 100).toFixed(1) + '%</span></div>' +
+                '<div class="modal-row"><span class="label">' + (typeof t === 'function' ? (t('grab.estimatedCommission') || 'Estimated Commission') : 'Estimated Commission') + '</span><span class="value" style="color:#38a169;">+' + Number(data.commission).toFixed(2) + ' USDT</span></div>' +
+                '<div class="modal-total"><div class="label">' + (typeof t === 'function' ? (t('grab.totalReturn') || 'Total Return') : 'Total Return') + '</div><div class="value">' + Number(data.total_return).toFixed(2) + ' USDT</div><div class="modal-trust-line">✓ ' + (typeof t === 'function' ? (t('grab.returnAuto') || 'Principal + commission returned automatically after completion') : 'Principal + commission returned automatically after completion') + '</div></div>' +
                 '<div class="modal-btns">' +
-                '<button class="modal-btn-cancel" onclick="closeTaskModal()">Cancel</button>' +
-                '<button class="modal-btn-confirm" id="confirmBtn" onclick="confirmGrab()"' + confirmDisabled + '>Confirm</button>' +
+                '<button class="modal-btn-cancel" onclick="closeTaskModal()">' + (typeof t === 'function' ? (t('common.cancel') || 'Cancel') : 'Cancel') + '</button>' +
+                '<button class="modal-btn-confirm" id="confirmBtn" onclick="confirmGrab()"' + confirmDisabled + '>' + (typeof t === 'function' ? (t('common.confirm') || 'Confirm') : 'Confirm') + '</button>' +
                 '</div>' +
-                '<div class="modal-tip">💡 Complete the order as specified; after confirmation, principal + commission will be returned automatically.</div>' +
+                '<div class="modal-tip">💡 ' + (typeof t === 'function' ? (t('grab.tip') || 'Complete the order as specified; after confirmation, principal + commission will be returned automatically.') : 'Complete the order as specified; after confirmation, principal + commission will be returned automatically.') + '</div>' +
                 '</div>';
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) closeTaskModal();
@@ -283,17 +291,31 @@
         function copyOrderNo(orderNo, btnEl) {
             if (!orderNo) return;
             var done = function() {
-                if (btnEl) { btnEl.textContent = 'Copied!'; btnEl.disabled = true; setTimeout(function() { btnEl.textContent = 'Copy'; btnEl.disabled = false; }, 2000); }
-                showToast('Order No. copied');
+                if (btnEl) {
+                    btnEl.textContent = (typeof t === 'function' ? (t('common.copied') || 'Copied!') : 'Copied!');
+                    btnEl.disabled = true;
+                    setTimeout(function() { btnEl.textContent = (typeof t === 'function' ? (t('common.copy') || 'Copy') : 'Copy'); btnEl.disabled = false; }, 2000);
+                }
+                showToast(typeof t === 'function' ? (t('grab.orderNoCopied') || 'Order No. copied') : 'Order No. copied');
             };
-            var fail = function() { showToast('Copy failed'); };
+            var fail = function() { showToast(typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed'); };
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(orderNo).then(function() { done(); }, function() { fallbackCopy(orderNo, btnEl); });
             } else { fallbackCopy(orderNo, btnEl); }
         }
         function fallbackCopy(text, btnEl) {
             var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
-            try { document.execCommand('copy'); if (btnEl) { btnEl.textContent = 'Copied!'; btnEl.disabled = true; setTimeout(function() { btnEl.textContent = 'Copy'; btnEl.disabled = false; }, 2000); } showToast('Order No. copied'); } catch (e) { showToast('Copy failed'); }
+            try {
+                document.execCommand('copy');
+                if (btnEl) {
+                    btnEl.textContent = (typeof t === 'function' ? (t('common.copied') || 'Copied!') : 'Copied!');
+                    btnEl.disabled = true;
+                    setTimeout(function() { btnEl.textContent = (typeof t === 'function' ? (t('common.copy') || 'Copy') : 'Copy'); btnEl.disabled = false; }, 2000);
+                }
+                showToast(typeof t === 'function' ? (t('grab.orderNoCopied') || 'Order No. copied') : 'Order No. copied');
+            } catch (e) {
+                showToast(typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed');
+            }
             document.body.removeChild(ta);
         }
 
@@ -305,13 +327,13 @@
                 m.remove();
             }
             currentMatchToken = null;
-            if (hadToken && !skipSavedToast) showToast('Order saved. You can complete it under History → Pending.');
+            if (hadToken && !skipSavedToast) showToast(typeof t === 'function' ? (t('grab.orderSavedHint') || 'Order saved. You can complete it under History → Pending.') : 'Order saved. You can complete it under History → Pending.');
         }
 
         async function confirmGrab() {
             if (!currentMatchToken) return;
             var btn = document.getElementById('confirmBtn');
-            if (btn) { btn.disabled = true; btn.textContent = 'Processing...'; }
+            if (btn) { btn.disabled = true; btn.textContent = (typeof t === 'function' ? (t('common.processing') || 'Processing...') : 'Processing...'); }
             var token = localStorage.getItem('token');
             try {
                 var response = await fetch('/api/task/confirm', {
@@ -324,28 +346,29 @@
                 currentMatchToken = null;
                 if (res.success && res.data) {
                     if (res.data.daily_completed) {
-                        showToast('Daily tasks completed! Grab is paused. Admin must re-enable to continue.');
+                        showToast(typeof t === 'function' ? (t('grab.dailyCompletedPaused') || 'Daily tasks completed! Grab is paused. Admin must re-enable to continue.') : 'Daily tasks completed! Grab is paused. Admin must re-enable to continue.');
                         var gh = document.getElementById('grabHint');
-                        if (gh) { gh.textContent = 'Daily tasks completed. Grab is paused. Contact admin to re-enable.'; gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
+                        if (gh) { gh.textContent = (typeof t === 'function' ? (t('grab.dailyCompletedHint') || 'Daily tasks completed. Grab is paused. Contact admin to re-enable.') : 'Daily tasks completed. Grab is paused. Contact admin to re-enable.'); gh.style.display = 'block'; gh.style.color = '#e53e3e'; }
                         var grabBtn = document.getElementById('grabBtn');
                         if (grabBtn) grabBtn.disabled = true;
                     } else {
-                        showToast('✅ Task completed! +' + Number(res.data.commission).toFixed(2) + ' USDT commission');
+                        var tpl = (typeof t === 'function' ? (t('grab.taskCompletedCommission') || 'Task completed! +{commission} USDT commission') : 'Task completed! +{commission} USDT commission');
+                        showToast('✅ ' + tpl.replace('{commission}', Number(res.data.commission).toFixed(2)));
                     }
                     loadUserData();
                 } else {
                     var errMsg = res.message || 'Confirm failed';
                     if (errMsg.toLowerCase().indexOf('insufficient') !== -1) {
-                        showToast('Insufficient balance. Please deposit then complete this order under History → Pending.');
+                        showToast(typeof t === 'function' ? (t('grab.insufficientBalanceHint') || 'Insufficient balance. Please deposit then complete this order under History → Pending.') : 'Insufficient balance. Please deposit then complete this order under History → Pending.');
                     } else {
                         showToast(errMsg);
                     }
                 }
             } catch (e) {
                 console.error(e);
-                showToast('Network error');
+                showToast(typeof t === 'function' ? (t('common.networkError') || 'Network error') : 'Network error');
                 if (btn) btn.disabled = false;
-                if (btn) btn.textContent = 'Confirm';
+                if (btn) btn.textContent = (typeof t === 'function' ? (t('common.confirm') || 'Confirm') : 'Confirm');
             }
         }
         function initServiceLink() {

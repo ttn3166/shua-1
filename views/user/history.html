@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
+  <meta name="i18n-title" content="history.pageTitle">
   <title>Order History - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -579,7 +580,7 @@
       }
     }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
@@ -587,16 +588,16 @@
 
   <!-- 头部区域 -->
   <div class="page-header">
-    <div class="page-title">Order History</div>
+    <div class="page-title" data-i18n="history.title">Order History</div>
     <div class="page-subtitle">Track all your completed tasks</div>
   </div>
 
   <!-- 筛选 Tabs -->
   <div class="filter-tabs">
-    <div class="tab-item active" data-status="all" onclick="filterOrders('all')">All Orders</div>
-    <div class="tab-item" data-status="pending" onclick="filterOrders('pending')">Pending</div>
-    <div class="tab-item" data-status="completed" onclick="filterOrders('completed')">Completed</div>
-    <div class="tab-item" data-status="frozen" onclick="filterOrders('frozen')">Frozen</div>
+    <div class="tab-item active" data-status="all" onclick="filterOrders('all')" data-i18n="history.tabAll">All Orders</div>
+    <div class="tab-item" data-status="pending" onclick="filterOrders('pending')" data-i18n="history.tabPending">Pending</div>
+    <div class="tab-item" data-status="completed" onclick="filterOrders('completed')" data-i18n="history.tabCompleted">Completed</div>
+    <div class="tab-item" data-status="frozen" onclick="filterOrders('frozen')" data-i18n="history.tabFrozen">Frozen</div>
   </div>
 
   <!-- 订单列表容器 -->
@@ -704,7 +705,9 @@
         const token = localStorage.getItem('token');
         if (!token) {
           document.getElementById('loadingState').style.display = 'none';
-          showEmptyState('error', 'Failed to Load', 'Unable to fetch order history. Please try again.');
+          showEmptyState('error',
+            (typeof t === 'function' ? (t('history.failedToLoadTitle') || 'Failed to Load') : 'Failed to Load'),
+            (typeof t === 'function' ? (t('history.failedToLoadDesc') || 'Unable to fetch order history. Please try again.') : 'Unable to fetch order history. Please try again.'));
           return;
         }
         const response = await fetch('/api/task/my-orders', {
@@ -716,7 +719,7 @@
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Failed to load');
+          throw new Error(result.error || (typeof t === 'function' ? (t('common.loadFailed') || 'Failed to load') : 'Failed to load'));
         }
 
         allOrders = result.data || [];
@@ -735,7 +738,9 @@
           return;
         }
         document.getElementById('loadingState').style.display = 'none';
-        showEmptyState('error', 'Failed to Load', 'Unable to fetch order history. Please try again.');
+        showEmptyState('error',
+          (typeof t === 'function' ? (t('history.failedToLoadTitle') || 'Failed to Load') : 'Failed to Load'),
+          (typeof t === 'function' ? (t('history.failedToLoadDesc') || 'Unable to fetch order history. Please try again.') : 'Unable to fetch order history. Please try again.'));
       }
     }
 
@@ -750,13 +755,13 @@
         });
         const data = await res.json();
         if (data.success) {
-          showToast('Order completed!');
+          showToast(typeof t === 'function' ? (t('toast.orderCompleted') || 'Order completed!') : 'Order completed!');
           loadOrders();
         } else {
-          showToast(data.error || data.message || 'Failed');
+          showToast(data.error || data.message || (typeof t === 'function' ? (t('common.failed') || 'Failed') : 'Failed'));
         }
       } catch (e) {
-        showToast('Network error');
+        showToast(typeof t === 'function' ? (t('common.networkError') || 'Network error') : 'Network error');
       }
     }
 
@@ -788,14 +793,19 @@
       // 空状态
       if (filteredOrders.length === 0) {
         if (currentFilter === 'all') {
-          showEmptyState('empty', 'No Orders Yet', 'Complete your first task to build your order history');
+          showEmptyState('empty',
+            (typeof t === 'function' ? (t('history.emptyTitle') || 'No Orders Yet') : 'No Orders Yet'),
+            (typeof t === 'function' ? (t('history.emptyDesc') || 'Complete your first task to build your order history') : 'Complete your first task to build your order history'));
         } else {
           const statusNames = {
-            'pending': 'Pending',
-            'completed': 'Completed',
-            'frozen': 'Frozen'
+            'pending': (typeof t === 'function' ? (t('history.tabPending') || 'Pending') : 'Pending'),
+            'completed': (typeof t === 'function' ? (t('history.tabCompleted') || 'Completed') : 'Completed'),
+            'frozen': (typeof t === 'function' ? (t('history.tabFrozen') || 'Frozen') : 'Frozen')
           };
-          showEmptyState('search', 'No Results', `No ${statusNames[currentFilter] || currentFilter} orders found`);
+          var tpl = (typeof t === 'function' ? (t('history.noResultsTpl') || 'No {status} orders found') : 'No {status} orders found');
+          showEmptyState('search',
+            (typeof t === 'function' ? (t('history.noResultsTitle') || 'No Results') : 'No Results'),
+            tpl.replace('{status}', String(statusNames[currentFilter] || currentFilter)));
         }
         return;
       }
@@ -803,8 +813,14 @@
       // 渲染订单卡片
       container.innerHTML = filteredOrders.map(order => {
         const statusClass = order.status || 'pending';
-        const statusText = statusClass.charAt(0).toUpperCase() + statusClass.slice(1);
-        const orderDate = new Date(order.created_at).toLocaleString('en-US', {
+        const statusText = statusClass === 'completed'
+          ? (typeof t === 'function' ? (t('history.statusCompleted') || 'Completed') : 'Completed')
+          : statusClass === 'pending'
+            ? (typeof t === 'function' ? (t('history.statusPending') || 'Pending') : 'Pending')
+            : statusClass === 'frozen'
+              ? (typeof t === 'function' ? (t('history.statusFrozen') || 'Frozen') : 'Frozen')
+              : (statusClass.charAt(0).toUpperCase() + statusClass.slice(1));
+        const orderDate = new Date(order.created_at).toLocaleString(undefined, {
           year: 'numeric',
           month: 'short',
           day: 'numeric',
@@ -824,7 +840,7 @@
         const imgSrcEscaped = imgSrc.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
         const completeBtn = statusClass === 'pending' 
-          ? `<button class="complete-pending-btn" onclick="completePendingOrder(${order.id})" style="margin-top:10px;padding:8px 16px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;width:100%;">Complete Task</button>`
+          ? `<button class="complete-pending-btn" onclick="completePendingOrder(${order.id})" style="margin-top:10px;padding:8px 16px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border:none;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer;width:100%;">${(typeof t === 'function' ? (t('history.completeTask') || 'Complete Task') : 'Complete Task')}</button>`
           : '';
         return `
           <div class="order-card" data-status="${statusClass}">
@@ -836,11 +852,11 @@
               </div>
               <div class="order-amounts">
                 <div class="order-amount">
-                  <div class="amount-label">Order Amount</div>
+                  <div class="amount-label">${(typeof t === 'function' ? (t('history.orderAmount') || 'Order Amount') : 'Order Amount')}</div>
                   <div class="amount-value">${Number(order.amount || 0).toFixed(2)} <span style="font-size: 12px; font-weight: 600; color: #a0aec0;">USDT</span></div>
                 </div>
                 <div class="order-amount">
-                  <div class="amount-label">Commission</div>
+                  <div class="amount-label">${(typeof t === 'function' ? (t('history.commission') || 'Commission') : 'Commission')}</div>
                   <div class="commission-value">${Number(order.commission || 0).toFixed(2)} <span style="font-size: 12px; font-weight: 600; color: #a0aec0;">USDT</span></div>
                 </div>
               </div>
@@ -879,7 +895,7 @@
       }
       
       const actionButton = currentFilter === 'all' && iconType === 'empty' 
-        ? '<div class="empty-action" onclick="window.location.href=\'/views/user/dashboard.html\'">🚀 Start First Task</div>' 
+        ? '<div class="empty-action" onclick="window.location.href=\'/views/user/dashboard.html\'">🚀 ' + (typeof t === 'function' ? (t('history.startFirstTask') || 'Start First Task') : 'Start First Task') + '</div>' 
         : '';
       
       container.innerHTML = `

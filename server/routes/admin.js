@@ -3136,5 +3136,159 @@ router.get('/reports/balance-check', checkAdmin, (req, res) => {
     }
 });
 
+// ==================== 多语言：管理端添加语言 ====================
+const localesDir = path.join(__dirname, '../../public/locales');
+const commonJsPath = path.join(__dirname, '../../public/js/common.js');
+
+/** GET /i18n/list - 列出当前支持的语言（从 common.js 或 locales 目录读取） */
+router.get('/i18n/list', checkAdmin, (req, res) => {
+    try {
+        const files = fs.readdirSync(localesDir).filter(f => f.endsWith('.json'));
+        const list = files.map(f => ({ code: f.replace(/\.json$/, '') }));
+        res.json({ success: true, data: list });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+});
+
+/** 占位符保护：翻译前把 {xxx} 换成 __PH_xxx__，翻译后换回 */
+function maskPlaceholders(text) {
+    const map = {};
+    let n = 0;
+    const masked = String(text).replace(/\{([^}]+)\}/g, (_, key) => {
+        const token = '__PH_' + (n++) + '__';
+        map[token] = '{' + key + '}';
+        return token;
+    });
+    return { masked, map };
+}
+function unmaskPlaceholders(text, map) {
+    let out = String(text);
+    for (const [token, orig] of Object.entries(map)) {
+        out = out.split(token).join(orig);
+    }
+    return out;
+}
+
+/** POST /i18n/add-language - 添加新语言：复制 en.json，自动翻译为目标语言，并更新 common.js（一次性解决，无需后续改 JSON） */
+router.post('/i18n/add-language', checkAdmin, async (req, res) => {
+    const { code, label } = req.body || {};
+    if (!code || typeof code !== 'string') {
+        return res.status(400).json({ success: false, message: '请填写语言代码（如 en、zh-TW）' });
+    }
+    const safeCode = code.trim().replace(/[^a-zA-Z0-9\-]/g, '');
+    if (!safeCode || safeCode.length > 10) {
+        return res.status(400).json({ success: false, message: '语言代码仅允许字母、数字、横线，且长度不超过 10' });
+    }
+    const displayLabel = (label && typeof label === 'string' && label.trim()) ? label.trim() : safeCode;
+
+    const enPath = path.join(localesDir, 'en.json');
+    const newPath = path.join(localesDir, safeCode + '.json');
+    if (!fs.existsSync(enPath)) {
+        return res.status(500).json({ success: false, message: '基准语言包 en.json 不存在' });
+    }
+    if (fs.existsSync(newPath)) {
+        return res.status(400).json({ success: false, message: '该语言已存在：' + safeCode });
+    }
+
+    let enData;
+    try {
+        enData = JSON.parse(fs.readFileSync(enPath, 'utf8'));
+    } catch (e) {
+        return res.status(500).json({ success: false, message: '读取 en.json 失败：' + e.message });
+    }
+
+    const keys = Object.keys(enData);
+    const targetLocale = safeCode.toLowerCase() === 'en' ? enData : {};
+
+    if (safeCode.toLowerCase() !== 'en') {
+        try {
+            const translate = (await import('translate')).default;
+            translate.engine = 'google';
+            const BATCH = 25;
+            const delay = (ms) => new Promise(r => setTimeout(r, ms));
+            for (let i = 0; i < keys.length; i += BATCH) {
+                const chunk = keys.slice(i, i + BATCH);
+                await Promise.all(chunk.map(async (k) => {
+                    const raw = enData[k];
+                    if (raw == null || typeof raw !== 'string') {
+                        targetLocale[k] = raw;
+                        return;
+                    }
+                    const { masked, map } = maskPlaceholders(raw);
+                    try {
+                        const translated = await translate(masked, { from: 'en', to: safeCode });
+                        targetLocale[k] = unmaskPlaceholders(translated || masked, map);
+                    } catch (err) {
+                        targetLocale[k] = raw;
+                    }
+                }));
+                if (i + BATCH < keys.length) await delay(400);
+            }
+        } catch (err) {
+            console.error('i18n translate error:', err);
+            return res.status(500).json({ success: false, message: '自动翻译失败：' + (err.message || String(err)) + '。请检查网络或稍后重试。' });
+        }
+    }
+
+    try {
+        fs.writeFileSync(newPath, JSON.stringify(targetLocale, null, 2), 'utf8');
+    } catch (e) {
+        return res.status(500).json({ success: false, message: '写入语言包失败：' + e.message });
+    }
+
+    let commonContent;
+    try {
+        commonContent = fs.readFileSync(commonJsPath, 'utf8');
+    } catch (e) {
+        return res.status(500).json({ success: false, message: '读取 common.js 失败：' + e.message });
+    }
+
+    const escapeForJs = (s) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const newLine = "\n        { code: '" + escapeForJs(safeCode) + "', label: '" + escapeForJs(displayLabel) + "' }";
+
+    if (!commonContent.includes("var LANGUAGES = [")) {
+        return res.status(500).json({ success: false, message: 'common.js 中未找到 LANGUAGES 数组' });
+    }
+    const langMatch = commonContent.match(/\{ code: 'ja', label: '日本語' \}\s*\];/);
+    if (langMatch) {
+        commonContent = commonContent.replace(
+            /\{ code: 'ja', label: '日本語' \}\s*\];/,
+            "{ code: 'ja', label: '日本語' }," + newLine + "\n    ];"
+        );
+    } else {
+        const lastLangMatch = commonContent.match(/(\s*\{ code: '[^']+', label: '[^']*' \})\s*\];/);
+        if (lastLangMatch) {
+            commonContent = commonContent.replace(
+                lastLangMatch[0],
+                lastLangMatch[1] + "," + newLine + "\n    ];"
+            );
+        } else {
+            return res.status(500).json({ success: false, message: '无法定位 LANGUAGES 末尾' });
+        }
+    }
+
+    const supportedMatch = commonContent.match(/var supported = \[([^\]]+)\];/);
+    if (supportedMatch) {
+        const current = supportedMatch[1];
+        if (current.includes("'" + safeCode + "'")) {
+            // already in list, skip
+        } else {
+            commonContent = commonContent.replace(
+                /var supported = \[([^\]]+)\];/,
+                "var supported = [" + current + ", '" + safeCode + "'];"
+            );
+        }
+    }
+
+    try {
+        fs.writeFileSync(commonJsPath, commonContent, 'utf8');
+    } catch (e) {
+        return res.status(500).json({ success: false, message: '写入 common.js 失败：' + e.message });
+    }
+
+    res.json({ success: true, message: '语言已添加并完成自动翻译：' + safeCode + '。前台语言切换中已出现该语言，可直接使用；如需微调可编辑 public/locales/' + safeCode + '.json。' });
+});
+
 module.exports = router;
 module.exports.getUsersHandler = getUsersHandler;

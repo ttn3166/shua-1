@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="i18n-title" content="helpCenter.pageTitle">
     <title>Help Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -15,7 +16,7 @@
         .rich-content img { max-width: 100%; height: auto; border-radius: 0.75rem; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-weight: 700; margin: 0.75rem 0 0.5rem; }
     </style>
-    <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body class="p-4">
     <div class="max-w-md mx-auto min-h-screen flex flex-col">
@@ -23,7 +24,7 @@
             <button onclick="history.back()" class="mr-4 p-2 bg-white rounded-full shadow-sm">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
-            <h1 class="text-xl font-bold text-gray-800">Help Center</h1>
+            <h1 class="text-xl font-bold text-gray-800" data-i18n="helpCenter.title">Help Center</h1>
         </div>
 
         <div id="helpCenterCard" class="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -38,13 +39,13 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div>
-                        <div class="text-sm font-semibold text-gray-800">About Us</div>
-                        <div class="text-xs text-gray-500">Configurable in Admin panel</div>
+                        <div class="text-sm font-semibold text-gray-800" data-i18n="helpCenter.aboutUs">About Us</div>
+                        <div class="text-xs text-gray-500" data-i18n="helpCenter.configurable">Configurable in Admin panel</div>
                     </div>
                 </div>
             </div>
             <div class="p-4 text-sm text-gray-700 rich-content" id="aboutUsContent">
-                Loading...
+                <span data-i18n="common.loading">Loading...</span>
             </div>
         </div>
     </div>
@@ -58,12 +59,12 @@
             'info': { bg: 'bg-emerald-50', icon: 'text-emerald-500', path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
         };
         var DEFAULT_HELP_ITEMS = [
-            { title: 'Invitation Rules', url: '/views/user/invitation_rules.html', icon: 'user-plus' },
-            { title: 'VIP Rules', url: '/views/user/vip_rule.html', icon: 'star' },
-            { title: 'FAQ', url: '/views/user/faq.html', icon: 'help' },
-            { title: 'Terms of Service', url: '/views/user/terms.html', icon: 'info' },
-            { title: 'Privacy Policy', url: '/views/user/privacy.html', icon: 'info' },
-            { title: 'Risk Disclaimer', url: '/views/user/risk_disclaimer.html', icon: 'info' }
+            { titleKey: 'helpCenter.invitationRules', title: 'Invitation Rules', url: '/views/user/invitation_rules.html', icon: 'user-plus' },
+            { titleKey: 'helpCenter.vipRules', title: 'VIP Rules', url: '/views/user/vip_rule.html', icon: 'star' },
+            { titleKey: 'helpCenter.faq', title: 'FAQ', url: '/views/user/faq.html', icon: 'help' },
+            { titleKey: 'helpCenter.terms', title: 'Terms of Service', url: '/views/user/terms.html', icon: 'info' },
+            { titleKey: 'helpCenter.privacy', title: 'Privacy Policy', url: '/views/user/privacy.html', icon: 'info' },
+            { titleKey: 'helpCenter.risk', title: 'Risk Disclaimer', url: '/views/user/risk_disclaimer.html', icon: 'info' }
         ];
 
         function renderHelpItem(item, isLast) {
@@ -71,6 +72,9 @@
             var cfg = HELP_ICONS[item.icon] || HELP_ICONS['info'];
             var url = (item.url || '').trim() || '#';
             var title = (item.title || '').trim() || 'Item';
+            if (item.titleKey && typeof t === 'function') {
+                title = t(item.titleKey) || title;
+            }
             return '<div onclick="window.location.href=\'' + url.replace(/'/g, "\\'") + '\'" class="' + style + '">' +
                 '<div class="flex items-center gap-3">' +
                 '<div class="w-8 h-8 rounded-full ' + cfg.bg + ' flex items-center justify-center ' + cfg.icon + '">' +

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="i18n-title" content="invitePage.pageTitle">
     <title>Invite Friends - TaskMall</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,7 +39,7 @@
             100% { background-position: 200% 0; }
         }
     </style>
-    <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body class="flex flex-col">
     <!-- 顶部导航栏 -->
@@ -48,7 +49,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </button>
-        <h1 class="text-lg font-bold">Invite Friends</h1>
+        <h1 class="text-lg font-bold" data-i18n="invitePage.title">Invite Friends</h1>
     </div>
 
     <!-- 主内容区 -->
@@ -61,8 +62,8 @@
             
             <div class="relative z-10">
                 <!-- 标题 -->
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Invite & Earn</h2>
-                <p class="text-gray-500 text-sm mb-6">Earn high commissions by inviting friends to join TaskMall!</p>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2" data-i18n="invitePage.heroTitle">Invite & Earn</h2>
+                <p class="text-gray-500 text-sm mb-6" data-i18n="invitePage.heroSubtitle">Earn high commissions by inviting friends to join TaskMall!</p>
 
                 <!-- 二维码区域 -->
                 <div class="bg-white p-4 rounded-xl shadow-inner inline-block mb-6">
@@ -71,7 +72,7 @@
 
                 <!-- 邀请码展示 -->
                 <div class="mb-6">
-                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Your Invitation Code</p>
+                    <p class="text-gray-400 text-xs uppercase tracking-wider mb-1" data-i18n="invitePage.yourCode">Your Invitation Code</p>
                     <div class="text-3xl font-bold text-purple-600 tracking-widest" id="inviteCode">
                         <span class="shimmer inline-block h-10 w-32 rounded"></span>
                     </div>
@@ -80,10 +81,10 @@
                 <!-- 操作按钮 -->
                 <div class="space-y-3">
                     <button onclick="copyLink()" class="w-full bg-purple-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-purple-700 transition transform hover:-translate-y-1 active:scale-95">
-                        📋 Copy Invitation Link
+                        <span data-i18n="invitePage.copyLink">📋 Copy Invitation Link</span>
                     </button>
                     <button onclick="copyCode()" class="w-full bg-purple-50 text-purple-600 py-3 rounded-xl font-bold hover:bg-purple-100 transition active:scale-95">
-                        🔑 Copy Invitation Code
+                        <span data-i18n="invitePage.copyCode">🔑 Copy Invitation Code</span>
                     </button>
                 </div>
             </div>
@@ -92,7 +93,7 @@
         <!-- 团队统计卡片 -->
         <div class="mt-6 glass rounded-xl p-4 flex justify-between items-center shadow-lg animate-fade-in" style="animation-delay: 0.2s; opacity: 0;">
             <div>
-                <p class="text-gray-500 text-xs">Total Team Members</p>
+                <p class="text-gray-500 text-xs" data-i18n="invitePage.teamMembers">Total Team Members</p>
                 <p class="text-xl font-bold text-gray-800" id="teamCount">
                     <span class="shimmer inline-block h-6 w-12 rounded"></span>
                 </p>
@@ -108,20 +109,20 @@
         <div class="mt-6 glass rounded-xl p-4 shadow-lg animate-fade-in" style="animation-delay: 0.4s; opacity: 0;">
             <h3 class="text-gray-800 font-bold mb-3 flex items-center">
                 <span class="text-xl mr-2">🎁</span>
-                Invitation Rewards
+                <span data-i18n="invitePage.rewardsTitle">Invitation Rewards</span>
             </h3>
             <ul class="text-sm text-gray-600 space-y-2">
                 <li class="flex items-start">
                     <span class="text-green-500 mr-2">✓</span>
-                    <span>Your friend gets a welcome bonus upon registration</span>
+                    <span data-i18n="invitePage.reward1">Your friend gets a welcome bonus upon registration</span>
                 </li>
                 <li class="flex items-start">
                     <span class="text-green-500 mr-2">✓</span>
-                    <span>You earn commission from their completed tasks</span>
+                    <span data-i18n="invitePage.reward2">You earn commission from their completed tasks</span>
                 </li>
                 <li class="flex items-start">
                     <span class="text-green-500 mr-2">✓</span>
-                    <span>Unlimited invitations, unlimited earnings</span>
+                    <span data-i18n="invitePage.reward3">Unlimited invitations, unlimited earnings</span>
                 </li>
             </ul>
         </div>
@@ -160,11 +161,11 @@
                     qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareLink)}`;
                     qrImage.classList.remove('shimmer');
                 } else {
-                    showToast('❌ Failed to load invite info');
+                    showToast('❌ ' + (typeof t === 'function' ? (t('invitePage.loadFailed') || 'Failed to load invite info') : 'Failed to load invite info'));
                 }
             } catch (error) {
                 console.error('Failed to load invite info:', error);
-                showToast('❌ Network error, please try again');
+                showToast('❌ ' + (typeof t === 'function' ? (t('common.networkErrorRetry') || 'Network error, please try again') : 'Network error, please try again'));
             }
         }
 
@@ -202,26 +203,26 @@
         // 复制邀请链接
         function copyLink() {
             if (!shareLink) {
-                showToast('⏳ Loading...');
+                showToast(typeof t === 'function' ? (t('common.loading') || 'Loading...') : 'Loading...');
                 return;
             }
             copyToClipboard(shareLink).then(() => {
-                showToast('✅ Link Copied!');
+                showToast('✅ ' + (typeof t === 'function' ? (t('invitePage.linkCopied') || 'Link Copied!') : 'Link Copied!'));
             }).catch(() => {
-                showToast('❌ Copy failed');
+                showToast('❌ ' + (typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed'));
             });
         }
 
         // 复制邀请码
         function copyCode() {
             if (!inviteCode) {
-                showToast('⏳ Loading...');
+                showToast(typeof t === 'function' ? (t('common.loading') || 'Loading...') : 'Loading...');
                 return;
             }
             copyToClipboard(inviteCode).then(() => {
-                showToast('✅ Code Copied!');
+                showToast('✅ ' + (typeof t === 'function' ? (t('invitePage.codeCopied') || 'Code Copied!') : 'Code Copied!'));
             }).catch(() => {
-                showToast('❌ Copy failed');
+                showToast('❌ ' + (typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed'));
             });
         }
 

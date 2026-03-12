@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="i18n-title" content="faq.pageTitle">
     <title>FAQ - TaskMall</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -35,7 +36,7 @@
         .content-area strong { color: #1f2937; font-weight: 600; }
         .content-area code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
     </style>
-    <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body class="flex flex-col min-h-screen">
     <div class="p-4 flex items-center text-white">
@@ -44,21 +45,21 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
             </svg>
         </button>
-        <h1 class="text-lg font-bold">FAQ</h1>
+        <h1 class="text-lg font-bold" data-i18n="faq.title">FAQ</h1>
     </div>
 
     <div class="flex-1 p-4">
         <div class="glass rounded-2xl p-6 shadow-2xl">
             <div class="text-center mb-6">
                 <div class="text-5xl mb-3">❓</div>
-                <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
-                <p class="text-sm text-gray-500 mt-2">Common Questions</p>
+                <h2 class="text-2xl font-bold text-gray-800" data-i18n="faq.heroTitle">Frequently Asked Questions</h2>
+                <p class="text-sm text-gray-500 mt-2" data-i18n="faq.heroSubtitle">Common Questions</p>
             </div>
 
             <div id="ruleContent" class="content-area">
                 <div style="text-align: center; padding: 40px; color: #999;">
                     <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
-                    <p>Loading...</p>
+                    <p data-i18n="common.loading">Loading...</p>
                 </div>
             </div>
         </div>
@@ -106,19 +107,22 @@
                 if (data.success && data.data.faq) {
                     content.innerHTML = formatFaqHtml(data.data.faq);
                 } else {
+                    var title = (typeof t === 'function' ? (t('common.loadingContent') || 'Loading content...') : 'Loading content...');
+                    var hint = (typeof t === 'function' ? (t('faq.contactSupport') || 'Contact online support if needed') : 'Contact online support if needed');
                     content.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #999;">
                             <p style="font-size: 48px;">📭</p>
-                            <p>Loading content...</p>
-                            <p style="font-size: 12px; margin-top: 10px;">Contact online support if needed</p>
+                            <p>${title}</p>
+                            <p style="font-size: 12px; margin-top: 10px;">${hint}</p>
                         </div>
                     `;
                 }
             })
             .catch(err => {
+                var fail = (typeof t === 'function' ? (t('common.failedToLoad') || 'Failed to load') : 'Failed to load');
                 document.getElementById('ruleContent').innerHTML = `
                     <div style="text-align: center; padding: 40px; color: #ff5858;">
-                        <p>❌ Failed to load</p>
+                        <p>❌ ${fail}</p>
                     </div>
                 `;
             });

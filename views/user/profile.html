@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#667eea">
+  <meta name="i18n-title" content="profile.pageTitle">
   <title>Profile - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -641,7 +642,7 @@
       to { opacity: 0; }
     }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
   <!-- Toast 提示 -->
@@ -650,10 +651,10 @@
   <!-- Logout confirmation (custom buttons in English) -->
   <div id="logoutConfirmModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; padding: 20px;">
     <div class="card-elevated" style="max-width: 320px; width: 100%; padding: 24px; text-align: center;">
-      <p style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 24px;">Are you sure you want to log out?</p>
+      <p style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0 0 24px;" data-i18n="profile.logoutConfirm">Are you sure you want to log out?</p>
       <div style="display: flex; gap: 12px; justify-content: center;">
-        <button type="button" class="btn btn-outline" onclick="closeLogoutConfirmModal()" style="flex: 1;">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="confirmLogout()" style="flex: 1;">OK</button>
+        <button type="button" class="btn btn-outline" onclick="closeLogoutConfirmModal()" style="flex: 1;" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmLogout()" style="flex: 1;" data-i18n="common.ok">OK</button>
       </div>
     </div>
   </div>
@@ -663,8 +664,8 @@
     <div class="card-elevated" style="max-width: 340px; width: 100%; padding: 24px; text-align: center;">
       <p id="withdrawConfirmMsg" style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin: 0 0 24px; line-height: 1.5;"></p>
       <div style="display: flex; gap: 12px; justify-content: center;">
-        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;">Confirm</button>
+        <button type="button" class="btn btn-outline" onclick="closeWithdrawConfirmModal()" style="flex: 1;" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmWithdrawalSubmit()" style="flex: 1;" data-i18n="common.confirm">Confirm</button>
       </div>
     </div>
   </div>
@@ -673,33 +674,33 @@
   <div id="withdrawModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(102, 126, 234, 0.95); backdrop-filter: blur(8px); align-items: center; justify-content: center; z-index: 9999; padding: 20px; overflow-y: auto;">
     <div class="card-elevated" style="max-width: 460px; width: 100%; margin: 20px 0;">
       <div style="text-align: center; margin-bottom: 24px;">
-        <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;">USDT Withdrawal</h2>
-        <p style="color: var(--text-secondary); font-size: 13px;">Min Withdrawal 10 USDT</p>
+        <h2 style="font-size: 22px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; margin-top: 8px;" data-i18n="withdraw.title">USDT Withdrawal</h2>
+        <p style="color: var(--text-secondary); font-size: 13px;" data-i18n="profile.withdrawMin">Min Withdrawal 10 USDT</p>
       </div>
       <form id="withdrawForm" onsubmit="submitWithdrawal(event)">
         <div class="form-group">
-          <label class="form-label">Withdraw Amount (USDT)</label>
-          <input type="number" id="withdrawAmount" class="form-input" placeholder="Enter amount" min="10" step="0.01" required>
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Available: <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT</div>
+          <label class="form-label" data-i18n="withdraw.amount">Withdraw Amount (USDT)</label>
+          <input type="number" id="withdrawAmount" class="form-input" placeholder="Enter amount" data-i18n-placeholder="withdraw.amountPlaceholder" min="10" step="0.01" required>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;"><span data-i18n="withdraw.available">Available:</span> <span id="availableBalance" style="color: var(--accent-color); font-weight: 600;">0.00</span> USDT</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Wallet Address (TRC20)</label>
-          <input type="text" id="walletAddress" class="form-input" placeholder="Enter your TRC20 address" required>
+          <label class="form-label" data-i18n="withdraw.wallet">Wallet Address (TRC20)</label>
+          <input type="text" id="walletAddress" class="form-input" placeholder="Enter your TRC20 address" data-i18n-placeholder="withdraw.walletPlaceholder" required>
         </div>
         <div class="form-group" id="withdrawSecurityPasswordRow" style="display: none;">
-          <label class="form-label">Security Password</label>
-          <input type="password" id="withdrawSecurityPassword" class="form-input" placeholder="Enter security password">
+          <label class="form-label" data-i18n="withdraw.securityPassword">Security Password</label>
+          <input type="password" id="withdrawSecurityPassword" class="form-input" placeholder="Enter security password" data-i18n-placeholder="withdraw.securityPasswordPlaceholder">
         </div>
         <div class="form-group">
-          <label class="form-label">Remark (Optional)</label>
-          <input type="text" id="withdrawNote" class="form-input" placeholder="Enter remark...">
+          <label class="form-label" data-i18n="withdraw.remark">Remark (Optional)</label>
+          <input type="text" id="withdrawNote" class="form-input" placeholder="Enter remark..." data-i18n-placeholder="withdraw.remarkPlaceholder">
         </div>
         <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: var(--border-radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; color: #fde68a; text-align: left;">
-          <div style="font-weight: 600; margin-bottom: 4px;">Withdrawal Notice:</div>
-          <div style="line-height: 1.6;">Request will be queued for audit. Arrives within 24h after approval. Ensure wallet address is correct.</div>
+          <div style="font-weight: 600; margin-bottom: 4px;" data-i18n="withdraw.noticeTitle">Withdrawal Notice:</div>
+          <div style="line-height: 1.6;" data-i18n="profile.withdrawNotice">Request will be queued for audit. Arrives within 24h after approval. Ensure wallet address is correct.</div>
         </div>
-        <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn"><span id="withdrawBtnText">Confirm</span><span id="withdrawBtnLoading" class="loading" style="display: none;"></span></button>
-        <button type="button" class="btn btn-outline btn-full" onclick="closeWithdrawModal()" style="margin-top: 12px;">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" id="withdrawBtn"><span id="withdrawBtnText" data-i18n="common.confirm">Confirm</span><span id="withdrawBtnLoading" class="loading" style="display: none;"></span></button>
+        <button type="button" class="btn btn-outline btn-full" onclick="closeWithdrawModal()" style="margin-top: 12px;" data-i18n="common.cancel">Cancel</button>
       </form>
     </div>
   </div>
@@ -712,10 +713,10 @@
     </div>
     <div class="profile-info">
       <div class="profile-name" id="profileName">Guest</div>
-      <div class="profile-meta">Invite Code: <span id="profileInviteCode">------</span></div>
-      <div class="profile-meta">UID: <span id="profileUID">000000</span></div>
-      <div class="profile-meta">Credit: <span id="creditScore">850</span></div>
-      <div class="profile-balance">Balance: <span id="profileBalance">0.00</span> USDT</div>
+      <div class="profile-meta"><span data-i18n="profile.inviteCode">Invite Code:</span> <span id="profileInviteCode">------</span></div>
+      <div class="profile-meta"><span data-i18n="profile.uid">UID:</span> <span id="profileUID">000000</span></div>
+      <div class="profile-meta"><span data-i18n="profile.credit">Credit:</span> <span id="creditScore">850</span></div>
+      <div class="profile-balance"><span data-i18n="profile.balance">Balance:</span> <span id="profileBalance">0.00</span> USDT</div>
     </div>
   </div>
 
@@ -727,7 +728,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
         </svg>
       </div>
-      <div class="stat-label">Total Profit</div>
+      <div class="stat-label" data-i18n="profile.totalProfit">Total Profit</div>
       <div class="stat-value">
         <span id="totalProfit">0.00</span>
         <span class="stat-unit">USDT</span>
@@ -740,7 +741,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
         </svg>
       </div>
-      <div class="stat-label">Balance</div>
+      <div class="stat-label" data-i18n="profile.balanceLabel">Balance</div>
       <div class="stat-value">
         <span id="totalBalance">0.00</span>
         <span class="stat-unit">USDT</span>
@@ -753,7 +754,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
       </div>
-      <div class="stat-label">Frozen</div>
+      <div class="stat-label" data-i18n="profile.frozen">Frozen</div>
       <div class="stat-value">
         <span id="frozenBalance">0.00</span>
         <span class="stat-unit">USDT</span>
@@ -766,7 +767,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
         </svg>
       </div>
-      <div class="stat-label">Orders</div>
+      <div class="stat-label" data-i18n="profile.orders">Orders</div>
       <div class="stat-value">
         <span id="totalOrders">0</span>
       </div>
@@ -781,7 +782,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
         </svg>
       </div>
-      <div class="action-label">Deposit</div>
+      <div class="action-label" data-i18n="dashboard.deposit">Deposit</div>
     </div>
 
     <div class="action-item" onclick="openWithdrawModal()">
@@ -790,7 +791,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3V15" />
         </svg>
       </div>
-      <div class="action-label">Withdraw</div>
+      <div class="action-label" data-i18n="dashboard.withdraw">Withdraw</div>
     </div>
 
     <div class="action-item" onclick="window.location.href='/views/user/history.html'">
@@ -799,7 +800,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="action-label">History</div>
+      <div class="action-label" data-i18n="nav.history">History</div>
     </div>
 
     <div class="action-item" onclick="window.open('https://t.me/TaskMall_Support', '_blank')">
@@ -808,15 +809,15 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
         </svg>
       </div>
-      <div class="action-label">Service</div>
+      <div class="action-label" data-i18n="nav.service">Service</div>
     </div>
   </div>
 
   <!-- 邀请 Banner -->
   <div class="invite-banner" onclick="inviteFriends()">
     <div class="invite-content">
-      <div class="invite-title">Invite Friends</div>
-      <div class="invite-subtitle">Share and earn rewards together!</div>
+      <div class="invite-title" data-i18n="profile.inviteFriends">Invite Friends</div>
+      <div class="invite-subtitle" data-i18n="profile.inviteSubtitle">Share and earn rewards together!</div>
     </div>
     <div class="invite-icon">🎁</div>
   </div>
@@ -831,7 +832,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
             </svg>
           </div>
-          <div class="menu-label">Bind Wallet</div>
+          <div class="menu-label" data-i18n="profile.bindWallet">Bind Wallet</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -843,7 +844,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l3.364 3.364M21 12H3" />
             </svg>
           </div>
-          <div class="menu-label">Deposit Record</div>
+          <div class="menu-label" data-i18n="profile.depositRecord">Deposit Record</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -855,7 +856,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
           </div>
-          <div class="menu-label">Withdrawal Record</div>
+          <div class="menu-label" data-i18n="profile.withdrawalRecord">Withdrawal Record</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -867,7 +868,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
           </div>
-          <div class="menu-label">Login Password</div>
+          <div class="menu-label" data-i18n="profile.loginPassword">Login Password</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -879,7 +880,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
             </svg>
           </div>
-          <div class="menu-label">Security Password</div>
+          <div class="menu-label" data-i18n="profile.securityPassword">Security Password</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -891,7 +892,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802" />
             </svg>
           </div>
-          <div class="menu-label">Language</div>
+          <div class="menu-label" data-i18n="common.language">Language</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -903,7 +904,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
             </svg>
           </div>
-          <div class="menu-label">About Us</div>
+          <div class="menu-label" data-i18n="profile.aboutUs">About Us</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -917,7 +918,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
             </svg>
           </div>
-          <div class="menu-label">Log Out</div>
+          <div class="menu-label" data-i18n="profile.logout">Log Out</div>
         </div>
         <div class="menu-arrow">›</div>
       </div>
@@ -932,7 +933,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
         </svg>
       </div>
-      <div class="nav-label">Home</div>
+      <div class="nav-label" data-i18n="nav.home">Home</div>
     </div>
     <div class="nav-item" onclick="window.location.href='/views/user/history.html'">
       <div class="nav-icon">
@@ -940,7 +941,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <div class="nav-label">History<span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
+      <div class="nav-label"><span data-i18n="nav.history">History</span><span class="nav-pending-badge" id="navHistoryBadge" style="display:none;"></span></div>
     </div>
     <div class="nav-item center" onclick="window.location.href='/grab'">
       <div class="nav-icon-large">
@@ -948,7 +949,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       </div>
-      <div class="nav-label" style="color: #1a202c; font-weight: 700;">Start</div>
+      <div class="nav-label" style="color: #1a202c; font-weight: 700;" data-i18n="nav.start">Start</div>
     </div>
     <div class="nav-item" onclick="window.open('https://t.me/TaskMall_Support', '_blank')">
       <div class="nav-icon">
@@ -956,7 +957,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
         </svg>
       </div>
-      <div class="nav-label">Service</div>
+      <div class="nav-label" data-i18n="nav.service">Service</div>
     </div>
     <div class="nav-item active">
       <div class="nav-icon">
@@ -964,7 +965,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
       </div>
-      <div class="nav-label">Profile</div>
+      <div class="nav-label" data-i18n="nav.profile">Profile</div>
     </div>
   </div>
 
@@ -994,7 +995,7 @@
           window.location.href = '/views/user/index.html';
           return;
         }
-        if (!response.ok || !result.success) throw new Error('Load failed');
+        if (!response.ok || !result.success) throw new Error(typeof t === 'function' ? (t('common.loadFailed') || 'Load failed') : 'Load failed');
 
         const d = result.data;
         var name = (d.username || '').trim() || 'Guest';
@@ -1081,9 +1082,12 @@
         fee = (cfg.withdraw_fee_type || 'percent').toLowerCase() === 'fixed' ? parseFloat(cfg.withdraw_fee_value) : amount * parseFloat(cfg.withdraw_fee_value) / 100;
       }
       var totalDeduct = amount + fee;
-      var msg = 'Confirm withdrawal of ' + amount + ' USDT?';
-      if (fee > 0) msg += ' Fee: ' + fee.toFixed(2) + ' USDT, total deduction: ' + totalDeduct.toFixed(2) + ' USDT.';
-      msg += ' Submission will be pending review.';
+      var msg = (typeof t === 'function' ? (t('withdraw.confirmTpl') || 'Confirm withdrawal of {amount} USDT?') : 'Confirm withdrawal of {amount} USDT?').replace('{amount}', String(amount));
+      if (fee > 0) {
+        var feeTpl = (typeof t === 'function' ? (t('withdraw.feeTpl') || ' Fee: {fee} USDT, total deduction: {total} USDT.') : ' Fee: {fee} USDT, total deduction: {total} USDT.');
+        msg += feeTpl.replace('{fee}', fee.toFixed(2)).replace('{total}', totalDeduct.toFixed(2));
+      }
+      msg += (typeof t === 'function' ? (t('withdraw.pendingReview') || ' Submission will be pending review.') : ' Submission will be pending review.');
       window._pendingWithdraw = { amount, wallet_address, note, password };
       var msgEl = document.getElementById('withdrawConfirmMsg');
       if (msgEl) msgEl.textContent = msg;
@@ -1116,12 +1120,12 @@
           body: JSON.stringify({ amount: p.amount, wallet_address: p.wallet_address, note: p.note, password: p.password, channel_id: null })
         });
         const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.error || 'Withdrawal failed');
+        if (!response.ok || !result.success) throw new Error(result.error || (typeof t === 'function' ? (t('withdraw.failed') || 'Withdrawal failed') : 'Withdrawal failed'));
         closeWithdrawModal();
-        showToast('Withdrawal submitted, pending review');
+        showToast(typeof t === 'function' ? (t('withdraw.submittedPending') || 'Withdrawal submitted, pending review') : 'Withdrawal submitted, pending review');
         setTimeout(loadUserData, 500);
       } catch (error) {
-        showToast('Error: ' + error.message);
+        showToast((typeof t === 'function' ? (t('common.errorPrefix') || 'Error: ') : 'Error: ') + (error && error.message ? error.message : ''));
       } finally {
         withdrawBtn.disabled = false;
         if (withdrawBtnText) withdrawBtnText.style.display = 'inline';
@@ -1146,9 +1150,9 @@
       textarea.select();
       try {
         document.execCommand('copy');
-        showToast('Address copied!');
+        showToast(typeof t === 'function' ? (t('common.copied') || 'Copied!') : 'Copied!');
       } catch (err) {
-        showToast('Copy failed');
+        showToast(typeof t === 'function' ? (t('common.copyFailed') || 'Copy failed') : 'Copy failed');
       }
       document.body.removeChild(textarea);
     }

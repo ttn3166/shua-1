@@ -65,7 +65,7 @@ function distributeTeamCommission(db, refereeUserId, orderCommission, orderNo) {
 const confirmLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
-  message: { success: false, message: '操作过于频繁，请稍后再试' },
+  message: { success: false, message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false
 });

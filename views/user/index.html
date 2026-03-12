@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050712">
   <meta name="google" content="notranslate">
+  <meta name="i18n-title" content="login.pageTitle">
   <title>Login - TaskMall</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
@@ -92,27 +93,34 @@
       position: fixed;
       top: 16px;
       right: 16px;
-      z-index: 10;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
       font-size: 13px;
-      color: var(--text-muted);
+      font-weight: 600;
+      color: #2d3748;
       text-decoration: none;
       padding: 6px 10px;
       border-radius: 8px;
       transition: background 0.2s, color 0.2s;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
     }
     .login-page-lang:hover { color: var(--gold-primary); background: rgba(0,0,0,0.04); }
   </style>
-  <script src="/public/js/common.js?v=3"></script>
+  <script src="/public/js/common.js?v=8"></script>
 </head>
 <body>
-  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="login-page-lang" title="Language">🌐 Language</a>
+  <a href="javascript:void(0)" onclick="typeof showLanguage==='function'&&showLanguage();return false;" class="login-page-lang" title="Language" data-i18n="common.language">🌐 Language</a>
   <div class="login-container">
     <!-- 登录表单卡片 -->
     <div class="card-elevated">
       <div class="login-header">
         <div class="logo">T</div>
-        <h1 class="login-title">Welcome Back</h1>
-        <p class="login-subtitle">Login to your TaskMall account</p>
+        <h1 class="login-title" data-i18n="login.welcomeBack">Welcome Back</h1>
+        <p class="login-subtitle" data-i18n="login.subtitle">Login to your TaskMall account</p>
       </div>
 
       <!-- 错误提示 -->
@@ -121,46 +129,48 @@
       <!-- 表单 -->
       <form id="loginForm">
         <div class="form-group">
-          <label class="form-label" for="username">Username</label>
+          <label class="form-label" for="username" data-i18n="login.username">Username</label>
           <input 
             type="text" 
             id="username" 
             class="form-input" 
             placeholder="Enter your username"
+            data-i18n-placeholder="login.usernamePlaceholder"
             required
             autocomplete="username"
           >
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password" data-i18n="login.password">Password</label>
           <input 
             type="password" 
             id="password" 
             class="form-input" 
             placeholder="Enter Password"
+            data-i18n-placeholder="login.passwordPlaceholder"
             required
             autocomplete="current-password"
           >
         </div>
 
         <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
-          <span id="btnText">Login</span>
+          <span id="btnText" data-i18n="login.loginButton">Login</span>
           <span id="btnLoading" class="loading" style="display: none;"></span>
         </button>
       </form>
 
       <!-- 底部链接 -->
       <div class="form-footer">
-        No account? <a href="/views/user/register.html">Register</a>
+        <span data-i18n="login.noAccount">No account?</span> <a href="/views/user/register.html" data-i18n="login.register">Register</a>
       </div>
       <div class="form-footer" style="margin-top:10px; font-size:12px;">
-        <a href="/views/user/terms.html">Terms</a> <span style="margin:0 6px; color: var(--text-muted);">·</span> <a href="/views/user/privacy.html">Privacy</a>
+        <a href="/views/user/terms.html" data-i18n="common.terms">Terms</a> <span style="margin:0 6px; color: var(--text-muted);">·</span> <a href="/views/user/privacy.html" data-i18n="common.privacy">Privacy</a>
       </div>
 
-      <div class="divider">or</div>
+      <div class="divider" data-i18n="common.or">or</div>
 
-      <a href="/download.html" class="btn btn-outline btn-full">
+      <a href="/download.html" class="btn btn-outline btn-full" data-i18n="common.downloadApp">
         Download App
       </a>
     </div>
@@ -210,7 +220,7 @@
       const password = document.getElementById('password').value;
 
       if (!username || !password) {
-        showError('Please enter username and password');
+        showError(typeof t === 'function' ? (t('login.errorUsernamePassword') || 'Please enter username and password') : 'Please enter username and password');
         return;
       }
 
@@ -229,7 +239,7 @@
         try {
           result = await response.json();
         } catch (_) {
-          showError(response.ok ? 'Invalid response from server' : 'Server error. Please try again later.');
+          showError(response.ok ? (typeof t === 'function' ? (t('login.invalidResponse') || 'Invalid response from server') : 'Invalid response from server') : (typeof t === 'function' ? (t('login.serverError') || 'Server error. Please try again later.') : 'Server error. Please try again later.'));
           return;
         }
 
@@ -244,7 +254,8 @@
         // 跳转到主页并带欢迎参数，首屏可显示 Welcome back
         window.location.href = '/views/user/dashboard.html?welcome=1';
       } catch (error) {
-        showError(error.message);
+        var msg = (typeof t === 'function' && t('login.loginFailed')) ? t('login.loginFailed') : (error && error.message) || 'Login failed';
+        showError(msg);
       } finally {
         setLoading(false);
       }

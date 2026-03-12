@@ -55,16 +55,16 @@ function validateUsername(u) {
 }
 
 /**
- * 校验密码强度：长度 8～12 位，且至少包含一个字母和一个数字
+ * 校验密码强度：长度 8～12 位，且至少包含一个字母和一个数字（C 端接口返回英文提示）
  */
 function validatePassword(p) {
-  if (p == null || typeof p !== 'string') return { ok: false, msg: '密码格式无效' };
+  if (p == null || typeof p !== 'string') return { ok: false, msg: 'Invalid password format' };
   const s = String(p);
-  if (s.length < PASSWORD_MIN_LEN) return { ok: false, msg: `密码至少 ${PASSWORD_MIN_LEN} 位` };
-  if (s.length > PASSWORD_MAX_LEN) return { ok: false, msg: `密码不能超过 ${PASSWORD_MAX_LEN} 位` };
+  if (s.length < PASSWORD_MIN_LEN) return { ok: false, msg: `Password must be at least ${PASSWORD_MIN_LEN} characters` };
+  if (s.length > PASSWORD_MAX_LEN) return { ok: false, msg: `Password must not exceed ${PASSWORD_MAX_LEN} characters` };
   const hasLetter = /[a-zA-Z]/.test(s);
   const hasNumber = /[0-9]/.test(s);
-  if (!hasLetter || !hasNumber) return { ok: false, msg: '密码须同时包含字母和数字' };
+  if (!hasLetter || !hasNumber) return { ok: false, msg: 'Password must contain both letters and numbers' };
   return { ok: true };
 }
 
@@ -73,10 +73,10 @@ router.post('/register', authLimiter, (req, res) => {
   const usernameTrimmed = typeof username === 'string' ? username.trim() : '';
   
   if (!username || !password) {
-    return error(res, '请填写用户名和密码');
+    return error(res, 'Please enter username and password');
   }
   if (!validateUsername(usernameTrimmed)) {
-    return error(res, `用户名长度需为 ${USERNAME_MIN_LEN}～${USERNAME_MAX_LEN} 个字符`);
+    return error(res, `Username must be ${USERNAME_MIN_LEN}-${USERNAME_MAX_LEN} characters`);
   }
   const pwdCheck = validatePassword(password);
   if (!pwdCheck.ok) {
@@ -86,7 +86,7 @@ router.post('/register', authLimiter, (req, res) => {
   // 检查用户是否已存在
   const existing = req.db.prepare('SELECT id FROM users WHERE username = ?').get(usernameTrimmed);
   if (existing) {
-    return error(res, '该用户名已被注册', 409);
+    return error(res, 'This username is already registered', 409);
   }
   
   // 1. 查找推荐人（代理）：支持 ref 为代理 ID、用户名 或 邀请码（代理链接常用 ?ref=邀请码）
