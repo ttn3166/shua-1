@@ -37,17 +37,204 @@ const productImageUpload = multer({
 
 const ADMIN_ROLES = ['SuperAdmin', 'Admin', 'Finance', 'Support'];
 
+function safeJsonParse(str) {
+    try { return JSON.parse(str); } catch (_) { return null; }
+}
+
+function loadAgentPermissions(db, userId) {
+    try {
+        const row = db.prepare('SELECT agent_permissions FROM users WHERE id = ?').get(userId);
+        const parsed = row && row.agent_permissions ? safeJsonParse(row.agent_permissions) : null;
+        if (Array.isArray(parsed)) return parsed;
+        // 未配置权限：默认无权限（权限由管理员下放）
+        return [];
+    } catch (_) {
+        return [];
+    }
+}
+
+// 旧权限名与 admin.<模块>.<动作> 的对应（业务员管理里勾选的“团队、统计、详情”等）
+const OLD_PERM_TO_NEW = {
+    view_team: ['admin.users.view'],
+    view_stats: ['admin.stats.view', 'admin.dataScreen.view', 'admin.reports.view'],
+    view_team_detail: ['admin.user-detail.view'],
+    view_deposit_withdraw: ['admin.withdrawals.view', 'admin.deposits.view'],
+    view_referral_rewards: ['admin.referral-rewards.view'],
+    view_team_orders: ['admin.orders.view'],
+    view_team_login: ['admin.login-logs.view'],
+    view_team_transactions: ['admin.transactions.view']
+};
+
+function hasPermission(permList, perm) {
+    if (!Array.isArray(permList) || permList.length === 0) return false;
+    if (permList.includes('*') || permList.includes('admin_all')) return true;
+    if (permList.includes(perm)) return true;
+    // 旧权限兼容：若当前要求 perm，检查是否有任一旧权限映射到该 perm
+    for (const oldName of Object.keys(OLD_PERM_TO_NEW)) {
+        if (!permList.includes(oldName)) continue;
+        if (OLD_PERM_TO_NEW[oldName].indexOf(perm) !== -1) return true;
+    }
+    // 简单通配：users.* 这种前缀匹配
+    const parts = String(perm || '').split('.');
+    for (let i = parts.length; i >= 1; i--) {
+        const prefix = parts.slice(0, i).join('.') + '.*';
+        if (permList.includes(prefix)) return true;
+    }
+    return false;
+}
+
+// 代理访问后台：混合授权（模块 + 动作）
+// - 模块：取 req.path 的首段，如 /users/.. => users
+// - 动作：GET=view，DELETE=delete，其它=edit
+router.use((req, res, next) => {
+    if (!req.backoffice || !req.backoffice.isAgent) return next();
+    const seg = String(req.path || '/').split('/').filter(Boolean)[0] || 'root';
+    // GET /me 用于拉取当前权限，不要求 admin.me.view，否则代理无法进入工作台
+    if (seg === 'me') return next();
+    const action = req.method === 'GET' ? 'view' : (req.method === 'DELETE' ? 'delete' : 'edit');
+    const permKey = `admin.${seg}.${action}`;
+    if (!hasPermission(req.backoffice.permissions, permKey)) {
+        return res.status(403).json({ success: false, message: 'Forbidden: 无此权限', required: permKey });
+    }
+    next();
+});
+
+function getAgentScopeFilter(db, agentUser) {
+    const agentPath = (agentUser && agentUser.agent_path) ? String(agentUser.agent_path) : String((agentUser && agentUser.id) || '');
+    let inviteCode = '';
+    try {
+        const row = db.prepare('SELECT invite_code FROM users WHERE id = ?').get(agentUser.id);
+        inviteCode = row && row.invite_code ? String(row.invite_code) : '';
+    } catch (_) { inviteCode = ''; }
+    return {
+        agentPath,
+        likePrefix: agentPath ? (agentPath + '/%') : '',
+        inviteCode
+    };
+}
+
+function isUserInAgentScope(db, scope, userId) {
+    try {
+        const u = db.prepare('SELECT id, referred_by, agent_path FROM users WHERE id = ?').get(userId);
+        if (!u) return false;
+        const ap = u.agent_path ? String(u.agent_path) : '';
+        if (scope && scope.agentPath) {
+            if (ap === scope.agentPath) return true;
+            if (ap && ap.startsWith(scope.agentPath + '/')) return true;
+        }
+        if (scope && scope.inviteCode && u.referred_by === scope.inviteCode) return true;
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
+
+function ensureAgentUserInScopeOr403(req, res, db, userId) {
+    if (!req.backoffice || !req.backoffice.isAgent) return true;
+    const ok = isUserInAgentScope(db, req.backoffice.scope, userId);
+    if (!ok) {
+        res.status(403).json({ success: false, message: 'Forbidden: 超出数据范围' });
+        return false;
+    }
+    return true;
+}
+
+function addAgentScopeCondition(req, conditions, params, userAlias) {
+    if (!req.backoffice || !req.backoffice.isAgent || !req.backoffice.scope) return;
+    const sc = req.backoffice.scope;
+    const a = userAlias || 'u';
+    if (sc.agentPath && sc.inviteCode) {
+        conditions.push(`(${a}.agent_path = ? OR ${a}.agent_path LIKE ? OR ${a}.referred_by = ?)`);
+        params.push(sc.agentPath, sc.likePrefix || (sc.agentPath + '/%'), sc.inviteCode);
+        return;
+    }
+    if (sc.agentPath) {
+        conditions.push(`(${a}.agent_path = ? OR ${a}.agent_path LIKE ?)`);
+        params.push(sc.agentPath, sc.likePrefix || (sc.agentPath + '/%'));
+        return;
+    }
+    if (sc.inviteCode) {
+        conditions.push(`${a}.referred_by = ?`);
+        params.push(sc.inviteCode);
+        return;
+    }
+    // 代理无 agent_path 且无 inviteCode 时，不返回任何数据，避免误放行全量
+    conditions.push('1 = 0');
+}
+
 const checkAdmin = (req, res, next) => {
     const auth = req.headers['authorization'];
     if (!auth) return res.status(401).json({ success: false, error: 'Unauthorized' });
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : auth;
     const decoded = verifyToken(token);
-    if (!decoded || !ADMIN_ROLES.includes(decoded.role)) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!decoded) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const role = decoded.role;
+    if (ADMIN_ROLES.includes(role)) {
+        req.user = decoded;
+        req.backoffice = { role: role, isAgent: false, permissions: ['admin_all'] };
+        return next();
     }
-    req.user = decoded;
-    next();
+    if (role === 'Agent') {
+        const db = getDb();
+        const perms = loadAgentPermissions(db, decoded.id);
+        req.user = decoded;
+        req.backoffice = { role: role, isAgent: true, permissions: perms, scope: getAgentScopeFilter(db, decoded) };
+        return next();
+    }
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
 };
+
+// 代理访问后台：统一审计（不记录密码等敏感字段）
+router.use((req, res, next) => {
+    res.on('finish', () => {
+        try {
+            if (!req.backoffice || !req.backoffice.isAgent) return;
+            const db = getDb();
+            const method = req.method;
+            const pathOnly = req.originalUrl ? String(req.originalUrl).split('?')[0] : '';
+            const meta = {
+                role: req.backoffice.role,
+                method,
+                path: pathOnly,
+                status: res.statusCode,
+                query: req.query || {}
+            };
+            // 仅在非 GET 时记录 body（并做简单脱敏）
+            if (method !== 'GET' && req.body && typeof req.body === 'object') {
+                const b = { ...req.body };
+                if (b.password) b.password = '[redacted]';
+                if (b.new_password) b.new_password = '[redacted]';
+                if (b.security_password) b.security_password = '[redacted]';
+                meta.body = b;
+            }
+            writeAuditLog(db, req.user && req.user.id, 'agent_backoffice_api', 'admin_api', null, null, meta);
+        } catch (_) {}
+    });
+    next();
+});
+
+// 当前登录信息（给前端做权限与模式判断）
+// 代理的 permissions 会做一次展开：旧权限名（view_team 等）展开为 admin.xxx.view，便于前端 hasBackofficePerm 一致判断
+router.get('/me', checkAdmin, (req, res) => {
+    let perms = (req.backoffice && Array.isArray(req.backoffice.permissions)) ? req.backoffice.permissions : [];
+    if (req.backoffice && req.backoffice.isAgent && perms.length) {
+        const set = new Set(perms);
+        perms.forEach(p => {
+            const mapped = OLD_PERM_TO_NEW[p];
+            if (mapped) mapped.forEach(m => set.add(m));
+        });
+        perms = Array.from(set);
+    }
+    res.json({
+        success: true,
+        data: {
+            id: req.user && req.user.id,
+            role: req.backoffice ? req.backoffice.role : (req.user && req.user.role),
+            isAgent: !!(req.backoffice && req.backoffice.isAgent),
+            permissions: perms
+        }
+    });
+});
 
 function writeAuditLog(db, actorId, action, entityType, entityId, reason, metadata) {
     try {
@@ -176,6 +363,18 @@ router.get('/stats', checkAdmin, (req, res) => {
     const db = getDb();
     
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const scopeConditions = []; const scopeParams = [];
+            addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+            const scopeWhere = scopeConditions.length ? ' AND ' + scopeConditions.join(' AND ') : '';
+            let userCount = 0, systemBalance = 0, pendingWithdrawals = 0, todayProfit = 0;
+            try { const r = db.prepare("SELECT COUNT(*) as count FROM users u WHERE u.role = 'User'" + scopeWhere).get(...scopeParams); userCount = r ? r.count : 0; } catch (_) {}
+            try { const r = db.prepare("SELECT SUM(u.balance) as total FROM users u WHERE u.role = 'User'" + scopeWhere).get(...scopeParams); systemBalance = r && r.total ? r.total : 0; } catch (_) {}
+            try { const r = db.prepare("SELECT COUNT(*) as count FROM withdrawals w INNER JOIN users u ON w.user_id = u.id WHERE w.status = 'pending' AND u.role = 'User'" + scopeWhere).get(...scopeParams); pendingWithdrawals = r ? r.count : 0; } catch (_) {}
+            try { const r = db.prepare("SELECT SUM(COALESCE(o.commission, o.amount * 0.02)) as total FROM orders o INNER JOIN users u ON o.user_id = u.id WHERE o.status = 'completed' AND date(o.created_at) = date('now') AND u.role = 'User'" + scopeWhere).get(...scopeParams); todayProfit = r && r.total ? r.total : 0; } catch (_) {}
+            const empty = { total_invites: 0, active_referrers: 0, online_count: 0, online_users: [], today_reg: 0, yesterday_reg: 0, total_deposit: 0, today_deposit: 0, yesterday_deposit: 0, total_withdraw: 0, today_withdraw: 0, yesterday_withdraw: 0, month_deposit: 0, last_month_deposit: 0, month_withdraw: 0, last_month_withdraw: 0, total_profit: 0, yesterday_profit: 0, members_10d: [], deposit_10d: [] };
+            return res.json({ success: true, data: { total_users: userCount, system_balance: systemBalance, pending_withdrawals: pendingWithdrawals, today_profit: todayProfit, ...empty } });
+        }
         let userCount = 0;
         let systemBalance = 0;
         let pendingWithdrawals = 0;
@@ -406,7 +605,8 @@ function getUsersHandler(req, res) {
     const sortCol = allowedSort[String(sort).toLowerCase()] || 'id';
     const orderDir = (String(order).toLowerCase() === 'asc') ? 'ASC' : 'DESC';
     // 默认显示全部角色；仅当明确传 include_all_roles=0 或 false 时只显示普通用户
-    const onlyUserRole = include_all_roles === '0' || include_all_roles === 'false';
+    // 代理后台强制仅可查看自己范围内的普通用户
+    const onlyUserRole = (req.backoffice && req.backoffice.isAgent) ? true : (include_all_roles === '0' || include_all_roles === 'false');
     const userCols = db.prepare("PRAGMA table_info(users)").all().map(r => r.name);
     const hasRoleCol = userCols.includes('role');
     try {
@@ -416,6 +616,13 @@ function getUsersHandler(req, res) {
         const params = [];
         if (hasRoleCol && onlyUserRole) {
             sql += " AND role = 'User'";
+        }
+
+        // 代理范围：仅自己名下/团队/渠道（agent_path 前缀 或 referred_by=代理邀请码）
+        if (req.backoffice && req.backoffice.isAgent) {
+            const cond = [];
+            addAgentScopeCondition(req, cond, params, 'users');
+            if (cond.length) sql += " AND " + cond.join(' AND ');
         }
 
         if (type === 'worker') {
@@ -546,6 +753,12 @@ router.get('/user-detail/:id', checkAdmin, (req, res) => {
     const orderLimit = Math.min(parseInt(req.query.order_limit, 10) || 20, 100);
     const txLimit = Math.min(parseInt(req.query.tx_limit, 10) || 20, 100);
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const uidNum = parseInt(userId, 10);
+            if (!isUserInAgentScope(db, req.backoffice.scope, uidNum)) {
+                return res.status(403).json({ success: false, message: 'Forbidden: 超出数据范围' });
+            }
+        }
         const user = db.prepare(
             'SELECT id, username, phone, balance, frozen_balance, invite_code, referred_by, status, allow_grab, task_progress, created_at, admin_remark FROM users WHERE id = ?'
         ).get(userId);
@@ -584,6 +797,12 @@ router.get('/users/:id/orders', checkAdmin, (req, res) => {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
     const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const uidNum = parseInt(userId, 10);
+            if (!isUserInAgentScope(db, req.backoffice.scope, uidNum)) {
+                return res.status(403).json({ success: false, message: 'Forbidden: 超出数据范围' });
+            }
+        }
         const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
         if (!user) return res.status(404).json({ success: false, message: '用户不存在' });
         const total = db.prepare('SELECT COUNT(*) as c FROM orders WHERE user_id = ?').get(userId).c;
@@ -604,6 +823,12 @@ router.get('/users/:id/detail', checkAdmin, (req, res) => {
     const orderLimit = Math.min(parseInt(req.query.order_limit, 10) || 20, 100);
     const txLimit = Math.min(parseInt(req.query.tx_limit, 10) || 20, 100);
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const uidNum = parseInt(userId, 10);
+            if (!isUserInAgentScope(db, req.backoffice.scope, uidNum)) {
+                return res.status(403).json({ success: false, message: 'Forbidden: 超出数据范围' });
+            }
+        }
         const user = db.prepare(
             'SELECT id, username, phone, balance, frozen_balance, invite_code, referred_by, status, allow_grab, task_progress, created_at, admin_remark FROM users WHERE id = ?'
         ).get(userId);
@@ -641,6 +866,10 @@ router.get('/users/export', checkAdmin, (req, res) => {
     const q = req.query;
     let sql = "SELECT id, username, phone, balance, frozen_balance, invite_code, referred_by, allow_grab, task_progress, status, created_at FROM users WHERE role = 'User'";
     const params = [];
+    const scopeConditions = [];
+    const scopeParams = [];
+    addAgentScopeCondition(req, scopeConditions, scopeParams, 'users');
+    if (scopeConditions.length) { sql += " AND " + scopeConditions.join(' AND '); params.push(...scopeParams); }
     if (q.type === 'worker') { sql += " AND is_worker = 1"; } else if (q.type === 'real') { sql += " AND (is_worker = 0 OR is_worker IS NULL)"; }
     if (q.search) { sql += " AND (username LIKE ? OR CAST(id AS TEXT) LIKE ? OR invite_code LIKE ? OR COALESCE(phone,'') LIKE ?)"; params.push(`%${q.search}%`, `%${q.search}%`, `%${q.search}%`, `%${q.search}%`); }
     if (q.user_id) { sql += " AND id = ?"; params.push(q.user_id); }
@@ -693,6 +922,9 @@ router.get('/users/export', checkAdmin, (req, res) => {
 router.get('/users/segments', checkAdmin, (req, res) => {
     const db = getDb();
     try {
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'users');
+        const scopeWhere = scopeConditions.length ? ' AND ' + scopeConditions.join(' AND ') : '';
         const balanceRanges = [
             { label: '0', min: 0, max: 0 },
             { label: '0.01-10', min: 0.01, max: 10 },
@@ -701,16 +933,15 @@ router.get('/users/segments', checkAdmin, (req, res) => {
             { label: '500+', min: 500, max: 1e9 }
         ];
         const segments = balanceRanges.map(r => {
-            const row = db.prepare(
-                "SELECT COUNT(*) as count FROM users WHERE role = 'User' AND balance >= ? AND balance < ?"
-            ).get(r.min, r.max);
+            const sql = "SELECT COUNT(*) as count FROM users WHERE role = 'User' AND balance >= ? AND balance < ?" + scopeWhere;
+            const row = scopeParams.length ? db.prepare(sql).get(r.min, r.max, ...scopeParams) : db.prepare(sql).get(r.min, r.max);
             return { range: r.label, count: row ? row.count : 0 };
         });
-        const vipRows = db.prepare(
-            "SELECT vip_level, COUNT(*) as count FROM users WHERE role = 'User' GROUP BY vip_level ORDER BY vip_level"
-        ).all();
+        const vipSql = "SELECT vip_level, COUNT(*) as count FROM users WHERE role = 'User'" + scopeWhere + " GROUP BY vip_level ORDER BY vip_level";
+        const vipRows = scopeParams.length ? db.prepare(vipSql).all(...scopeParams) : db.prepare(vipSql).all();
         const vipSegments = vipRows.map(r => ({ vip_level: r.vip_level, count: r.count }));
-        const totalUsers = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'User'").get().c;
+        const totalSql = "SELECT COUNT(*) as c FROM users WHERE role = 'User'" + scopeWhere;
+        const totalUsers = (scopeParams.length ? db.prepare(totalSql).get(...scopeParams) : db.prepare(totalSql).get()).c;
         res.json({ success: true, data: { balance_segments: segments, vip_segments: vipSegments, total_users: totalUsers } });
     } catch (err) {
         console.error('users/segments error:', err);
@@ -735,6 +966,9 @@ router.get('/users/top-value', checkAdmin, (req, res) => {
             WHERE u.role = 'User'
         `;
         const params = [];
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) { sql += ' AND ' + scopeConditions.join(' AND '); params.push(...scopeParams); }
         if (days > 0) {
             sql += " AND u.created_at >= date('now', ?)";
             params.push('-' + days + ' days');
@@ -755,6 +989,7 @@ router.get('/users/top-value', checkAdmin, (req, res) => {
                 WHERE u.role = 'User'
             `;
             const params2 = [];
+            if (scopeConditions.length) { sql2 += ' AND ' + scopeConditions.join(' AND '); params2.push(...scopeParams); }
             if (days > 0) {
                 sql2 += " AND u.created_at >= date('now', ?)";
                 params2.push('-' + days + ' days');
@@ -806,6 +1041,7 @@ router.post('/adjust-balance', checkAdmin, (req, res) => {
         }
 
         const db = req.db || getDb();
+        if (!ensureAgentUserInScopeOr403(req, res, db, parseInt(user_id, 10))) return;
         const user = db.prepare('SELECT id, balance, is_worker FROM users WHERE id = ?').get(user_id);
         if (!user) {
             return res.json({ success: false, message: '用户不存在' });
@@ -851,6 +1087,7 @@ router.post('/adjust-balance', checkAdmin, (req, res) => {
 
 // 管理员账号列表（仅角色为 SuperAdmin/Admin/Finance/Support）
 router.get('/admins', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权访问' });
     const db = getDb();
     try {
         const list = db.prepare(
@@ -867,11 +1104,13 @@ const ALLOWED_USER_STATUS = ['active', 'frozen', 'banned'];
 router.patch('/users/:id/status', checkAdmin, (req, res) => {
     const db = getDb();
     const { status } = req.body;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     if (!status || !ALLOWED_USER_STATUS.includes(String(status))) {
         return res.status(400).json({ success: false, message: '状态值无效，仅允许: active, frozen, banned' });
     }
     try {
-        db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, req.params.id);
+        db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, userId);
         res.json({ success: true, message: '状态更新成功' });
     } catch (err) {
         const config = require('../config');
@@ -882,8 +1121,9 @@ router.patch('/users/:id/status', checkAdmin, (req, res) => {
 // 修改用户推荐关系
 router.patch('/users/:id/referrer', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
     const { referrer_code } = req.body; // 新推荐人的邀请码
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     
     try {
         // 获取当前用户信息
@@ -934,7 +1174,8 @@ router.patch('/users/:id/referrer', checkAdmin, (req, res) => {
 // 切换用户抢单状态（仅对 role=User 的会员生效；C 端抢单页 / 任务 match 会读取 allow_grab）
 router.post('/users/:id/toggle-grab', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
 
     try {
         const user = db.prepare('SELECT id, username, role, allow_grab FROM users WHERE id = ?').get(userId);
@@ -991,7 +1232,8 @@ router.post('/users/:id/toggle-account-type', checkAdmin, (req, res) => {
 // 重置用户任务进度（同时取消未完成订单并退还冻结金额）
 router.post('/users/:id/reset-progress', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
 
     try {
         const user = db.prepare('SELECT id, username, task_progress, frozen_balance FROM users WHERE id = ?').get(userId);
@@ -1030,7 +1272,8 @@ router.post('/users/:id/reset-progress', checkAdmin, (req, res) => {
 // 创建派送订单（预设插队订单）
 router.post('/users/:id/dispatch-order', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     const { task_index, min_amount, max_amount } = req.body;
     
     try {
@@ -1091,7 +1334,8 @@ router.post('/users/:id/dispatch-order', checkAdmin, (req, res) => {
 // 获取用户的派送订单列表
 router.get('/users/:id/dispatch-orders', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     
     try {
         const orders = db.prepare(`
@@ -1113,6 +1357,11 @@ router.delete('/dispatch-orders/:id', checkAdmin, (req, res) => {
     const orderId = req.params.id;
     
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const row = db.prepare('SELECT user_id FROM dispatched_orders WHERE id = ?').get(orderId);
+            if (!row) return res.status(404).json({ success: false, message: '派送订单不存在' });
+            if (!ensureAgentUserInScopeOr403(req, res, db, row.user_id)) return;
+        }
         db.prepare('DELETE FROM dispatched_orders WHERE id = ?').run(orderId);
         res.json({ success: true, message: '派送订单已删除' });
     } catch (err) {
@@ -1127,6 +1376,7 @@ router.delete('/dispatch-orders/:id', checkAdmin, (req, res) => {
 
 // 创建做单账户
 router.post('/worker/create', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权操作' });
     const db = getDb();
     const { username, password, balance } = req.body;
     
@@ -1172,6 +1422,8 @@ router.post('/users/:id/reset-password', checkAdmin, (req, res) => {
     const db = getDb();
     const bcrypt = require('bcryptjs');
     const { new_password } = req.body;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     
     if (!new_password || new_password.length < 6) {
         return res.json({ success: false, message: '新密码至少6位' });
@@ -1179,7 +1431,7 @@ router.post('/users/:id/reset-password', checkAdmin, (req, res) => {
     
     try {
         const hashedPassword = bcrypt.hashSync(new_password, 10);
-        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashedPassword, req.params.id);
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashedPassword, userId);
         res.json({ success: true, message: '密码重置成功' });
     } catch (err) {
         console.error('重置密码失败:', err);
@@ -1190,8 +1442,10 @@ router.post('/users/:id/reset-password', checkAdmin, (req, res) => {
 // 重置用户资金密码
 router.post('/users/:id/reset-security-password', checkAdmin, (req, res) => {
     const db = getDb();
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     try {
-        db.prepare('UPDATE users SET security_password = NULL WHERE id = ?').run(req.params.id);
+        db.prepare('UPDATE users SET security_password = NULL WHERE id = ?').run(userId);
         res.json({ success: true, message: '资金密码已清除，用户需重新设置' });
     } catch (err) {
         console.error('重置资金密码失败:', err);
@@ -1213,6 +1467,8 @@ router.get('/withdrawals', checkAdmin, (req, res) => {
     try {
         const conditions = [];
         const params = [];
+        // 代理范围：仅自己名下/团队/渠道
+        addAgentScopeCondition(req, conditions, params, 'u');
         if (accountTypeFilter === 'formal' || accountTypeFilter === 'worker') {
             conditions.push('(COALESCE(w.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
             params.push(accountTypeFilter);
@@ -1252,7 +1508,12 @@ router.get('/withdrawals', checkAdmin, (req, res) => {
         const whereClause = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
         const baseSql = 'FROM withdrawals w JOIN users u ON w.user_id = u.id' + whereClause;
         const total = db.prepare('SELECT COUNT(*) as c ' + baseSql).get(...params).c;
-        const pendingCount = db.prepare("SELECT COUNT(*) as c FROM withdrawals WHERE status = 'pending'").get().c;
+        // 待审数量：对代理做 scope 限制（不叠加其它筛选）
+        const pendingConds = [];
+        const pendingParams = [];
+        addAgentScopeCondition(req, pendingConds, pendingParams, 'u');
+        const pendingWhere = pendingConds.length ? (' WHERE ' + pendingConds.join(' AND ') + " AND w.status = 'pending'") : " WHERE w.status = 'pending'";
+        const pendingCount = db.prepare('SELECT COUNT(*) as c FROM withdrawals w JOIN users u ON w.user_id = u.id' + pendingWhere).get(...pendingParams).c;
         const summary = db.prepare(
             'SELECT COUNT(*) as count_approved, IFNULL(SUM(amount), 0) as amount_approved FROM withdrawals w JOIN users u ON w.user_id = u.id' + whereClause + " AND w.status IN ('approved', 'paid')"
         ).get(...params);
@@ -1282,6 +1543,11 @@ router.post('/withdrawals/:id/review', checkAdmin, (req, res) => {
     const withdrawalId = req.params.id;
     
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const row = db.prepare('SELECT user_id FROM withdrawals WHERE id = ?').get(withdrawalId);
+            if (!row) return res.status(404).json({ success: false, message: '提现记录不存在' });
+            if (!ensureAgentUserInScopeOr403(req, res, db, row.user_id)) return;
+        }
         const tx = db.transaction(() => {
             const withdrawal = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(withdrawalId);
             if (!withdrawal) throw new Error('提现记录不存在');
@@ -1316,6 +1582,9 @@ router.post('/withdrawals/:id/review', checkAdmin, (req, res) => {
 
 // 提现批量审批（仅总端）
 router.post('/withdrawals/batch-review', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) {
+        return res.status(403).json({ success: false, message: 'Forbidden: 代理不可批量审批' });
+    }
     const db = getDb();
     const { ids, action, reason } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, message: '请选择要处理的记录' });
@@ -1362,6 +1631,8 @@ router.get('/deposits', checkAdmin, (req, res) => {
     try {
         const conditions = [];
         const params = [];
+        // 代理范围：仅自己名下/团队/渠道
+        addAgentScopeCondition(req, conditions, params, 'u');
         if (accountTypeFilter === 'formal' || accountTypeFilter === 'worker') {
             conditions.push('(COALESCE(d.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
             params.push(accountTypeFilter);
@@ -1406,7 +1677,12 @@ router.get('/deposits', checkAdmin, (req, res) => {
         const whereClause = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
         const baseSql = 'FROM deposits d JOIN users u ON d.user_id = u.id' + whereClause;
         const total = db.prepare('SELECT COUNT(*) as c ' + baseSql).get(...params).c;
-        const pendingCount = db.prepare("SELECT COUNT(*) as c FROM deposits WHERE status = 'pending'").get().c;
+        // 待审数量：对代理做 scope 限制（不叠加其它筛选）
+        const pendingConds = [];
+        const pendingParams = [];
+        addAgentScopeCondition(req, pendingConds, pendingParams, 'u');
+        const pendingWhere = pendingConds.length ? (' WHERE ' + pendingConds.join(' AND ') + " AND d.status = 'pending'") : " WHERE d.status = 'pending'";
+        const pendingCount = db.prepare('SELECT COUNT(*) as c FROM deposits d JOIN users u ON d.user_id = u.id' + pendingWhere).get(...pendingParams).c;
         const summary = db.prepare(
             'SELECT COUNT(*) as count_approved, IFNULL(SUM(amount), 0) as amount_approved FROM deposits d JOIN users u ON d.user_id = u.id' + whereClause + " AND d.status = 'approved'"
         ).get(...params);
@@ -1436,6 +1712,11 @@ router.post('/deposits/:id/review', checkAdmin, (req, res) => {
     const depositId = req.params.id;
     
     try {
+        if (req.backoffice && req.backoffice.isAgent) {
+            const row = db.prepare('SELECT user_id FROM deposits WHERE id = ?').get(depositId);
+            if (!row) return res.status(404).json({ success: false, message: '充值记录不存在' });
+            if (!ensureAgentUserInScopeOr403(req, res, db, row.user_id)) return;
+        }
         const tx = db.transaction(() => {
             const deposit = db.prepare('SELECT * FROM deposits WHERE id = ?').get(depositId);
             if (!deposit) throw new Error('充值记录不存在');
@@ -1468,6 +1749,9 @@ router.post('/deposits/:id/review', checkAdmin, (req, res) => {
 
 // 充值批量审批（仅总端）
 router.post('/deposits/batch-review', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) {
+        return res.status(403).json({ success: false, message: 'Forbidden: 代理不可批量审批' });
+    }
     const db = getDb();
     const { ids, action, reason } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ success: false, message: '请选择要处理的记录' });
@@ -1982,8 +2266,9 @@ router.post('/settings', checkAdmin, (req, res) => {
 // 获取用户的团队成员列表
 router.get('/users/:id/team', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
-    
+    const userId = parseInt(req.params.id, 10);
+    if (req.backoffice && req.backoffice.isAgent && !ensureAgentUserInScopeOr403(req, res, db, userId)) return;
+
     try {
         // 获取用户邀请码
         const user = db.prepare('SELECT invite_code, username FROM users WHERE id = ?').get(userId);
@@ -2020,15 +2305,21 @@ router.get('/invite-trends', checkAdmin, (req, res) => {
     const db = getDb();
     
     try {
-        const trends = db.prepare(`
-            SELECT DATE(created_at) as date, COUNT(*) as count
-            FROM users
-            WHERE referred_by IS NOT NULL 
-            AND role = 'User'
-            AND created_at >= DATE('now', '-30 days')
-            GROUP BY DATE(created_at)
-            ORDER BY date ASC
-        `).all();
+        let sql = `
+            SELECT DATE(u.created_at) as date, COUNT(*) as count
+            FROM users u
+            WHERE u.referred_by IS NOT NULL 
+            AND u.role = 'User'
+            AND u.created_at >= DATE('now', '-30 days')
+        `;
+        const scopeConditions = [];
+        const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            sql += ' AND ' + scopeConditions.join(' AND ');
+        }
+        sql += ' GROUP BY DATE(u.created_at) ORDER BY date ASC';
+        const trends = scopeParams.length ? db.prepare(sql).all(...scopeParams) : db.prepare(sql).all();
         
         res.json({ success: true, data: trends });
     } catch (err) {
@@ -2042,15 +2333,22 @@ router.get('/export-invites', checkAdmin, (req, res) => {
     const db = getDb();
     
     try {
-        const users = db.prepare(`
+        let sql = `
             SELECT u.id, u.username, u.invite_code, u.referred_by, u.balance, u.created_at,
                    r.username as referrer_name,
                    (SELECT COUNT(*) FROM users WHERE referred_by = u.invite_code) as team_count
             FROM users u
             LEFT JOIN users r ON u.referred_by = r.invite_code
             WHERE u.role = 'User'
-            ORDER BY u.id ASC
-        `).all();
+        `;
+        const scopeConditions = [];
+        const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            sql += ' AND ' + scopeConditions.join(' AND ');
+        }
+        sql += ' ORDER BY u.id ASC';
+        const users = scopeParams.length ? db.prepare(sql).all(...scopeParams) : db.prepare(sql).all();
         
         // 构建CSV内容
         let csv = 'ID,用户名,邀请码,推荐人,推荐人用户名,余额,团队人数,注册时间\n';
@@ -2084,6 +2382,12 @@ router.get('/referral-rewards', checkAdmin, (req, res) => {
             if (date_from != null && String(date_from).trim() !== '') { conditions.push("date(created_at) >= ?"); params.push(String(date_from).trim()); }
             if (date_to != null && String(date_to).trim() !== '') { conditions.push("date(created_at) <= ?"); params.push(String(date_to).trim()); }
         } catch (e) {}
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            conditions.push('referrer_username IN (SELECT u.username FROM users u WHERE u.role = ? AND ' + scopeConditions.join(' AND ') + ')');
+            params.push('User', ...scopeParams);
+        }
         const whereClause = conditions.length ? ' WHERE ' + conditions.join(' AND ') : '';
         const offset = ((parseInt(page, 10) || 1) - 1) * (parseInt(limit, 10) || 50);
         const limitNum = Math.min(parseInt(limit, 10) || 50, 500);
@@ -2099,7 +2403,8 @@ router.get('/referral-rewards', checkAdmin, (req, res) => {
 // 切换用户状态 (冻结/解冻)
 router.post('/users/:id/toggle-status', checkAdmin, (req, res) => {
     const db = getDb();
-    const userId = req.params.id;
+    const userId = parseInt(req.params.id, 10);
+    if (!ensureAgentUserInScopeOr403(req, res, db, userId)) return;
     
     try {
         const user = db.prepare('SELECT id, username, status FROM users WHERE id = ?').get(userId);
@@ -2137,6 +2442,8 @@ router.post('/users/:id/edit', checkAdmin, (req, res) => {
     const remark = body.remark;
     
     try {
+        const uidNum = parseInt(userId, 10);
+        if (!ensureAgentUserInScopeOr403(req, res, db, uidNum)) return;
         const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
         if (!user) {
             return res.status(404).json({ success: false, message: '用户不存在' });
@@ -2363,6 +2670,7 @@ router.post('/system-params', checkAdmin, (req, res) => {
 
 // 获取业务员列表
 router.get('/agents', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权访问' });
     const db = getDb();
     const q = req.query;
     const where = ["u.role = 'Agent'"];
@@ -2386,6 +2694,7 @@ router.get('/agents', checkAdmin, (req, res) => {
 
 // 创建代理（业务员）
 router.post('/agent/create', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权操作' });
     const { username, password, remark, permissions } = req.body;
     
     if (!username || !password) {
@@ -2422,6 +2731,9 @@ router.post('/agent/create', checkAdmin, (req, res) => {
             VALUES (?, ?, ?, 'Agent', 1, 0, 'active', datetime('now'), ?)
         `).run(username, passwordHash, inviteCode, agentPermissionsJson || JSON.stringify(['view_team', 'view_stats', 'view_team_detail', 'view_deposit_withdraw', 'view_referral_rewards', 'view_team_orders', 'view_team_login']));
 
+        // agent_path：作为范围前缀（默认用自身 ID）
+        try { db.prepare('UPDATE users SET agent_path = ? WHERE id = ?').run(String(result.lastInsertRowid), result.lastInsertRowid); } catch (_) {}
+
         console.log(`🤵 创建业务员: ${username} (ID:${result.lastInsertRowid}, 邀请码:${inviteCode})`);
         if (remark) {
             console.log(`   备注: ${remark}`);
@@ -2440,6 +2752,7 @@ router.post('/agent/create', checkAdmin, (req, res) => {
 
 // 删除业务员
 router.delete('/agents/:id', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权操作' });
     const db = getDb();
     const agentId = req.params.id;
     
@@ -2472,6 +2785,7 @@ router.delete('/agents/:id', checkAdmin, (req, res) => {
 
 // 更新代理权限
 router.patch('/agents/:id', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权操作' });
     const db = getDb();
     const agentId = req.params.id;
     const { permissions } = req.body || {};
@@ -2492,6 +2806,7 @@ router.patch('/agents/:id', checkAdmin, (req, res) => {
 
 // 切换业务员状态
 router.post('/agents/:id/toggle-status', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden: 代理无权操作' });
     const db = getDb();
     const agentId = req.params.id;
     
@@ -2522,6 +2837,7 @@ router.post('/agents/:id/toggle-status', checkAdmin, (req, res) => {
 // ==========================================
 // 操作日志导出 CSV（与列表同筛选条件，最多 10000 条）
 router.get('/audit-logs/export', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden' });
     const db = getDb();
     const q = req.query;
     const where = [];
@@ -2551,6 +2867,7 @@ router.get('/audit-logs/export', checkAdmin, (req, res) => {
 });
 
 router.get('/audit-logs', checkAdmin, (req, res) => {
+    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden' });
     const db = getDb();
     const q = req.query;
     const where = [];
@@ -2600,6 +2917,13 @@ router.get('/login-logs', checkAdmin, (req, res) => {
             whereClause += ' AND ip LIKE ?';
             filterParams.push('%' + String(ip).trim() + '%');
         }
+        const scopeConditions = [];
+        const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            whereClause += ' AND user_id IN (SELECT u.id FROM users u WHERE u.role = \'User\' AND ' + scopeConditions.join(' AND ') + ')';
+            filterParams.push(...scopeParams);
+        }
         const listSql = 'SELECT id, user_id, username, ip, user_agent, created_at FROM login_logs' + whereClause + ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
         const logs = db.prepare(listSql).all(...filterParams, parseInt(limit), parseInt(offset));
         const total = db.prepare('SELECT COUNT(*) as count FROM login_logs' + whereClause).get(...filterParams);
@@ -2626,6 +2950,13 @@ router.get('/login-logs/export', checkAdmin, (req, res) => {
     if (q.user_id) { whereClause += ' AND user_id = ?'; params.push(q.user_id); }
     if (q.username && String(q.username).trim()) { whereClause += ' AND username LIKE ?'; params.push('%' + String(q.username).trim() + '%'); }
     if (q.ip && String(q.ip).trim()) { whereClause += ' AND ip LIKE ?'; params.push('%' + String(q.ip).trim() + '%'); }
+    const scopeConditions = [];
+    const scopeParams = [];
+    addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+    if (scopeConditions.length) {
+        whereClause += ' AND user_id IN (SELECT u.id FROM users u WHERE u.role = \'User\' AND ' + scopeConditions.join(' AND ') + ')';
+        params.push(...scopeParams);
+    }
     const limitNum = Math.min(parseInt(q.limit, 10) || 10000, 10000);
     try {
         const logs = db.prepare(
@@ -2653,6 +2984,7 @@ router.get('/orders/export', checkAdmin, (req, res) => {
     const q = req.query;
     const where = ["o.user_id = u.id", "u.role = 'User'"];
     const params = [];
+    addAgentScopeCondition(req, where, params, 'u');
     if (q.user_id && String(q.user_id).trim()) { where.push('o.user_id = ?'); params.push(parseInt(q.user_id, 10)); }
     if (q.username && String(q.username).trim()) { where.push('u.username LIKE ?'); params.push('%' + String(q.username).trim() + '%'); }
     if (q.order_no && String(q.order_no).trim()) { where.push('o.order_no LIKE ?'); params.push('%' + String(q.order_no).trim() + '%'); }
@@ -2695,6 +3027,7 @@ router.get('/orders', checkAdmin, (req, res) => {
         if (q.status && String(q.status).trim()) { where.push('o.status = ?'); params.push(String(q.status).trim()); }
         if (q.date_from && String(q.date_from).trim()) { where.push("date(o.created_at) >= ?"); params.push(String(q.date_from).trim()); }
         if (q.date_to && String(q.date_to).trim()) { where.push("date(o.created_at) <= ?"); params.push(String(q.date_to).trim()); }
+        addAgentScopeCondition(req, where, params, 'u');
         const whereStr = ' WHERE ' + where.join(' AND ');
         const baseSql = 'FROM orders o JOIN users u ON o.user_id = u.id' + whereStr;
         const limitNum = Math.min(parseInt(q.limit, 10) || 20, 500);
@@ -2723,9 +3056,13 @@ router.get('/orders', checkAdmin, (req, res) => {
 router.get('/orders/status-counts', checkAdmin, (req, res) => {
     const db = getDb();
     try {
+        const where = [];
+        const params = [];
+        addAgentScopeCondition(req, where, params, 'u');
+        const whereStr = where.length ? (' WHERE ' + where.join(' AND ')) : '';
         const rows = db.prepare(
-            "SELECT status, COUNT(*) as count FROM orders GROUP BY status"
-        ).all();
+            "SELECT o.status as status, COUNT(*) as count FROM orders o JOIN users u ON o.user_id = u.id" + whereStr + " GROUP BY o.status"
+        ).all(...params);
         const counts = { pending: 0, completed: 0, cancelled: 0 };
         rows.forEach(r => { counts[r.status] = r.count; });
         res.json({ success: true, data: counts });
@@ -2956,6 +3293,7 @@ router.get('/transactions/all', checkAdmin, (req, res) => {
     const db = getDb();
     const q = req.query;
     const where = []; const params = [];
+    addAgentScopeCondition(req, where, params, 'u');
     if (q.account_type === 'formal' || q.account_type === 'worker') {
         where.push('(COALESCE(t.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
         params.push(q.account_type);
@@ -2984,6 +3322,7 @@ router.get('/transactions/export', checkAdmin, (req, res) => {
     const db = getDb();
     const q = req.query;
     const where = []; const params = [];
+    addAgentScopeCondition(req, where, params, 'u');
     if (q.account_type === 'formal' || q.account_type === 'worker') {
         where.push('(COALESCE(t.account_type, (CASE WHEN u.is_worker = 1 THEN \'worker\' ELSE \'formal\' END)) = ?)');
         params.push(q.account_type);

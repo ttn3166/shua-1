@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#050712">
-  <title>Agent Partner - TaskMall</title>
+  <title>代理后台 - 登录</title>
   <link rel="stylesheet" href="/public/css/theme.css">
   <style>
     body {
@@ -89,14 +89,14 @@
     <div class="card-elevated">
       <div class="login-header">
         <div class="logo">💎</div>
-        <h1 class="login-title">Agent Partner</h1>
-        <p class="login-subtitle">Agent Partner Center</p>
+        <h1 class="login-title">代理后台</h1>
+        <p class="login-subtitle">代理中心登录</p>
       </div>
 
       <!-- 欢迎提示 -->
       <div class="welcome-notice">
         <span>👋</span>
-        <span>Welcome back! Login to view your team data and commission.</span>
+        <span>欢迎回来，登录后可查看团队数据与佣金。</span>
       </div>
 
       <!-- 错误提示 -->
@@ -105,38 +105,38 @@
       <!-- 表单 -->
       <form id="agentLoginForm">
         <div class="form-group">
-          <label class="form-label" for="username">Agent Account</label>
+          <label class="form-label" for="username">代理账号</label>
           <input 
             type="text" 
             id="username" 
             class="form-input" 
-            placeholder="Enter agent username"
+            placeholder="请输入代理用户名"
             required
             autocomplete="username"
           >
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">Password</label>
+          <label class="form-label" for="password">密码</label>
           <input 
             type="password" 
             id="password" 
             class="form-input" 
-            placeholder="Enter password"
+            placeholder="请输入密码"
             required
             autocomplete="current-password"
           >
         </div>
 
         <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
-          <span id="btnText">Login to Agent Dashboard</span>
+          <span id="btnText">登录代理工作台</span>
           <span id="btnLoading" class="loading" style="display: none;"></span>
         </button>
       </form>
 
       <!-- 底部提示 -->
       <div class="form-footer">
-        Don't have an agent account? <a href="#" onclick="alert('Please contact admin to apply for agent'); return false;">Apply to become an agent</a>
+        还没有代理账号？<a href="#" onclick="alert('请联系管理员申请成为代理'); return false;">申请成为代理</a>
       </div>
     </div>
   </div>
@@ -180,7 +180,7 @@
       const password = document.getElementById('password').value;
 
       if (!username || !password) {
-        showError('Please enter username and password');
+        showError('请输入用户名和密码');
         return;
       }
 
@@ -198,12 +198,12 @@
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Login failed');
+          throw new Error(result.error || '登录失败');
         }
 
         // 验证角色权限
         if (result.data.user.role !== 'Agent') {
-          throw new Error('Access denied. Agents only.');
+          throw new Error('仅限代理账号登录');
         }
 
         // 保存 Token
