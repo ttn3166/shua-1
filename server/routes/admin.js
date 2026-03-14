@@ -89,8 +89,8 @@ function hasPermission(permList, perm) {
 router.use((req, res, next) => {
     if (!req.backoffice || !req.backoffice.isAgent) return next();
     const seg = String(req.path || '/').split('/').filter(Boolean)[0] || 'root';
-    // GET /me 用于拉取当前权限，不要求 admin.me.view，否则代理无法进入工作台
     if (seg === 'me') return next();
+    if (seg === 'change-password') return next(); // 代理可修改自己的登录密码
     const action = req.method === 'GET' ? 'view' : (req.method === 'DELETE' ? 'delete' : 'edit');
     const permKey = `admin.${seg}.${action}`;
     if (!hasPermission(req.backoffice.permissions, permKey)) {
@@ -100,12 +100,17 @@ router.use((req, res, next) => {
 });
 
 function getAgentScopeFilter(db, agentUser) {
-    const agentPath = (agentUser && agentUser.agent_path) ? String(agentUser.agent_path) : String((agentUser && agentUser.id) || '');
+    let agentPath = '';
     let inviteCode = '';
     try {
-        const row = db.prepare('SELECT invite_code FROM users WHERE id = ?').get(agentUser.id);
-        inviteCode = row && row.invite_code ? String(row.invite_code) : '';
-    } catch (_) { inviteCode = ''; }
+        const row = db.prepare('SELECT invite_code, agent_path FROM users WHERE id = ?').get(agentUser && agentUser.id);
+        if (row) {
+            inviteCode = row.invite_code ? String(row.invite_code) : '';
+            agentPath = (row.agent_path != null && row.agent_path !== '') ? String(row.agent_path) : String(agentUser && agentUser.id || '');
+        } else {
+            agentPath = String(agentUser && agentUser.id || '');
+        }
+    } catch (_) { agentPath = String(agentUser && agentUser.id || ''); }
     return {
         agentPath,
         likePrefix: agentPath ? (agentPath + '/%') : '',
@@ -3075,10 +3080,13 @@ router.get('/orders/status-counts', checkAdmin, (req, res) => {
 // 报表统计系统
 // ==========================================
 
-// 每日经营报表（支持 days=7|30|90，默认 30）
+// 每日经营报表（支持 days=7|30|90，默认 30；代理仅统计线下）
 router.get('/reports/daily', checkAdmin, (req, res) => {
     const db = getDb();
     const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 30));
+    const scopeConditions = []; const scopeParams = [];
+    addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+    const scopeWhere = scopeConditions.length ? ' AND ' + scopeConditions.join(' AND ') : '';
     try {
         const dailyReports = [];
         for (let i = days - 1; i >= 0; i--) {
@@ -3086,38 +3094,31 @@ router.get('/reports/daily', checkAdmin, (req, res) => {
             date.setDate(date.getDate() - i);
             const dateStr = date.toISOString().split('T')[0];
             
-            // 统计新增用户
-            const newUsers = db.prepare(`
-                SELECT COUNT(*) as count 
-                FROM users 
-                WHERE date(created_at) = ? AND role = 'User'
-            `).get(dateStr);
-            
-            // 统计充值总额（从 deposits 表，已审批通过的）
-            let totalDeposit = 0;
-            try {
-                const depositResult = db.prepare(`
-                    SELECT IFNULL(SUM(amount), 0) as total 
-                    FROM deposits 
-                    WHERE date(created_at) = ? AND status = 'approved'
-                `).get(dateStr);
-                totalDeposit = depositResult ? depositResult.total : 0;
-            } catch (e) {}
-            
-            // 统计提现总额（从 withdrawals 表，已通过/已打款）
-            let totalWithdraw = 0;
-            try {
-                const withdrawResult = db.prepare(`
-                    SELECT IFNULL(SUM(amount), 0) as total 
-                    FROM withdrawals 
-                    WHERE date(created_at) = ? AND status IN ('approved', 'paid')
-                `).get(dateStr);
-                totalWithdraw = withdrawResult ? withdrawResult.total : 0;
-            } catch (e) {}
-            
+            let newUsers, totalDeposit = 0, totalWithdraw = 0;
+            if (scopeConditions.length) {
+                newUsers = db.prepare("SELECT COUNT(*) as count FROM users u WHERE date(u.created_at) = ? AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                try {
+                    const r = db.prepare("SELECT IFNULL(SUM(d.amount),0) as total FROM deposits d INNER JOIN users u ON d.user_id = u.id WHERE date(d.created_at) = ? AND d.status = 'approved' AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                    totalDeposit = r ? r.total : 0;
+                } catch (e) {}
+                try {
+                    const r = db.prepare("SELECT IFNULL(SUM(w.amount),0) as total FROM withdrawals w INNER JOIN users u ON w.user_id = u.id WHERE date(w.created_at) = ? AND w.status IN ('approved','paid') AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                    totalWithdraw = r ? r.total : 0;
+                } catch (e) {}
+            } else {
+                newUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE date(created_at) = ? AND role = 'User'").get(dateStr);
+                try {
+                    const r = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM deposits WHERE date(created_at) = ? AND status = 'approved'").get(dateStr);
+                    totalDeposit = r ? r.total : 0;
+                } catch (e) {}
+                try {
+                    const r = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM withdrawals WHERE date(created_at) = ? AND status IN ('approved','paid')").get(dateStr);
+                    totalWithdraw = r ? r.total : 0;
+                } catch (e) {}
+            }
             dailyReports.push({
                 date: dateStr,
-                new_users: newUsers.count,
+                new_users: newUsers ? newUsers.count : 0,
                 total_deposit: totalDeposit,
                 total_withdraw: totalWithdraw,
                 net_inflow: totalDeposit - totalWithdraw
@@ -3352,20 +3353,31 @@ router.get('/transactions/export', checkAdmin, (req, res) => {
     }
 });
 
-// 数据分析：多维度报表
+// 数据分析：多维度报表（代理仅统计线下）
 router.get('/reports/multi', checkAdmin, (req, res) => {
     const db = getDb();
     const days = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 30));
+    const scopeConditions = []; const scopeParams = [];
+    addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+    const scopeWhere = scopeConditions.length ? ' AND ' + scopeConditions.join(' AND ') : '';
     try {
         const rows = [];
         for (let i = days - 1; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().split('T')[0];
-            const newUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE date(created_at) = ? AND role = 'User'").get(dateStr);
-            const dep = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM deposits WHERE date(created_at) = ? AND status = 'approved'").get(dateStr);
-            const wd = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM withdrawals WHERE date(created_at) = ? AND status IN ('approved','paid')").get(dateStr);
-            const ord = db.prepare("SELECT COUNT(*) as c, IFNULL(SUM(CASE WHEN status = 'completed' THEN commission ELSE 0 END),0) as commission FROM orders WHERE date(created_at) = ?").get(dateStr);
+            let newUsers, dep, wd, ord;
+            if (scopeConditions.length) {
+                newUsers = db.prepare("SELECT COUNT(*) as count FROM users u WHERE date(u.created_at) = ? AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                dep = db.prepare("SELECT IFNULL(SUM(d.amount),0) as total FROM deposits d INNER JOIN users u ON d.user_id = u.id WHERE date(d.created_at) = ? AND d.status = 'approved' AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                wd = db.prepare("SELECT IFNULL(SUM(w.amount),0) as total FROM withdrawals w INNER JOIN users u ON w.user_id = u.id WHERE date(w.created_at) = ? AND w.status IN ('approved','paid') AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+                ord = db.prepare("SELECT COUNT(*) as c, IFNULL(SUM(CASE WHEN o.status = 'completed' THEN o.commission ELSE 0 END),0) as commission FROM orders o INNER JOIN users u ON o.user_id = u.id WHERE date(o.created_at) = ? AND u.role = 'User'" + scopeWhere).get(dateStr, ...scopeParams);
+            } else {
+                newUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE date(created_at) = ? AND role = 'User'").get(dateStr);
+                dep = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM deposits WHERE date(created_at) = ? AND status = 'approved'").get(dateStr);
+                wd = db.prepare("SELECT IFNULL(SUM(amount),0) as total FROM withdrawals WHERE date(created_at) = ? AND status IN ('approved','paid')").get(dateStr);
+                ord = db.prepare("SELECT COUNT(*) as c, IFNULL(SUM(CASE WHEN status = 'completed' THEN commission ELSE 0 END),0) as commission FROM orders WHERE date(created_at) = ?").get(dateStr);
+            }
             rows.push({
                 date: dateStr,
                 new_users: newUsers ? newUsers.count : 0,
@@ -3383,7 +3395,7 @@ router.get('/reports/multi', checkAdmin, (req, res) => {
     }
 });
 
-// 数据分析：邀请汇总
+// 数据分析：邀请汇总（代理仅看线下）
 router.get('/reports/invite-summary', checkAdmin, (req, res) => {
     const db = getDb();
     const dateFrom = (req.query.date_from || '').trim();
@@ -3393,6 +3405,9 @@ router.get('/reports/invite-summary', checkAdmin, (req, res) => {
         const params = [];
         if (dateFrom) { where += " AND date(u.created_at) >= ? "; params.push(dateFrom); }
         if (dateTo) { where += " AND date(u.created_at) <= ? "; params.push(dateTo); }
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) { where += ' AND ' + scopeConditions.join(' AND '); params.push(...scopeParams); }
         const list = db.prepare(
             "SELECT u.referred_by as invite_code, COUNT(DISTINCT u.id) as reg_count FROM users u " + where + " GROUP BY u.referred_by ORDER BY reg_count DESC LIMIT 200"
         ).all(...params);
@@ -3413,7 +3428,7 @@ router.get('/reports/invite-summary', checkAdmin, (req, res) => {
     }
 });
 
-// 数据分析：流水汇总
+// 数据分析：流水汇总（代理仅看线下用户流水）
 router.get('/reports/finance-summary', checkAdmin, (req, res) => {
     const db = getDb();
     const dateFrom = (req.query.date_from || '').trim();
@@ -3423,6 +3438,12 @@ router.get('/reports/finance-summary', checkAdmin, (req, res) => {
         const params = [];
         if (dateFrom) { where += " AND date(created_at) >= ? "; params.push(dateFrom); }
         if (dateTo) { where += " AND date(created_at) <= ? "; params.push(dateTo); }
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            where += " AND user_id IN (SELECT u.id FROM users u WHERE u.role = 'User' AND " + scopeConditions.join(' AND ') + ") ";
+            params.push(...scopeParams);
+        }
         try {
             const rows = db.prepare("SELECT type, COUNT(*) as count, IFNULL(SUM(amount),0) as total FROM transactions " + where + " GROUP BY type").all(...params);
             return res.json({ success: true, data: rows || [] });
@@ -3444,19 +3465,38 @@ router.get('/reports/finance-summary', checkAdmin, (req, res) => {
 router.get('/reports/balance-check', checkAdmin, (req, res) => {
     const db = getDb();
     try {
-        const userBalance = db.prepare("SELECT IFNULL(SUM(balance),0) as t FROM users WHERE role = 'User'").get();
-        const totalDeposit = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM deposits WHERE status = 'approved'").get();
-        const totalWithdraw = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM withdrawals WHERE status IN ('approved','paid')").get();
-        let totalCommission = { t: 0 }, totalManualAdd = { t: 0 }, totalManualDeduct = { t: 0 };
-        try {
-            totalCommission = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'task_commission'").get();
-            totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_add'").get();
-            totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_deduct'").get();
-        } catch (e) {
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        const scopeWhere = scopeConditions.length ? ' AND ' + scopeConditions.join(' AND ') : '';
+        let userBalance, totalDeposit, totalWithdraw, totalCommission = { t: 0 }, totalManualAdd = { t: 0 }, totalManualDeduct = { t: 0 };
+        if (scopeConditions.length) {
+            userBalance = db.prepare("SELECT IFNULL(SUM(u.balance),0) as t FROM users u WHERE u.role = 'User'" + scopeWhere).get(...scopeParams);
+            totalDeposit = db.prepare("SELECT IFNULL(SUM(d.amount),0) as t FROM deposits d INNER JOIN users u ON d.user_id = u.id WHERE d.status = 'approved' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+            totalWithdraw = db.prepare("SELECT IFNULL(SUM(w.amount),0) as t FROM withdrawals w INNER JOIN users u ON w.user_id = u.id WHERE w.status IN ('approved','paid') AND u.role = 'User'" + scopeWhere).get(...scopeParams);
             try {
-                totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_add'").get();
-                totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_deduct'").get();
-            } catch (e2) { totalManualAdd = { t: 0 }; totalManualDeduct = { t: 0 }; }
+                totalCommission = db.prepare("SELECT IFNULL(SUM(t.amount),0) as t FROM transactions t INNER JOIN users u ON t.user_id = u.id WHERE t.type = 'task_commission' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+                totalManualAdd = db.prepare("SELECT IFNULL(SUM(t.amount),0) as t FROM transactions t INNER JOIN users u ON t.user_id = u.id WHERE t.type = 'system_add' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+                totalManualDeduct = db.prepare("SELECT IFNULL(SUM(t.amount),0) as t FROM transactions t INNER JOIN users u ON t.user_id = u.id WHERE t.type = 'system_deduct' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+            } catch (e) {
+                try {
+                    totalManualAdd = db.prepare("SELECT IFNULL(SUM(l.amount),0) as t FROM ledger l INNER JOIN users u ON l.user_id = u.id WHERE l.type = 'system_add' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+                    totalManualDeduct = db.prepare("SELECT IFNULL(SUM(l.amount),0) as t FROM ledger l INNER JOIN users u ON l.user_id = u.id WHERE l.type = 'system_deduct' AND u.role = 'User'" + scopeWhere).get(...scopeParams);
+                } catch (e2) {}
+            }
+        } else {
+            userBalance = db.prepare("SELECT IFNULL(SUM(balance),0) as t FROM users WHERE role = 'User'").get();
+            totalDeposit = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM deposits WHERE status = 'approved'").get();
+            totalWithdraw = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM withdrawals WHERE status IN ('approved','paid')").get();
+            try {
+                totalCommission = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'task_commission'").get();
+                totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_add'").get();
+                totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_deduct'").get();
+            } catch (e) {
+                try {
+                    totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_add'").get();
+                    totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_deduct'").get();
+                } catch (e2) { totalManualAdd = { t: 0 }; totalManualDeduct = { t: 0 }; }
+            }
         }
         res.json({
             success: true,

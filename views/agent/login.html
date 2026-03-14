@@ -206,12 +206,14 @@
           throw new Error('仅限代理账号登录');
         }
 
-        // 保存 Token
-        localStorage.setItem('agent_token', result.data.token);
+        // 保存 Token（双写便于 enter/dashboard 读取）
+        const token = result.data.token;
+        localStorage.setItem('agent_token', token);
+        sessionStorage.setItem('agent_token', token);
         localStorage.setItem('agent_user', JSON.stringify(result.data.user));
 
-        // 跳转到代理后台
-        window.location.href = '/views/agent/dashboard.html';
+        // 经 enter 页注入 token 后跳转 dashboard，避免时序问题
+        window.location.replace('/views/agent/enter.html#' + encodeURIComponent(token));
       } catch (error) {
         showError(error.message);
       } finally {

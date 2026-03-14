@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正在进入工作台</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .msg { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <p class="msg">正在进入代理工作台…</p>
+  <script>
+    (function() {
+      var t = '';
+      var hash = (window.location.hash || '').replace(/^#/, '');
+      if (hash) { try { t = decodeURIComponent(hash); } catch (e) {} }
+      if (!t || t.length < 20) t = localStorage.getItem('agent_token') || sessionStorage.getItem('agent_token') || '';
+      if (t) {
+        try {
+          localStorage.setItem('agent_token', t);
+          sessionStorage.setItem('agent_token', t);
+        } catch (e) {}
+        location.replace('/views/admin/dashboard.html?mode=agent#' + encodeURIComponent(t));
+      } else {
+        location.replace('/views/agent/login.html');
+      }
+    })();
+  </script>
+</body>
+</html>

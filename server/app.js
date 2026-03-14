@@ -118,97 +118,10 @@ function checkAdmin(req, res, next) {
     next();
 }
 
-// 数据分析接口在 app 层注册，避免路由未加载导致 404
-app.get('/api/admin/reports/finance-summary', checkAdmin, (req, res) => {
-    const db = getDb();
-    const dateFrom = (req.query.date_from || '').trim();
-    const dateTo = (req.query.date_to || '').trim();
-    try {
-        let where = ' WHERE 1=1 ';
-        const params = [];
-        if (dateFrom) { where += " AND date(created_at) >= ? "; params.push(dateFrom); }
-        if (dateTo) { where += " AND date(created_at) <= ? "; params.push(dateTo); }
-        try {
-            const rows = db.prepare("SELECT type, COUNT(*) as count, IFNULL(SUM(amount),0) as total FROM transactions " + where + " GROUP BY type").all(...params);
-            return res.json({ success: true, data: rows || [] });
-        } catch (e1) {
-            try {
-                const rows2 = db.prepare("SELECT type, COUNT(*) as count, IFNULL(SUM(amount),0) as total FROM ledger " + where + " GROUP BY type").all(...params);
-                return res.json({ success: true, data: rows2 || [] });
-            } catch (e2) {
-                return res.json({ success: true, data: [] });
-            }
-        }
-    } catch (err) {
-        console.error('reports/finance-summary error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-app.get('/api/admin/reports/balance-check', checkAdmin, (req, res) => {
-    try {
-        const db = getDb();
-        const userBalance = db.prepare("SELECT IFNULL(SUM(balance),0) as t FROM users WHERE role = 'User'").get();
-        const totalDeposit = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM deposits WHERE status = 'approved'").get();
-        const totalWithdraw = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM withdrawals WHERE status IN ('approved','paid')").get();
-        let totalCommission = { t: 0 }, totalManualAdd = { t: 0 }, totalManualDeduct = { t: 0 };
-        try {
-            totalCommission = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'task_commission'").get();
-            totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_add'").get();
-            totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM transactions WHERE type = 'system_deduct'").get();
-        } catch (e) {
-            try {
-                totalManualAdd = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_add'").get();
-                totalManualDeduct = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM ledger WHERE type = 'system_deduct'").get();
-            } catch (e2) { totalManualAdd = { t: 0 }; totalManualDeduct = { t: 0 }; }
-        }
-        res.json({
-            success: true,
-            data: {
-                user_total_balance: userBalance ? userBalance.t : 0,
-                total_deposit: totalDeposit ? totalDeposit.t : 0,
-                total_withdraw: totalWithdraw ? totalWithdraw.t : 0,
-                total_commission: totalCommission ? totalCommission.t : 0,
-                total_manual_add: totalManualAdd ? totalManualAdd.t : 0,
-                total_manual_deduct: totalManualDeduct ? totalManualDeduct.t : 0
-            }
-        });
-    } catch (err) {
-        console.error('reports/balance-check error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-app.get('/api/admin/reports/invite-summary', checkAdmin, (req, res) => {
-    try {
-        const db = getDb();
-        const dateFrom = (req.query.date_from || '').trim();
-        const dateTo = (req.query.date_to || '').trim();
-        let where = " WHERE u.role = 'User' AND u.referred_by IS NOT NULL AND u.referred_by != '' ";
-        const params = [];
-        if (dateFrom) { where += " AND date(u.created_at) >= ? "; params.push(dateFrom); }
-        if (dateTo) { where += " AND date(u.created_at) <= ? "; params.push(dateTo); }
-        const list = db.prepare(
-            "SELECT u.referred_by as invite_code, COUNT(DISTINCT u.id) as reg_count FROM users u " + where + " GROUP BY u.referred_by ORDER BY reg_count DESC LIMIT 200"
-        ).all(...params);
-        const summary = list.map(row => {
-            const teamIds = db.prepare("SELECT id FROM users WHERE referred_by = ?").all(row.invite_code).map(r => r.id);
-            let total_deposit = 0;
-            if (teamIds.length) {
-                const ph = teamIds.map(() => '?').join(',');
-                const r = db.prepare("SELECT IFNULL(SUM(amount),0) as t FROM deposits WHERE user_id IN (" + ph + ") AND status = 'approved'").get(...teamIds);
-                total_deposit = r ? r.t : 0;
-            }
-            return { invite_code: row.invite_code, reg_count: row.reg_count, total_deposit };
-        });
-        res.json({ success: true, data: summary });
-    } catch (err) {
-        console.error('reports/invite-summary error:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-});
-
+// 报表/对账/邀请汇总 统一走 admin 路由（支持 Agent + 范围过滤）；此处不重复注册，否则 Agent 会被 app 层 checkAdmin 拒掉
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
-if (typeof adminRoutes.getUsersHandler === 'function') app.get('/api/admin/users', checkAdmin, adminRoutes.getUsersHandler);
+// GET /api/admin/users 不在此单独注册，统一走 admin 路由（checkAdmin 允许 Agent + 范围过滤）
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/task', taskRoutes);

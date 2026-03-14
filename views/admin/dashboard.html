@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>(function(){var sp=new URLSearchParams(window.location.search);var h=(window.location.hash||'').replace(/^#/,'');if(sp.get('mode')==='agent'&&h.length>20){var t=decodeURIComponent(h);try{localStorage.setItem('agent_token',t);localStorage.setItem('token',t);sessionStorage.setItem('agent_token',t);}catch(e){}if(window.history&&window.history.replaceState)window.history.replaceState(null,'',window.location.pathname+window.location.search);}})();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理后台 | 数据中心</title>
@@ -218,15 +219,15 @@
             <span>财务审批</span>
             <span id="financePendingBadge" class="finance-pending-badge" style="display:none;">0</span>
         </div>
-        <div class="menu-item" onclick="switchView('tasks', event)">
+        <div class="menu-item" id="menuItemTasks" onclick="switchView('tasks', event)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
             商品管理
         </div>
-        <div class="menu-item" onclick="switchView('vip', event)">
+        <div class="menu-item" id="menuItemVip" onclick="switchView('vip', event)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             VIP 管理
         </div>
-        <div class="menu-item" onclick="switchView('agents', event)">
+        <div class="menu-item" id="menuItemAgents" onclick="switchView('agents', event)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
             🤵 代理管理
         </div>
@@ -272,7 +273,7 @@
                 <div class="menu-item" onclick="switchView('inviteAnalysis', event)">邀请分析</div>
             </div>
         </div>
-        <div class="menu-group">
+        <div class="menu-group" id="menuGroupSystem">
             <div class="menu-item menu-group-toggle" onclick="toggleSystemMenu(event)">
                 <span style="display:flex; align-items:center; gap:12px;">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -290,6 +291,10 @@
                 <div class="menu-item" onclick="switchView('adminList', event)">管理员列表</div>
                 <div class="menu-item" onclick="switchView('i18n', event)">多语言</div>
             </div>
+        </div>
+        <div class="menu-item" id="menuAgentChangePassword" onclick="switchView('agentSettings', event)" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+            修改密码
         </div>
         <div class="menu-item" onclick="logout()" style="margin-top: auto; color: #ffaaaa;">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
@@ -1616,17 +1621,38 @@
                 </div>
             </div>
         </div>
+        <div id="agentSettingsView" class="view-container" style="display:none;">
+            <div class="view-inner" style="padding:20px;max-width:400px;">
+                <h3 style="margin-bottom:16px;">修改登录密码</h3>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>原密码</label>
+                    <input type="password" id="agentOldPassword" placeholder="原密码" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>新密码</label>
+                    <input type="password" id="agentNewPassword" placeholder="新密码" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
+                </div>
+                <div class="form-group" style="margin-bottom:12px;">
+                    <label>确认新密码</label>
+                    <input type="password" id="agentNewPasswordConfirm" placeholder="确认新密码" style="width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:6px;">
+                </div>
+                <button type="button" class="btn-primary" id="agentChangePasswordBtn" onclick="submitAgentChangePassword()" style="padding:8px 16px;">修改密码</button>
+                <p class="hint" style="margin-top:8px;font-size:12px;color:#718096;">修改成功后将退出，需使用新密码重新登录。</p>
+            </div>
+        </div>
     </div>
 
     <script>
         const API_BASE = '/api/admin';
+        const urlParams = new URLSearchParams(window.location.search || '');
         const adminToken = localStorage.getItem('admin_token') || '';
         const agentToken = localStorage.getItem('agent_token') || '';
-        const urlParams = new URLSearchParams(window.location.search || '');
         const isAgentMode = (urlParams.get('mode') === 'agent') || (!!agentToken && !adminToken);
-        // 代理模式下必须用 agent_token 发请求，否则后端会按管理员处理、不加范围过滤
-        const token = isAgentMode && agentToken ? agentToken : (adminToken || agentToken || localStorage.getItem('token'));
-        const loginUrl = adminToken && !isAgentMode ? '/views/admin/login.html' : (agentToken ? '/views/agent/login.html' : '/views/admin/login.html');
+        const loginUrl = isAgentMode ? '/views/agent/login.html' : '/views/admin/login.html';
+        function getToken() {
+            if (isAgentMode) return localStorage.getItem('agent_token') || sessionStorage.getItem('agent_token') || localStorage.getItem('token') || '';
+            return localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+        }
         let backofficePerms = [];
         function hasBackofficePerm(key) {
             if (!Array.isArray(backofficePerms) || backofficePerms.length === 0) return false;
@@ -1655,6 +1681,7 @@
         }
         function viewAllowed(viewName) {
             if (!isAgentMode) return true;
+            if (viewName === 'dashboard' || viewName === 'agentSettings') return true;
             const map = {
                 users: ['admin.users.view'],
                 finance: ['admin.withdrawals.view', 'admin.deposits.view'],
@@ -1703,6 +1730,26 @@
             if (addWorkerBtn) addWorkerBtn.style.display = 'none';
             var includeCb = document.getElementById('userIncludeAllRoles');
             if (includeCb) includeCb.checked = false;
+            var menuAgentPwd = document.getElementById('menuAgentChangePassword');
+            if (menuAgentPwd) menuAgentPwd.style.display = 'flex';
+            var menuGroupSystem = document.getElementById('menuGroupSystem');
+            if (menuGroupSystem) menuGroupSystem.style.display = 'none';
+            var menuItemTasks = document.getElementById('menuItemTasks');
+            var menuItemVip = document.getElementById('menuItemVip');
+            var menuItemAgents = document.getElementById('menuItemAgents');
+            if (menuItemTasks) menuItemTasks.style.display = 'none';
+            if (menuItemVip) menuItemVip.style.display = 'none';
+            if (menuItemAgents) menuItemAgents.style.display = 'none';
+            // 代理模式：始终显示「用户管理」「财务审批」，便于进入后由后端按权限控制
+            document.querySelectorAll('.sidebar .menu-item').forEach(function (el) {
+                var on = (el.getAttribute('onclick') || '');
+                if (on.indexOf("switchView('users')") !== -1 || on.indexOf("switchView('finance')") !== -1) el.style.display = '';
+            });
+            // 确保折叠父项（日志、报表与订单、数据分析）可点击、子菜单可展开
+            document.querySelectorAll('.sidebar .menu-group .menu-group-toggle').forEach(function (el) {
+                el.style.display = '';
+                el.style.cursor = 'pointer';
+            });
         }
         
         var loadingTimeoutId = null;
@@ -1730,8 +1777,10 @@
         // --- Core Functions ---
         
         async function fetchAPI(endpoint, options = {}) {
-            if (!token) { window.location.href = loginUrl; return null; }
-            options.headers = { ...options.headers, 'Authorization': 'Bearer ' + (token || ''), 'Content-Type': 'application/json' };
+            if (isAgentMode && !getToken()) { await new Promise(r => setTimeout(r, 300)); }
+            var tok = getToken();
+            if (!tok) { window.location.href = loginUrl; return null; }
+            options.headers = { ...options.headers, 'Authorization': 'Bearer ' + (tok || ''), 'Content-Type': 'application/json' };
             if (options.body !== undefined && !options.headers['Content-Type']) options.headers['Content-Type'] = 'application/json';
             try {
                 const url = (API_BASE + endpoint).replace(/([^:])\/\/+/g, '$1/');
@@ -1744,9 +1793,13 @@
                 try { data = await res.json(); } catch (_) { data = {}; }
                 if (res.status === 401) {
                     if (typeof showToast === 'function') showToast('登录已过期，请重新登录');
+                    if (isAgentMode && endpoint !== '/me' && !String(endpoint).endsWith('/me')) {
+                        return { success: false, message: '登录已过期或无权限', _unauthorized: true };
+                    }
                     localStorage.removeItem('admin_token');
                     localStorage.removeItem('agent_token');
                     localStorage.removeItem('token');
+                    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('agent_token');
                     window.location.href = loginUrl;
                     return null;
                 }
@@ -2037,7 +2090,7 @@
             } catch (e) { showToast('导出失败'); }
         }
 
-        var viewTabLabels = { dashboard: '首页', users: '会员列表', finance: '财务审批', tasks: '商品管理', vip: 'VIP 管理', orderParams: '做单参数', agents: '代理管理', reports: '报表统计', orders: '订单记录', auditLogs: '操作日志', loginLogs: '登录日志', dataScreen: '业务员报表', adminList: '管理员列表', i18n: '多语言', systemBase: '基础与展示', systemFinance: '财务与提现', systemContent: '规则与内容', systemDeposit: '充值收款', systemFinanceConfig: '充值提现配置', multiReport: '多维度报表', userAnalysis: '用户分析', financeReconcile: '资金对账', inviteAnalysis: '邀请分析' };
+        var viewTabLabels = { dashboard: '首页', users: '会员列表', finance: '财务审批', tasks: '商品管理', vip: 'VIP 管理', orderParams: '做单参数', agents: '代理管理', reports: '报表统计', orders: '订单记录', auditLogs: '操作日志', loginLogs: '登录日志', dataScreen: '业务员报表', adminList: '管理员列表', i18n: '多语言', systemBase: '基础与展示', systemFinance: '财务与提现', systemContent: '规则与内容', systemDeposit: '充值收款', systemFinanceConfig: '充值提现配置', multiReport: '多维度报表', userAnalysis: '用户分析', financeReconcile: '资金对账', inviteAnalysis: '邀请分析', agentSettings: '修改密码' };
         function ensureTab(viewName) {
             var bar = document.getElementById('adminTabBar');
             if (!bar) return;
@@ -2903,7 +2956,7 @@
             q.push('limit=10000');
             var url = API_BASE + '/products/export?' + q.join('&');
             try {
-                var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + (token || '') }, credentials: 'include' });
+                var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + (getToken() || '') }, credentials: 'include' });
                 if (!res.ok) { showToast('导出失败'); return; }
                 var blob = await res.blob();
                 var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'products.csv'; a.click(); URL.revokeObjectURL(a.href);
@@ -3068,7 +3121,7 @@
                 // 注意：这里不能用 fetchAPI（它会强制 Content-Type=application/json）
                 const res = await fetch(API_BASE + '/products/import', {
                     method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + (token || '') },
+                    headers: { 'Authorization': 'Bearer ' + (getToken() || '') },
                     body: fd
                 });
                 const data = await res.json();
@@ -3639,6 +3692,36 @@
                     showToast('密码已修改，即将跳转登录页');
                     localStorage.removeItem('admin_token'); localStorage.removeItem('token');
                     setTimeout(function() { window.location.href = '/views/admin/login.html'; }, 1500);
+                } else {
+                    showToast(res && res.message ? res.message : '修改失败');
+                    if (btn) btn.disabled = false;
+                }
+            } catch (e) {
+                showToast('请求失败');
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function submitAgentChangePassword() {
+            if (!isAgentMode) return;
+            var oldP = document.getElementById('agentOldPassword');
+            var newP = document.getElementById('agentNewPassword');
+            var newP2 = document.getElementById('agentNewPasswordConfirm');
+            var btn = document.getElementById('agentChangePasswordBtn');
+            var op = oldP && oldP.value ? oldP.value.trim() : '';
+            var np = newP && newP.value ? newP.value.trim() : '';
+            var np2 = newP2 && newP2.value ? newP2.value.trim() : '';
+            if (!op || !np) { showToast('请填写原密码和新密码'); return; }
+            if (np !== np2) { showToast('两次新密码不一致'); return; }
+            if (np.length < 6) { showToast('新密码至少6位'); return; }
+            if (btn) btn.disabled = true;
+            try {
+                var res = await fetchAPI('/change-password', { method: 'POST', body: JSON.stringify({ old_password: op, new_password: np }) });
+                if (res && res.success) {
+                    showToast('密码已修改，即将跳转登录页');
+                    localStorage.removeItem('agent_token'); localStorage.removeItem('token');
+                    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('agent_token');
+                    setTimeout(function() { window.location.href = '/views/agent/login.html'; }, 1500);
                 } else {
                     showToast(res && res.message ? res.message : '修改失败');
                     if (btn) btn.disabled = false;
@@ -5144,18 +5227,20 @@
         }
 
         async function logout() {
-            var token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+            var tok = getToken();
             try {
                 await fetch('/api/auth/logout', {
                     method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+                    headers: { 'Authorization': 'Bearer ' + (tok || ''), 'Content-Type': 'application/json' }
                 });
             } catch (error) {
                 console.error('Logout error:', error);
             }
             localStorage.removeItem('admin_token');
+            localStorage.removeItem('agent_token');
             localStorage.removeItem('token');
-            window.location.href = '/views/admin/login.html';
+            if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('agent_token');
+            window.location.href = loginUrl;
         }
 
         async function saveFinanceAndReminderSettings() {
