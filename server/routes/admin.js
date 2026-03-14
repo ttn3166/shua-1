@@ -2840,13 +2840,23 @@ router.post('/agents/:id/toggle-status', checkAdmin, (req, res) => {
 // ==========================================
 // 操作审计日志
 // ==========================================
-// 操作日志导出 CSV（与列表同筛选条件，最多 10000 条）
+// 操作日志导出 CSV（与列表同筛选条件，最多 10000 条；代理仅导出本人+线下用户相关日志）
 router.get('/audit-logs/export', checkAdmin, (req, res) => {
-    if (req.backoffice && req.backoffice.isAgent) return res.status(403).json({ success: false, message: 'Forbidden' });
     const db = getDb();
     const q = req.query;
     const where = [];
     const params = [];
+    if (req.backoffice && req.backoffice.isAgent) {
+        const scopeConditions = []; const scopeParams = [];
+        addAgentScopeCondition(req, scopeConditions, scopeParams, 'u');
+        if (scopeConditions.length) {
+            where.push('(a.actor_id = ? OR (a.entity_type = \'user\' AND a.entity_id IN (SELECT u.id FROM users u WHERE u.role = \'User\' AND ' + scopeConditions.join(' AND ') + ')))');
+            params.push(req.user.id, ...scopeParams);
+        } else {
+            where.push('a.actor_id = ?');
+            params.push(req.user.id);
+        }
+    }
     if (q.actor_id && String(q.actor_id).trim()) { where.push('a.actor_id = ?'); params.push(parseInt(q.actor_id, 10)); }
     if (q.action && String(q.action).trim()) { where.push('a.action = ?'); params.push(String(q.action).trim()); }
     if (q.entity_type && String(q.entity_type).trim()) { where.push('a.entity_type = ?'); params.push(String(q.entity_type).trim()); }
